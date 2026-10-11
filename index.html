@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Musical Housie — Dynamic Animated Stage</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      /* Solid Light Palette */
+      --bg-body: #F4F7FC;
+      --card-bg: #FFFFFF;
+      --border-color: #E2E8F4;
+      
+      /* Vibrant Accents */
+      --primary: #4F46E5;
+      --primary-light: #EEF2FF;
+      --emerald: #059669;
+      --emerald-light: #ECFDF5;
+      --coral: #F43F5E;
+      --coral-light: #FFF1F2;
+      --amber: #D97706;
+      --amber-light: #FEF3C7;
+      
+      --text-main: #0F172A;
+      --text-muted: #64748B;
+      --shadow-soft: 0 10px 30px rgba(79, 70, 229, 0.08);
+      --radius-lg: 24px;
+      --radius-md: 14px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: var(--bg-body);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Header Nav */
+    header {
+      background: var(--card-bg);
+      border-bottom: 2px solid var(--border-color);
+      padding: 0.85rem 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .nav-tabs {
+      display: flex;
+      background: var(--bg-body);
+      border: 1px solid var(--border-color);
+      padding: 5px;
+      border-radius: 40px;
+      gap: 8px;
+    }
+
+    .tab-btn {
+      border: none;
+      background: transparent;
+      padding: 8px 20px;
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      border-radius: 30px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tab-btn.active {
+      background: var(--card-bg);
+      color: var(--primary);
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.12);
+    }
+
+    main {
+      flex: 1;
+      max-width: 1500px;
+      margin: 0 auto;
+      width: 100%;
+      padding: 2rem;
+    }
+
+    .screen {
+      display: none;
+      animation: fadeIn 0.4s ease forwards;
+    }
+    .screen.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ========================================================
+       SCREEN 1: CALLER STAGE WITH 3D POPPING & ROLLING BALL
+    ======================================================== */
+    .stage-layout {
+      display: grid;
+      grid-template-columns: 460px 1fr;
+      gap: 2rem;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1.5px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      box-shadow: var(--shadow-soft);
+      position: relative;
+    }
+
+    /* Arena for the Rolling Ball */
+    .ball-chute-arena {
+      height: 260px;
+      background: radial-gradient(circle at 50% 120%, #E0E7FF 0%, #F8FAFC 80%);
+      border-radius: var(--radius-md);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1.5px dashed #CBD5E1;
+      margin-bottom: 1.5rem;
+    }
+
+    /* 3D Ball Graphic */
+    .lotto-ball {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #FFFFFF 5%, #FF7849 40%, #E11D48 95%);
+      box-shadow: 0 20px 35px rgba(225, 29, 72, 0.35), inset -8px -8px 18px rgba(0, 0, 0, 0.25);
+      position: absolute;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      transform: scale(0.9);
+      transition: box-shadow 0.3s;
+    }
+
+    .lotto-ball-inner {
+      width: 68px;
+      height: 68px;
+      background: #FFFFFF;
+      border-radius: 50%;
+      box-shadow: inset 0 2px 5px rgba(0,0,0,0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: #0F172A;
+    }
+
+    /* Keyframe Animations for Pop, Drop, and Roll */
+    .ball-pop-and-roll {
+      animation: popAndRoll 1.4s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    }
+
+    @keyframes popAndRoll {
+      0% {
+        transform: translateY(-260px) scale(0.2) rotate(-360deg);
+        opacity: 0;
+      }
+      40% {
+        transform: translateY(20px) scale(1.15) rotate(180deg);
+        opacity: 1;
+      }
+      65% {
+        transform: translateY(-18px) scale(0.95) rotate(320deg);
+      }
+      85% {
+        transform: translateY(6px) scale(1.02) rotate(350deg);
+      }
+      100% {
+        transform: translateY(0) scale(1) rotate(360deg);
+      }
+    }
+
+    .song-announcement {
+      text-align: center;
+      min-height: 80px;
+    }
+
+    .song-title-hero {
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+
+    .song-sub-hero {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px 24px;
+      border-radius: var(--radius-md);
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 800;
+      cursor: pointer;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .btn-draw {
+      background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+      color: #FFFFFF;
+      box-shadow: 0 8px 20px rgba(79, 70, 229, 0.35);
+      margin-top: 1rem;
+    }
+    .btn-draw:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 26px rgba(79, 70, 229, 0.45);
+    }
+
+    .btn-live-scene {
+      background: var(--emerald-light);
+      color: var(--emerald);
+      border: 1.5px solid #A7F3D0;
+      margin-top: 10px;
+    }
+    .btn-live-scene:hover {
+      background: #D1FAE5;
+    }
+
+    /* 90-Board Calling Grid */
+    .board-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .grid-90 {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      gap: 8px;
+    }
+
+    .grid-ball {
+      aspect-ratio: 1.15;
+      background: #F8FAFC;
+      border: 1.5px solid var(--border-color);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #94A3B8;
+      transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .grid-ball.called {
+      background: #ECFDF5;
+      border-color: #34D399;
+      color: var(--emerald);
+      transform: scale(0.96);
+    }
+
+    .grid-ball.active-call {
+      background: linear-gradient(135deg, #FFEDD5 0%, #FEE2E2 100%);
+      border-color: #F87171;
+      color: #DC2626;
+      transform: scale(1.12);
+      box-shadow: 0 8px 18px rgba(239, 68, 68, 0.25);
+      animation: pulseCell 1.2s infinite alternate;
+      z-index: 5;
+    }
+
+    @keyframes pulseCell {
+      from { transform: scale(1.08); }
+      to { transform: scale(1.15); }
+    }
+
+    /* ========================================================
+       SCREEN 2: REACTIVE "BALL OF DOTS" SOUNDSPHERE SCENE
+    ======================================================== */
+    .soundsphere-wrapper {
+      background: var(--card-bg);
+      border: 1.5px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 2.5rem;
+      text-align: center;
+      box-shadow: var(--shadow-soft);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .soundsphere-info {
+      position: absolute;
+      top: 2rem;
+      left: 2.5rem;
+      text-align: left;
+      z-index: 10;
+    }
+
+    #dotsCanvas {
+      width: 100%;
+      height: 480px;
+      border-radius: var(--radius-md);
+      background: radial-gradient(circle at center, #FFFFFF 0%, #EEF2FF 100%);
+    }
+
+    .soundsphere-controls {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 1.5rem;
+    }
+
+    /* ========================================================
+       SCREEN 3: LUCKY DRAW & SLOT ROLLER
+    ======================================================== */
+    .raffle-grid {
+      display: grid;
+      grid-template-columns: 480px 1fr;
+      gap: 2rem;
+    }
+
+    .slot-machine-display {
+      background: #0F172A;
+      border-radius: var(--radius-md);
+      padding: 2.5rem 1rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      margin: 1.5rem 0;
+      box-shadow: inset 0 6px 18px rgba(0,0,0,0.5);
+    }
+
+    .slot-digit-drum {
+      width: 100px;
+      height: 120px;
+      background: #1E293B;
+      border: 2px solid #334155;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 3.5rem;
+      font-weight: 800;
+      color: #38BDF8;
+      box-shadow: 0 4px 15px rgba(56, 189, 248, 0.25);
+    }
+
+    .slot-digit-drum.rolling {
+      animation: drumBlur 0.12s infinite alternate;
+    }
+
+    @keyframes drumBlur {
+      0% { transform: translateY(-4px); filter: blur(2px); }
+      100% { transform: translateY(4px); filter: blur(0px); }
+    }
+
+    /* ========================================================
+       SCREEN 4: CLAIM VERIFIER LIVE TICKET
+    ======================================================== */
+    .ticket-board-3x9 {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      grid-template-rows: repeat(3, 85px);
+      gap: 8px;
+      background: #F1F5F9;
+      padding: 12px;
+      border-radius: var(--radius-md);
+      margin-top: 1.5rem;
+    }
+
+    .t-cell {
+      background: #FFFFFF;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.82rem;
+      font-weight: 700;
+      border: 1.5px solid var(--border-color);
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .t-cell.empty {
+      background: #F8FAFC;
+      border: 1px dashed #CBD5E1;
+      opacity: 0.5;
+    }
+
+    .t-cell.hit {
+      background: #ECFDF5;
+      border-color: #10B981;
+      color: #047857;
+      transform: scale(1.04);
+      box-shadow: 0 6px 14px rgba(16, 185, 129, 0.18);
+    }
+
+    .t-badge {
+      font-size: 0.65rem;
+      background: #10B981;
+      color: #FFF;
+      padding: 2px 6px;
+      border-radius: 10px;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- App Header -->
+  <header>
+    <div class="brand">
+      <span>♫</span>
+      <span>Musical Housie Stage</span>
+    </div>
+
+    <nav class="nav-tabs">
+      <button class="tab-btn active" onclick="navigate('stage')">🎯 Ball Roller & Stage</button>
+      <button class="tab-btn" onclick="navigate('sphere')">🔮 Audio Dot Sphere</button>
+      <button class="tab-btn" onclick="navigate('raffle')">🎰 Lucky Slot Draw</button>
+      <button class="tab-btn" onclick="navigate('verifier')">🔍 Claim Verifier</button>
+    </nav>
+  </header>
+
+  <main>
+
+    <!-- ========================================================
+         SCREEN 1: CALLER STAGE WITH POPPING & ROLLING BALL
+    ======================================================== -->
+    <section id="screen-stage" class="screen active">
+      <div class="stage-layout">
+        
+        <!-- Animated Host Calling Chute -->
+        <div class="card">
+          <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem;">
+            LIVE BALL DROP CHUTE
+          </div>
+
+          <div class="ball-chute-arena">
+            <!-- 3D Popping Ball -->
+            <div id="heroBall" class="lotto-ball" onclick="drawNextTrack()">
+              <div class="lotto-ball-inner">
+                <span id="heroBallNum">--</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="song-announcement">
+            <div id="heroSongTitle" class="song-title-hero">Ready to Drop Ball</div>
+            <div id="heroSongSub" class="song-sub-hero">Click button below to trigger ball roll and song!</div>
+          </div>
+
+          <button class="btn btn-draw" onclick="drawNextTrack()">
+            🎲 ROLL & DROP NEXT NUMBER
+          </button>
+          
+          <button class="btn btn-live-scene" onclick="navigate('sphere')">
+            🔮 View Live Audio Dot-Sphere Screen →
+          </button>
+        </div>
+
+        <!-- Master 90 Grid -->
+        <div class="card">
+          <div class="board-header">
+            <h3 style="font-size: 1.2rem; font-weight: 800;">Master 1–90 Live Matrix</h3>
+            <span id="callCounter" style="font-size: 0.9rem; font-weight: 700; color: var(--primary);">Played: 0 / 90</span>
+          </div>
+          <div id="boardGrid" class="grid-90"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========================================================
+         SCREEN 2: "BALL OF DOTS" DYNAMIC PARTICLE AUDIO SPHERE
+    ======================================================== -->
+    <section id="screen-sphere" class="screen">
+      <div class="soundsphere-wrapper">
+        <div class="soundsphere-info">
+          <h2 id="sphereSongTitle" style="font-size: 1.6rem; font-weight: 800; color: var(--primary);">Now Playing Track</h2>
+          <p id="sphereSongSub" style="color: var(--text-muted); font-size: 0.95rem;">Interactive 3D particle audio sphere reacting to sound</p>
+        </div>
+
+        <!-- 3D Interactive Canvas -->
+        <canvas id="dotsCanvas"></canvas>
+
+        <div class="soundsphere-controls">
+          <button class="btn btn-draw" style="width: auto; padding: 12px 30px;" onclick="navigate('stage')">
+            ← Back to Calling Board
+          </button>
+          <button class="btn btn-live-scene" style="width: auto; padding: 12px 30px;" onclick="toggleAudioSpeed()">
+            ⚡ Modulate Beat Energy
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         SCREEN 3: LUCKY DRAW WITH SPINNING DRUM
+    ======================================================== -->
+    <section id="screen-raffle" class="screen">
+      <div class="raffle-grid">
+        <div class="card" style="text-align: center;">
+          <h3 style="font-size: 1.25rem; font-weight: 800;">Bonus Lucky Draw</h3>
+          <p style="color: var(--text-muted); font-size: 0.88rem; margin-top: 4px;">Pulls instant winners from called tracks</p>
+
+          <div class="slot-machine-display">
+            <div id="drum1" class="slot-digit-drum">0</div>
+            <div id="drum2" class="slot-digit-drum">0</div>
+          </div>
+
+          <div id="raffleSongText" style="font-weight: 700; color: var(--primary); margin-bottom: 1.5rem; min-height: 24px;">
+            Ready to Spin
+          </div>
+
+          <button class="btn btn-draw" style="background: linear-gradient(135deg, #059669 0%, #10B981 100%);" onclick="spinLuckyDraw()">
+            🎰 SPIN LUCKY DRUM
+          </button>
+        </div>
+
+        <div class="card">
+          <h4 style="margin-bottom: 1rem;">Winners Announcement Stream</h4>
+          <div id="winnerStream" style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 2rem;">No draws executed yet.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         SCREEN 4: CLAIM VERIFIER LIVE 3x9 TICKET
+    ======================================================== -->
+    <section id="screen-verifier" class="screen">
+      <div class="card">
+        <h3 style="font-size: 1.25rem; font-weight: 800;">Instant Ticket Claim Inspector</h3>
+        <p style="color: var(--text-muted); font-size: 0.88rem;">Real-time automated matching across the player's 3×9 grid</p>
+
+        <div style="display: flex; gap: 12px; margin-top: 1.25rem;">
+          <input type="text" id="ticketSearch" value="042" placeholder="Ticket ID" style="padding: 12px 18px; border-radius: 12px; border: 1.5px solid var(--border-color); font-family: inherit; font-size: 0.95rem; width: 220px;" />
+          <button class="btn btn-draw" style="width: auto; padding: 0 24px;" onclick="renderTicket()">
+            🔍 Cross-Check Ticket
+          </button>
+        </div>
+
+        <div id="claimVerdict" style="margin-top: 1.25rem; padding: 14px 20px; border-radius: 12px; background: #ECFDF5; border: 1.5px solid #6EE7B7; color: #065F46; font-weight: 700; display: none;">
+          ✔ Claim Status: 4/5 marked in Top Line!
+        </div>
+
+        <div id="ticketGrid" class="ticket-board-3x9"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    /* ========================================================
+       MASTER 90 SONG MOCK BANK
+    ======================================================== */
+    const TRACK_BANK = {
+      1: "Chunari Chunari", 4: "Ek Do Teen", 11: "Kala Chashma", 18: "Kajra Re",
+      22: "Mane Tera", 28: "Solid Body", 31: "Chogada", 42: "Deva Deva",
+      45: "Tu Cheez Badi", 50: "Zingaat", 62: "Proper Patola", 75: "Lutt Putt Gaya",
+      82: "Joru Ka Ghulam", 90: "Balam Pichkari"
+    };
+
+    let calledTracks = [];
+    let activeTrack = null;
+
+    /* Build 90 Grid */
+    const gridEl = document.getElementById('boardGrid');
+    for (let i = 1; i <= 90; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'grid-ball';
+      cell.id = `cell-${i}`;
+      cell.innerText = i;
+      gridEl.appendChild(cell);
+    }
+
+    /* Screen Tab Switcher */
+    function navigate(screenId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.screen').forEach(scr => scr.classList.remove('active'));
+      
+      event?.currentTarget?.classList.add('active');
+      document.getElementById(`screen-${screenId}`).classList.add('active');
+
+      if (screenId === 'sphere') {
+        resizeCanvas();
+      }
+    }
+
+    /* ========================================================
+       POPPING & ROLLING BALL CALLER ENGINE
+    ======================================================== */
+    function drawNextTrack() {
+      const remaining = Array.from({length: 90}, (_, i) => i + 1).filter(n => !calledTracks.includes(n));
+      if (!remaining.length) return alert("All 90 numbers have been called!");
+
+      const nextNum = remaining[Math.floor(Math.random() * remaining.length)];
+      
+      // Update Previous Grid cell
+      if (activeTrack) {
+        const prev = document.getElementById(`cell-${activeTrack}`);
+        prev.classList.remove('active-call');
+        prev.classList.add('called');
+      }
+
+      activeTrack = nextNum;
+      calledTracks.push(nextNum);
+
+      // Trigger Pop & Roll Animation
+      const ball = document.getElementById('heroBall');
+      ball.classList.remove('ball-pop-and-roll');
+      void ball.offsetWidth; // Trigger reflow
+      ball.classList.add('ball-pop-and-roll');
+
+      document.getElementById('heroBallNum').innerText = String(nextNum).padStart(2, '0');
+      
+      const songName = TRACK_BANK[nextNum] || `Bollywood Track #${nextNum}`;
+      document.getElementById('heroSongTitle').innerText = songName;
+      document.getElementById('heroSongSub').innerText = `Track #${nextNum} • Now playing synced audio clip`;
+
+      // Update Sphere Header
+      document.getElementById('sphereSongTitle').innerText = songName;
+      document.getElementById('sphereSongSub').innerText = `Track #${nextNum} audio frequencies visualizing in real-time`;
+
+      // Update Matrix
+      const currentCell = document.getElementById(`cell-${nextNum}`);
+      currentCell.classList.add('active-call');
+      document.getElementById('callCounter').innerText = `Played: ${calledTracks.length} / 90`;
+    }
+
+    /* ========================================================
+       "BALL OF DOTS" 3D PARTICLE AUDIO SPHERE (CANVAS)
+    ======================================================== */
+    const canvas = document.getElementById('dotsCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let points = [];
+    const NUM_POINTS = 380;
+    const SPHERE_RADIUS = 160;
+    let angleX = 0;
+    let angleY = 0;
+    let beatEnergy = 1.0;
+
+    function resizeCanvas() {
+      canvas.width = canvas.parentElement.clientWidth - 80;
+      canvas.height = 480;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Generate Points on a Sphere (Fibonacci Lattice)
+    for (let i = 0; i < NUM_POINTS; i++) {
+      const phi = Math.acos(-1 + (2 * i) / NUM_POINTS);
+      const theta = Math.sqrt(NUM_POINTS * Math.PI) * phi;
+
+      points.push({
+        x: SPHERE_RADIUS * Math.cos(theta) * Math.sin(phi),
+        y: SPHERE_RADIUS * Math.sin(theta) * Math.sin(phi),
+        z: SPHERE_RADIUS * Math.cos(phi),
+        origX: SPHERE_RADIUS * Math.cos(theta) * Math.sin(phi),
+        origY: SPHERE_RADIUS * Math.sin(theta) * Math.sin(phi),
+        origZ: SPHERE_RADIUS * Math.cos(phi),
+      });
+    }
+
+    function toggleAudioSpeed() {
+      beatEnergy = beatEnergy === 1.0 ? 1.8 : 1.0;
+    }
+
+    // Render 3D Rotating & Pulsing Sphere
+    function renderSphere() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+
+      // Simulated sound wave pulse amplitude
+      const wave = Math.sin(Date.now() * 0.005 * beatEnergy) * 18 * beatEnergy;
+
+      angleX += 0.004 * beatEnergy;
+      angleY += 0.006 * beatEnergy;
+
+      points.forEach(p => {
+        // Pulse with simulated audio
+        const rFactor = 1 + wave / SPHERE_RADIUS;
+        let x = p.origX * rFactor;
+        let y = p.origY * rFactor;
+        let z = p.origZ * rFactor;
+
+        // Rotation around Y
+        let rotY_x = x * Math.cos(angleY) + z * Math.sin(angleY);
+        let rotY_z = -x * Math.sin(angleY) + z * Math.cos(angleY);
+
+        // Rotation around X
+        let rotX_y = y * Math.cos(angleX) - rotY_z * Math.sin(angleX);
+        let rotX_z = y * Math.sin(angleX) + rotY_z * Math.cos(angleX);
+
+        // Perspective Projection
+        const fov = 340;
+        const scale = fov / (fov + rotX_z);
+        const projX = rotY_x * scale + cx;
+        const projY = rotX_y * scale + cy;
+        const alpha = Math.max(0.15, (rotX_z + SPHERE_RADIUS) / (2 * SPHERE_RADIUS));
+
+        ctx.beginPath();
+        ctx.arc(projX, projY, Math.max(1, 4 * scale), 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(79, 70, 229, ${alpha})`;
+        ctx.fill();
+      });
+
+      requestAnimationFrame(renderSphere);
+    }
+    renderSphere();
+
+    /* ========================================================
+       SLOT ROLLER / LUCKY DRAW
+    ======================================================== */
+    function spinLuckyDraw() {
+      const drum1 = document.getElementById('drum1');
+      const drum2 = document.getElementById('drum2');
+      drum1.classList.add('rolling');
+      drum2.classList.add('rolling');
+
+      let spins = 0;
+      const spinInterval = setInterval(() => {
+        drum1.innerText = Math.floor(Math.random() * 10);
+        drum2.innerText = Math.floor(Math.random() * 10);
+        spins++;
+
+        if (spins > 16) {
+          clearInterval(spinInterval);
+          drum1.classList.remove('rolling');
+          drum2.classList.remove('rolling');
+
+          const winner = calledTracks.length ? calledTracks[Math.floor(Math.random() * calledTracks.length)] : Math.floor(Math.random() * 90) + 1;
+          const tens = Math.floor(winner / 10);
+          const ones = winner % 10;
+
+          drum1.innerText = tens;
+          drum2.innerText = ones;
+
+          const winnerName = TRACK_BANK[winner] || `Bonus Track #${winner}`;
+          document.getElementById('raffleSongText').innerText = `Winner: #${winner} - ${winnerName}`;
+
+          const stream = document.getElementById('winnerStream');
+          if (stream.innerText.includes('No draws')) stream.innerHTML = '';
+          const card = document.createElement('div');
+          card.style.padding = '12px 16px';
+          card.style.background = '#F8FAFC';
+          card.style.borderRadius = '12px';
+          card.style.border = '1px solid var(--border-color)';
+          card.innerHTML = `<strong>Ticket Winner #${winner}</strong> — <span style="color: var(--primary);">${winnerName}</span>`;
+          stream.prepend(card);
+        }
+      }, 70);
+    }
+
+    /* ========================================================
+       CLAIM VERIFIER 3x9 TICKET RENDER
+    ======================================================== */
+    function renderTicket() {
+      const grid = document.getElementById('ticketGrid');
+      grid.innerHTML = '';
+      document.getElementById('claimVerdict').style.display = 'block';
+
+      const sampleData = [
+        [1, null, 11, null, null, 42, null, 75, null],
+        [null, 4, null, 22, null, null, 62, null, 90],
+        [null, null, 18, 28, 45, null, null, 82, null]
+      ];
+
+      sampleData.forEach(row => {
+        row.forEach(val => {
+          const div = document.createElement('div');
+          if (!val) {
+            div.className = 't-cell empty';
+          } else {
+            const isHit = calledTracks.includes(val);
+            div.className = `t-cell ${isHit ? 'hit' : ''}`;
+            div.innerHTML = `
+              <div>#${val}</div>
+              <div style="font-size:0.65rem; opacity:0.8;">${TRACK_BANK[val] || 'Song'}</div>
+              ${isHit ? '<span class="t-badge">CALLED</span>' : ''}
+            `;
+          }
+          grid.appendChild(div);
+        });
+      });
+    }
+
+    // Auto-init ticket view
+    renderTicket();
+  </script>
+</body>
+</html>

@@ -1,0 +1,136 @@
+{
+  "garba_night": {
+    "id": "garba_night",
+    "name": "\ud83c\udfaa Garba Night Musical Housie (Pre-Designed Grid)",
+    "template_file": "assets/branding/Garba_Night_Musical_Housie_Template.png",
+    "print_mode": "direct_in_cell",
+    "width_px": 2400,
+    "height_px": 1792,
+    "strip_1": {
+      "top_pct": 14.45,
+      "left_pct": 1.96,
+      "width_pct": 96.04,
+      "height_pct": 28.07
+    },
+    "strip_2": {
+      "top_pct": 60.49,
+      "left_pct": 1.96,
+      "width_pct": 96.04,
+      "height_pct": 28.18
+    },
+    "badge_1": {
+      "enabled": true,
+      "top_pct": 4.91,
+      "left_pct": 7.08,
+      "width_pct": 13.42,
+      "height_pct": 6.25,
+      "color": "#ffffff",
+      "bg_color": "#7d143d",
+      "format": "\u091f\u093f\u0915\u091f \u0915\u094d\u0930\u092e\u093e\u0902\u0915 : {ticket_id}"
+    },
+    "badge_2": {
+      "enabled": true,
+      "top_pct": 51.78,
+      "left_pct": 7.08,
+      "width_pct": 13.42,
+      "height_pct": 6.03,
+      "color": "#ffffff",
+      "bg_color": "#7d143d",
+      "format": "\u091f\u093f\u0915\u091f \u0915\u094d\u0930\u092e\u093e\u0902\u0915 : {ticket_id}"
+    },
+    "participant_name": {
+      "enabled": true,
+      "top_pct": 91.5,
+      "left_pct": 19.2,
+      "width_pct": 27.0,
+      "font_size_pt": 12,
+      "color": "#800020"
+    },
+    "participant_mobile": {
+      "enabled": true,
+      "top_pct": 91.5,
+      "left_pct": 61.5,
+      "width_pct": 27.0,
+      "font_size_pt": 12,
+      "color": "#800020"
+    },
+    "show_song_number": false,
+    "font_number": {
+      "size_pt": 16,
+      "weight": 900,
+      "color": "#800020"
+    },
+    "font_title": {
+      "size_pt": 17.0,
+      "weight": 800,
+      "color": "#1e293b"
+    }
+  },
+  "festive_gold": {
+    "id": "festive_gold",
+    "name": "\u2728 Festive Musical Housie (Gold / Crimson)",
+    "template_file": "assets/branding/Festive_Musical_Housie_Template.png",
+    "print_mode": "direct_in_cell",
+    "width_px": 2400,
+    "height_px": 1600,
+    "strip_1": {
+      "top_pct": 16.0,
+      "left_pct": 3.5,
+      "width_pct": 93.0,
+      "height_pct": 27.5
+    },
+    "strip_2": {
+      "top_pct": 59.0,
+      "left_pct": 3.5,
+      "width_pct": 93.0,
+      "height_pct": 27.5
+    },
+    "badge_1": {
+      "enabled": true,
+      "top_pct": 7.0,
+      "left_pct": 82.0,
+      "width_pct": 14.0,
+      "height_pct": 4.5,
+      "color": "#ffffff",
+      "bg_color": "#be123c",
+      "format": "TICKET #{ticket_id}"
+    },
+    "badge_2": {
+      "enabled": true,
+      "top_pct": 50.0,
+      "left_pct": 82.0,
+      "width_pct": 14.0,
+      "height_pct": 4.5,
+      "color": "#ffffff",
+      "bg_color": "#be123c",
+      "format": "TICKET #{ticket_id}"
+    },
+    "participant_name": {
+      "enabled": true,
+      "top_pct": 92.0,
+      "left_pct": 22.0,
+      "width_pct": 26.0,
+      "font_size_pt": 11,
+      "color": "#be123c"
+    },
+    "participant_mobile": {
+      "enabled": true,
+      "top_pct": 92.0,
+      "left_pct": 65.0,
+      "width_pct": 24.0,
+      "font_size_pt": 11,
+      "color": "#be123c"
+    },
+    "show_song_number": false,
+    "font_number": {
+      "size_pt": 15,
+      "weight": 900,
+      "color": "#be123c"
+    },
+    "font_title": {
+      "size_pt": 16.0,
+      "weight": 700,
+      "color": "#0f172a"
+    }
+  }
+}

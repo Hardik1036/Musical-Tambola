@@ -1,0 +1,308 @@
+{
+  "batch_name": "Garba_Night_Perfect_Batch",
+  "generated_at": "2026-10-10T18:57:59.651546",
+  "format_mode": "2-strip",
+  "print_mode": "direct_in_cell",
+  "total_sheets": 3,
+  "total_tickets": 3,
+  "template_path": "E:\\Musical tambola\\assets\\branding\\Garba_Night_Musical_Housie_Template.png",
+  "calibration": {
+    "id": "garba_night",
+    "name": "\ud83c\udfaa Garba Night Musical Housie (Pre-Designed Grid)",
+    "template_file": "assets/branding/Garba_Night_Musical_Housie_Template.png",
+    "print_mode": "direct_in_cell",
+    "width_px": 2400,
+    "height_px": 1792,
+    "strip_1": {
+      "top_pct": 14.45,
+      "left_pct": 1.96,
+      "width_pct": 96.04,
+      "height_pct": 28.07
+    },
+    "strip_2": {
+      "top_pct": 60.49,
+      "left_pct": 1.96,
+      "width_pct": 96.04,
+      "height_pct": 28.18
+    },
+    "badge_1": {
+      "enabled": true,
+      "top_pct": 4.91,
+      "left_pct": 7.08,
+      "width_pct": 13.42,
+      "height_pct": 6.25,
+      "color": "#ffffff",
+      "bg_color": "#7d143d",
+      "format": "\u091f\u093f\u0915\u091f \u0915\u094d\u0930\u092e\u093e\u0902\u0915 : {ticket_id}"
+    },
+    "badge_2": {
+      "enabled": true,
+      "top_pct": 51.78,
+      "left_pct": 7.08,
+      "width_pct": 13.42,
+      "height_pct": 6.03,
+      "color": "#ffffff",
+      "bg_color": "#7d143d",
+      "format": "\u091f\u093f\u0915\u091f \u0915\u094d\u0930\u092e\u093e\u0902\u0915 : {ticket_id}"
+    },
+    "participant_name": {
+      "enabled": true,
+      "top_pct": 91.5,
+      "left_pct": 19.2,
+      "width_pct": 27.0,
+      "font_size_pt": 12,
+      "color": "#800020"
+    },
+    "participant_mobile": {
+      "enabled": true,
+      "top_pct": 91.5,
+      "left_pct": 61.5,
+      "width_pct": 27.0,
+      "font_size_pt": 12,
+      "color": "#800020"
+    },
+    "font_number": {
+      "size_pt": 16,
+      "weight": 900,
+      "color": "#800020"
+    },
+    "font_title": {
+      "size_pt": 9.5,
+      "weight": 700,
+      "color": "#1e293b"
+    }
+  },
+  "tickets": [
+    {
+      "ticket_id": "001",
+      "mode": "2-strip",
+      "batch_id": "batch_3_2-strip",
+      "strips": [
+        [
+          [
+            4,
+            12,
+            0,
+            30,
+            0,
+            53,
+            61,
+            0,
+            0
+          ],
+          [
+            0,
+            13,
+            20,
+            36,
+            0,
+            55,
+            0,
+            72,
+            0
+          ],
+          [
+            0,
+            17,
+            0,
+            39,
+            47,
+            59,
+            0,
+            0,
+            89
+          ]
+        ],
+        [
+          [
+            0,
+            10,
+            23,
+            32,
+            0,
+            51,
+            0,
+            0,
+            80
+          ],
+          [
+            0,
+            14,
+            0,
+            34,
+            41,
+            0,
+            69,
+            0,
+            83
+          ],
+          [
+            3,
+            0,
+            24,
+            35,
+            49,
+            0,
+            0,
+            75,
+            0
+          ]
+        ]
+      ]
+    },
+    {
+      "ticket_id": "002",
+      "mode": "2-strip",
+      "batch_id": "batch_3_2-strip",
+      "strips": [
+        [
+          [
+            7,
+            11,
+            22,
+            0,
+            43,
+            0,
+            0,
+            0,
+            85
+          ],
+          [
+            9,
+            0,
+            28,
+            0,
+            0,
+            57,
+            62,
+            0,
+            90
+          ],
+          [
+            0,
+            18,
+            29,
+            33,
+            0,
+            0,
+            64,
+            78,
+            0
+          ]
+        ],
+        [
+          [
+            0,
+            15,
+            25,
+            0,
+            44,
+            52,
+            0,
+            70,
+            0
+          ],
+          [
+            2,
+            16,
+            27,
+            0,
+            0,
+            0,
+            60,
+            71,
+            0
+          ],
+          [
+            0,
+            19,
+            0,
+            38,
+            0,
+            56,
+            0,
+            76,
+            86
+          ]
+        ]
+      ]
+    },
+    {
+      "ticket_id": "003",
+      "mode": "2-strip",
+      "batch_id": "batch_3_2-strip",
+      "strips": [
+        [
+          [
+            0,
+            0,
+            21,
+            31,
+            0,
+            50,
+            65,
+            73,
+            0
+          ],
+          [
+            8,
+            0,
+            0,
+            34,
+            46,
+            58,
+            0,
+            74,
+            0
+          ],
+          [
+            0,
+            12,
+            0,
+            37,
+            0,
+            0,
+            68,
+            79,
+            84
+          ]
+        ],
+        [
+          [
+            5,
+            0,
+            23,
+            0,
+            48,
+            0,
+            63,
+            0,
+            81
+          ],
+          [
+            0,
+            10,
+            26,
+            0,
+            0,
+            54,
+            66,
+            0,
+            82
+          ],
+          [
+            0,
+            0,
+            27,
+            33,
+            0,
+            0,
+            67,
+            77,
+            87
+          ]
+        ]
+      ]
+    }
+  ]
+}

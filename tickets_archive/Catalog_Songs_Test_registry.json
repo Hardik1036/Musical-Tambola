@@ -1,0 +1,154 @@
+{
+  "batch_name": "Catalog_Songs_Test",
+  "generated_at": "2026-10-10T19:26:55.687666",
+  "format_mode": "2-strip",
+  "print_mode": "direct_in_cell",
+  "total_sheets": 1,
+  "total_tickets": 1,
+  "template_path": "E:\\Musical tambola\\assets\\branding\\Garba_Night_Musical_Housie_Template.png",
+  "calibration": {
+    "id": "garba_night",
+    "name": "\ud83c\udfaa Garba Night Musical Housie (Pre-Designed Grid)",
+    "template_file": "assets/branding/Garba_Night_Musical_Housie_Template.png",
+    "print_mode": "direct_in_cell",
+    "width_px": 2400,
+    "height_px": 1792,
+    "strip_1": {
+      "top_pct": 14.45,
+      "left_pct": 1.96,
+      "width_pct": 96.04,
+      "height_pct": 28.07
+    },
+    "strip_2": {
+      "top_pct": 60.49,
+      "left_pct": 1.96,
+      "width_pct": 96.04,
+      "height_pct": 28.18
+    },
+    "badge_1": {
+      "enabled": true,
+      "top_pct": 4.91,
+      "left_pct": 7.08,
+      "width_pct": 13.42,
+      "height_pct": 6.25,
+      "color": "#ffffff",
+      "bg_color": "#7d143d",
+      "format": "\u091f\u093f\u0915\u091f \u0915\u094d\u0930\u092e\u093e\u0902\u0915 : {ticket_id}"
+    },
+    "badge_2": {
+      "enabled": true,
+      "top_pct": 51.78,
+      "left_pct": 7.08,
+      "width_pct": 13.42,
+      "height_pct": 6.03,
+      "color": "#ffffff",
+      "bg_color": "#7d143d",
+      "format": "\u091f\u093f\u0915\u091f \u0915\u094d\u0930\u092e\u093e\u0902\u0915 : {ticket_id}"
+    },
+    "participant_name": {
+      "enabled": true,
+      "top_pct": 91.5,
+      "left_pct": 19.2,
+      "width_pct": 27.0,
+      "font_size_pt": 12,
+      "color": "#800020"
+    },
+    "participant_mobile": {
+      "enabled": true,
+      "top_pct": 91.5,
+      "left_pct": 61.5,
+      "width_pct": 27.0,
+      "font_size_pt": 12,
+      "color": "#800020"
+    },
+    "font_number": {
+      "size_pt": 16,
+      "weight": 900,
+      "color": "#800020"
+    },
+    "font_title": {
+      "size_pt": 9.5,
+      "weight": 700,
+      "color": "#1e293b"
+    }
+  },
+  "tickets": [
+    {
+      "ticket_id": "001",
+      "mode": "2-strip",
+      "batch_id": "batch_1_2-strip",
+      "strips": [
+        [
+          [
+            0,
+            16,
+            20,
+            0,
+            40,
+            56,
+            0,
+            0,
+            83
+          ],
+          [
+            0,
+            0,
+            21,
+            38,
+            42,
+            0,
+            60,
+            0,
+            90
+          ],
+          [
+            5,
+            0,
+            0,
+            0,
+            49,
+            59,
+            61,
+            75,
+            0
+          ]
+        ],
+        [
+          [
+            6,
+            0,
+            0,
+            30,
+            48,
+            0,
+            65,
+            70,
+            0
+          ],
+          [
+            7,
+            13,
+            0,
+            32,
+            0,
+            57,
+            0,
+            72,
+            0
+          ],
+          [
+            0,
+            0,
+            22,
+            33,
+            0,
+            0,
+            68,
+            79,
+            85
+          ]
+        ]
+      ]
+    }
+  ]
+}

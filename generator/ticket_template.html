@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Musical Tambola - Printable Tickets</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap');
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f1f5f9;
+      color: #0f172a;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 10mm auto;
+      padding: 12mm;
+      background: #ffffff;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      page-break-after: always;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    @media print {
+      body {
+        background: transparent;
+      }
+      .page {
+        margin: 0;
+        box-shadow: none;
+        width: 100%;
+        min-height: auto;
+        page-break-after: always;
+        padding: 8mm;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+
+    .print-controls {
+      max-width: 210mm;
+      margin: 15px auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0f172a;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+    }
+
+    .btn-print {
+      background: #e11d48;
+      color: white;
+      border: none;
+      padding: 10px 24px;
+      font-size: 14px;
+      font-weight: 700;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .btn-print:hover {
+      background: #be123c;
+    }
+
+    /* Ticket Container */
+    .ticket-card {
+      border: 2px solid #be123c;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(190, 18, 60, 0.08);
+      margin-bottom: 12px;
+    }
+
+    /* Header */
+    .ticket-header {
+      background: linear-gradient(135deg, #881337 0%, #be123c 60%, #e11d48 100%);
+      color: white;
+      padding: 8px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #f59e0b;
+    }
+
+    .header-branding {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-branding img {
+      max-height: 28px;
+      border-radius: 4px;
+    }
+
+    .game-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      color: #fef08a;
+      text-transform: uppercase;
+    }
+
+    .ticket-badge {
+      background: #0f172a;
+      border: 1px solid #f59e0b;
+      color: #fef08a;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .strip-wrapper {
+      padding: 10px 12px;
+    }
+
+    .strip-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #be123c;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* 3x9 Grid Table */
+    .tambola-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      background: white;
+      border: 1.5px solid #0f172a;
+    }
+
+    .tambola-table td {
+      width: 11.11%;
+      height: 48px;
+      border: 1px solid #cbd5e1;
+      text-align: center;
+      vertical-align: middle;
+      padding: 2px 3px;
+      position: relative;
+    }
+
+    .cell-blank {
+      background-color: #f8fafc;
+      background-image: radial-gradient(#e2e8f0 0.8px, transparent 0.8px);
+      background-size: 6px 6px;
+    }
+
+    .cell-filled {
+      background: #fff;
+    }
+
+    .song-number {
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      font-weight: 800;
+      color: #be123c;
+      line-height: 1;
+      margin-bottom: 2px;
+    }
+
+    .song-title {
+      font-size: 9px;
+      font-weight: 600;
+      color: #1e293b;
+      line-height: 1.1;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      word-break: break-word;
+    }
+
+    /* Rules / Footer */
+    .ticket-footer {
+      background: #fdf2f8;
+      padding: 6px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px dashed #f43f5e;
+      font-size: 10px;
+      color: #475569;
+    }
+
+    .prize-hints {
+      font-weight: 600;
+      color: #881337;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="print-controls no-print">
+    <div>
+      <strong>Musical Tambola Printable Bundle</strong> &bull; Total Tickets: {{ tickets|length }}
+    </div>
+    <button class="btn-print" onclick="window.print()">🖨️ Print / Save to PDF</button>
+  </div>
+
+  {% for batch in page_batches %}
+  <div class="page">
+    {% for ticket in batch %}
+    <div class="ticket-card">
+      <div class="ticket-header">
+        <div class="header-branding">
+          {% if branding_logo_data %}
+            <img src="{{ branding_logo_data }}" alt="Logo">
+          {% endif %}
+          <div class="game-title">{{ event_title or "Musical Tambola Night" }}</div>
+        </div>
+        <div class="ticket-badge">TICKET #{{ ticket.ticket_id }}</div>
+      </div>
+
+      {% for strip in ticket.strips %}
+      <div class="strip-wrapper">
+        <div class="strip-label">
+          <span>Strip {{ loop.index }}</span>
+          <span>5 Items / Line &bull; 15 Songs Total</span>
+        </div>
+        <table class="tambola-table">
+          <tbody>
+            {% for row in strip %}
+            <tr>
+              {% for cell in row %}
+                {% if cell.id %}
+                  <td class="cell-filled">
+                    <div class="song-number">{{ cell.id }}</div>
+                    <div class="song-title">{{ cell.title }}</div>
+                  </td>
+                {% else %}
+                  <td class="cell-blank"></td>
+                {% endif %}
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endfor %}
+
+      <div class="ticket-footer">
+        <div class="prize-hints">⭐ Early 5 &bull; Lines 1, 2, 3 &bull; Four Corners &bull; Full House</div>
+        <div>Offline Verified &bull; ID: {{ ticket.ticket_id }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+
+</body>
+</html>

@@ -1,0 +1,231 @@
+{
+  "batch_name": "Test_Direct_In_Cell",
+  "generated_at": "2026-10-10T17:50:43.783809",
+  "format_mode": "2-strip",
+  "print_mode": "direct_in_cell",
+  "total_sheets": 2,
+  "total_tickets": 2,
+  "template_path": "E:\\Musical tambola\\assets\\branding\\Garba_Night_Musical_Housie_Template.png",
+  "calibration": {
+    "id": "garba_night",
+    "name": "\ud83c\udfaa Garba Night Musical Housie (Pre-Designed Grid)",
+    "template_file": "assets/branding/Garba_Night_Musical_Housie_Template.png",
+    "print_mode": "direct_in_cell",
+    "width_px": 2400,
+    "height_px": 1792,
+    "strip_1": {
+      "top_pct": 14.45,
+      "left_pct": 2.0,
+      "width_pct": 96.0,
+      "height_pct": 28.07
+    },
+    "strip_2": {
+      "top_pct": 60.49,
+      "left_pct": 2.0,
+      "width_pct": 96.0,
+      "height_pct": 28.18
+    },
+    "badge_1": {
+      "enabled": true,
+      "top_pct": 5.6,
+      "left_pct": 7.1,
+      "width_pct": 13.0,
+      "height_pct": 4.8,
+      "color": "#ffffff",
+      "bg_color": "#800020",
+      "format": "\u091f\u093f\u0915\u091f \u0915\u094d\u0930\u092e\u093e\u0902\u0915 : {ticket_id}"
+    },
+    "badge_2": {
+      "enabled": true,
+      "top_pct": 51.9,
+      "left_pct": 7.1,
+      "width_pct": 13.0,
+      "height_pct": 4.8,
+      "color": "#ffffff",
+      "bg_color": "#800020",
+      "format": "\u091f\u093f\u0915\u091f \u0915\u094d\u0930\u092e\u093e\u0902\u0915 : {ticket_id}"
+    },
+    "participant_name": {
+      "enabled": true,
+      "top_pct": 91.5,
+      "left_pct": 20.0,
+      "width_pct": 28.0,
+      "font_size_pt": 11,
+      "color": "#800020"
+    },
+    "participant_mobile": {
+      "enabled": true,
+      "top_pct": 91.5,
+      "left_pct": 63.0,
+      "width_pct": 26.0,
+      "font_size_pt": 11,
+      "color": "#800020"
+    },
+    "font_number": {
+      "size_pt": 16,
+      "weight": 900,
+      "color": "#800020"
+    },
+    "font_title": {
+      "size_pt": 9.5,
+      "weight": 700,
+      "color": "#1e293b"
+    }
+  },
+  "tickets": [
+    {
+      "ticket_id": "001",
+      "mode": "2-strip",
+      "batch_id": "batch_2_2-strip",
+      "strips": [
+        [
+          [
+            1,
+            16,
+            0,
+            33,
+            46,
+            0,
+            0,
+            0,
+            84
+          ],
+          [
+            2,
+            18,
+            0,
+            0,
+            0,
+            57,
+            65,
+            0,
+            90
+          ],
+          [
+            8,
+            0,
+            22,
+            34,
+            0,
+            0,
+            68,
+            75,
+            0
+          ]
+        ],
+        [
+          [
+            4,
+            0,
+            29,
+            31,
+            0,
+            0,
+            61,
+            70,
+            0
+          ],
+          [
+            9,
+            0,
+            0,
+            0,
+            42,
+            52,
+            62,
+            76,
+            0
+          ],
+          [
+            0,
+            17,
+            0,
+            37,
+            0,
+            58,
+            64,
+            0,
+            85
+          ]
+        ]
+      ]
+    },
+    {
+      "ticket_id": "002",
+      "mode": "2-strip",
+      "batch_id": "batch_2_2-strip",
+      "strips": [
+        [
+          [
+            3,
+            0,
+            24,
+            0,
+            43,
+            0,
+            66,
+            71,
+            0
+          ],
+          [
+            0,
+            19,
+            28,
+            0,
+            0,
+            54,
+            67,
+            0,
+            81
+          ],
+          [
+            0,
+            0,
+            0,
+            30,
+            45,
+            59,
+            0,
+            72,
+            86
+          ]
+        ],
+        [
+          [
+            5,
+            0,
+            23,
+            38,
+            0,
+            53,
+            60,
+            0,
+            0
+          ],
+          [
+            6,
+            0,
+            0,
+            0,
+            40,
+            55,
+            69,
+            79,
+            0
+          ],
+          [
+            0,
+            12,
+            26,
+            0,
+            41,
+            56,
+            0,
+            0,
+            88
+          ]
+        ]
+      ]
+    }
+  ]
+}

@@ -669,6 +669,24 @@ async def import_catalog_file(file: UploadFile = File(...)):
 # Serve Single Page Application at root /
 @app.get("/", response_class=HTMLResponse)
 def index_page():
+    index_file = BASE_DIR / "index.html"
+    if index_file.exists():
+        with open(index_file, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse(content=INDEX_HTML)
+
+
+@app.get("/stage", response_class=HTMLResponse)
+def stage_page():
+    index_file = BASE_DIR / "index.html"
+    if index_file.exists():
+        with open(index_file, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse(content=INDEX_HTML)
+
+
+@app.get("/studio", response_class=HTMLResponse)
+def studio_page():
     return HTMLResponse(content=INDEX_HTML)
 
 

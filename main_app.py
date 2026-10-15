@@ -199,26 +199,27 @@ def scan_audio_folder(folder_path: str) -> Dict[int, str]:
     return matched
 
 
-def get_song_cue(number: int, cfg: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def get_song_cue(number: Any, cfg: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     Retrieves resolved metadata, start timestamp, clip duration, and file path for a track.
-    Returns:
-      {
-        "title": str,
-        "file_path": Optional[str],
-        "start_time": float,
-        "duration": float
-      }
+    Handles number as int 1, string '1', or zero-padded '01'.
     """
+    try:
+        num_int = int(str(number).strip().lstrip("0") or "0")
+    except Exception:
+        num_int = 1
+
     if cfg is None:
         cfg = load_audio_config()
 
-    num_str = str(number)
-    cue_dict = cfg.get("song_cues", {}).get(num_str, {})
+    num_str = str(num_int)
+    num_pad = f"{num_int:02d}"
+    cues = cfg.get("song_cues", {})
+    cue_dict = cues.get(num_str) or cues.get(num_pad) or cues.get(str(number)) or {}
 
     # Title
-    song_info = song_bank.get_song(number)
-    title = cue_dict.get("title") or (song_info.get("title") if song_info else f"Track #{number}")
+    song_info = song_bank.get_song(num_int)
+    title = cue_dict.get("title") or (song_info.get("title") if song_info else f"Track #{num_int}")
 
     # Start time & duration
     start_time = parse_time_to_seconds(cue_dict.get("start_time", 0.0))
@@ -229,32 +230,7 @@ def get_song_cue(number: int, cfg: Optional[Dict[str, Any]] = None) -> Dict[str,
     if file_path and Path(file_path).exists():
         resolved_path = str(Path(file_path).resolve())
     else:
-        resolved_path = None
-        folder = cfg.get("audio_folder_path")
-        if folder and Path(folder).is_dir():
-            f_dir = Path(folder)
-            id_patterns = [str(number), f"{number:02d}", f"track{number}", f"track_{number}", f"track {number}"]
-            for pat in id_patterns:
-                for ext in AUDIO_EXTENSIONS:
-                    p = f_dir / f"{pat}{ext}"
-                    if p.exists():
-                        resolved_path = str(p.resolve())
-                        break
-                if resolved_path:
-                    break
-
-            if not resolved_path:
-                try:
-                    for entry in f_dir.iterdir():
-                        if entry.is_file() and entry.suffix.lower() in AUDIO_EXTENSIONS:
-                            if match_song_number_from_filename(entry.name) == number:
-                                resolved_path = str(entry.resolve())
-                                break
-                except Exception:
-                    pass
-
-        if not resolved_path:
-            resolved_path = song_bank.find_audio_file(number)
+        resolved_path = song_bank.find_audio_file(num_int)
 
     return {
         "title": title,
@@ -939,8 +915,17 @@ class LiveStageScreen(tk.Frame):
                 pass
             self._stop_timer = None
 
+        if not pygame.mixer.get_init():
+            try:
+                pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=2048)
+            except Exception:
+                pass
+
         cue = get_song_cue(number)
         audio_file = cue.get("file_path")
+        if not audio_file or not os.path.exists(audio_file):
+            audio_file = song_bank.find_audio_file(number)
+
         start_sec = cue.get("start_time", 0.0)
         duration = cue.get("duration", 0.0)
 
@@ -3124,8 +3109,16 @@ class AudioCatalogScreen(tk.Frame):
                 pass
             self._preview_timer = None
 
+        if not pygame.mixer.get_init():
+            try:
+                pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=2048)
+            except Exception:
+                pass
+
         cue = get_song_cue(self.selected_song_id)
         audio_path = cue.get("file_path")
+        if not audio_path or not os.path.exists(audio_path):
+            audio_path = song_bank.find_audio_file(self.selected_song_id)
         if audio_path and os.path.exists(audio_path):
             try:
                 pygame.mixer.music.load(audio_path)

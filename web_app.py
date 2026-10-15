@@ -70,8 +70,10 @@ def resolve_song_meta(num: int) -> Dict[str, Any]:
     """Resolves full metadata, English & Hindi titles, decade pillar, and audio file for a song 1-90."""
     cfg = load_audio_config()
     cues = cfg.get("song_cues", {})
-    cue = cues.get(str(num), {})
+    cue = cues.get(str(num)) or cues.get(f"{num:02d}") or {}
     file_path = cue.get("file_path", "")
+    if not file_path or not Path(file_path).exists():
+        file_path = song_bank.find_audio_file(num) or ""
     override_title = (cue.get("title") or "").strip()
 
     db_song = database.get_song(num) or {}
@@ -205,31 +207,66 @@ def reset_session():
 
 
 @app.get("/api/audio/{song_id}")
-def stream_audio(song_id: int):
-    """Stream audio file for the requested song ID with Range request support."""
-    cue = get_song_cue(song_id)
+def stream_audio(song_id: str):
+    """Stream audio file for the requested song ID with HTTP Range request & inline playback support."""
+    try:
+        clean_id = int(str(song_id).strip().lstrip("0") or "0")
+    except Exception:
+        clean_id = 1
+
+    cue = get_song_cue(clean_id)
     audio_path = cue.get("file_path")
     p = Path(audio_path) if audio_path else None
 
     if not p or not p.exists():
-        song = database.get_song(song_id)
+        p_str = song_bank.find_audio_file(clean_id)
+        if p_str:
+            p = Path(p_str)
+
+    if not p or not p.exists():
+        song = database.get_song(clean_id)
         if song and song.get("audio_path"):
             cand = Path(song["audio_path"])
             if cand.exists():
                 p = cand
 
     if not p or not p.exists():
-        for ext in [".wav", ".mp3", ".ogg", ".m4a", ".aac", ".flac"]:
-            cand = SONGS_DIR / f"{song_id}{ext}"
+        for ext in [".mp3", ".wav", ".ogg", ".m4a", ".aac", ".flac"]:
+            cand = SONGS_DIR / f"{clean_id}{ext}"
             if cand.exists():
                 p = cand
                 break
 
     if not p or not p.exists():
-        raise HTTPException(status_code=404, detail=f"Audio file for Song #{song_id} not found")
+        raise HTTPException(status_code=404, detail=f"Audio file for Song #{clean_id} not found")
 
-    media_type = "audio/wav" if p.suffix.lower() == ".wav" else ("audio/mpeg" if p.suffix.lower() == ".mp3" else "application/octet-stream")
-    return FileResponse(path=str(p), media_type=media_type, filename=p.name)
+    ext = p.suffix.lower()
+    mime_map = {
+        ".mp3": "audio/mpeg",
+        ".wav": "audio/wav",
+        ".ogg": "audio/ogg",
+        ".m4a": "audio/mp4",
+        ".flac": "audio/flac",
+        ".aac": "audio/aac",
+    }
+    media_type = mime_map.get(ext, "audio/mpeg")
+
+    headers = {
+        "Accept-Ranges": "bytes",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+        "Access-Control-Allow-Headers": "*",
+        "Access-Control-Expose-Headers": "Content-Range, Accept-Ranges, Content-Length",
+        "Cache-Control": "public, max-age=3600",
+    }
+
+    return FileResponse(
+        path=str(p),
+        media_type=media_type,
+        content_disposition_type="inline",
+        headers=headers
+    )
+
 
 
 @app.post("/api/audio/seek")

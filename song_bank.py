@@ -3,6 +3,7 @@ song_bank.py - 90 Indexed Songs Mapped Across 9 Columns
 Provides universal song catalog, decade column mapping, and audio file resolution.
 """
 import os
+import re
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
 
@@ -211,18 +212,24 @@ def get_songs_for_column(col_idx: int) -> List[Dict[str, Any]]:
     return [SONG_BANK[i] for i in range(start, end + 1) if i in SONG_BANK]
 
 
-def find_audio_file(song_id: int, base_dir: Optional[Path] = None) -> Optional[str]:
+def find_audio_file(song_id: Any, base_dir: Optional[Path] = None) -> Optional[str]:
     """
-    Search for audio file for song_id.
+    Search for audio file for song_id (handles int 1, '1', '01').
     Checks:
     - audio_config.json custom folder and mapped file_path
-    - songs/<song_id>.mp3, songs/<song_id>.wav
-    - assets/songs/<song_id>.mp3, assets/songs/<song_id>.wav
-    - with zero padding: 01.mp3, etc.
+    - Prefix scanning in custom folder (e.g. '1. Khaike Paan Banaras Wala.mp3', '01 - ...')
+    - songs/ and assets/songs/ for 1.mp3, 01.mp3, track1.mp3, etc.
     Returns absolute path string if found, else None.
     """
+    try:
+        s_id = int(str(song_id).strip().lstrip("0") or "0")
+    except Exception:
+        s_id = 1
+
     if base_dir is None:
         base_dir = Path(__file__).resolve().parent
+
+    exts = [".mp3", ".wav", ".ogg", ".flac", ".m4a", ".aac"]
 
     # 1. Check audio_config.json if present
     cfg_file = base_dir / "audio_config.json"
@@ -231,42 +238,60 @@ def find_audio_file(song_id: int, base_dir: Optional[Path] = None) -> Optional[s
             import json
             with open(cfg_file, "r", encoding="utf-8") as f:
                 cfg = json.load(f)
-            # Check explicit song_cues file_path
-            cue_path = cfg.get("song_cues", {}).get(str(song_id), {}).get("file_path")
-            if cue_path and Path(cue_path).exists():
-                return str(Path(cue_path).resolve())
+
+            cues = cfg.get("song_cues", {})
+            # Check both "1" and "01"
+            for k in [str(s_id), f"{s_id:02d}"]:
+                cue_path = cues.get(k, {}).get("file_path")
+                if cue_path and Path(cue_path).exists():
+                    return str(Path(cue_path).resolve())
 
             # Check custom audio folder
             custom_folder = cfg.get("audio_folder_path")
             if custom_folder and Path(custom_folder).is_dir():
                 cf_path = Path(custom_folder)
-                exts = [".mp3", ".wav", ".ogg", ".flac", ".m4a", ".aac"]
-                pats = [str(song_id), f"{song_id:02d}", f"track{song_id}", f"track_{song_id}", f"track {song_id}"]
+
+                # Exact pattern match
+                pats = [str(s_id), f"{s_id:02d}", f"track{s_id}", f"track_{s_id}", f"track {s_id}"]
                 for p in pats:
                     for ext in exts:
                         fp = cf_path / f"{p}{ext}"
                         if fp.exists():
                             return str(fp.resolve())
+
+                # Scan folder for files starting with song number (e.g. '1. Khaike Paan Banaras Wala.mp3')
+                pattern = re.compile(rf'^(?:track[_\s-]*)?0*{s_id}[\s\._\-]', re.IGNORECASE)
+                for entry in cf_path.iterdir():
+                    if entry.is_file() and entry.suffix.lower() in exts:
+                        if pattern.match(entry.stem) or entry.stem == str(s_id) or entry.stem == f"{s_id:02d}":
+                            return str(entry.resolve())
         except Exception:
             pass
 
+    # 2. Check candidate local directories
     candidate_dirs = [
         base_dir / "songs",
         base_dir / "assets" / "songs",
         base_dir / "assets",
     ]
-
-    extensions = [".mp3", ".wav", ".ogg", ".flac", ".m4a", ".aac"]
-    id_patterns = [str(song_id), f"{song_id:02d}", f"track{song_id}", f"track_{song_id}"]
+    pattern = re.compile(rf'^(?:track[_\s-]*)?0*{s_id}[\s\._\-]', re.IGNORECASE)
 
     for d in candidate_dirs:
-        if not d.exists():
+        if not d.exists() or not d.is_dir():
             continue
-        for pat in id_patterns:
-            for ext in extensions:
-                p = d / f"{pat}{ext}"
-                if p.exists():
-                    return str(p.resolve())
+        # Direct pattern match
+        pats = [str(s_id), f"{s_id:02d}", f"track{s_id}", f"track_{s_id}"]
+        for p in pats:
+            for ext in exts:
+                fp = d / f"{p}{ext}"
+                if fp.exists():
+                    return str(fp.resolve())
+        # Prefix match
+        for entry in d.iterdir():
+            if entry.is_file() and entry.suffix.lower() in exts:
+                if pattern.match(entry.stem) or entry.stem == str(s_id) or entry.stem == f"{s_id:02d}":
+                    return str(entry.resolve())
 
     return None
+
 

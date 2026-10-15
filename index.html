@@ -1929,6 +1929,10 @@
     }
 
     async function drawNextSong() {
+      // Immediately capture user gesture to unlock Web Audio API & AudioContext
+      initWebAudio();
+      resumeAudioContext();
+
       try {
         const res = await fetch('/api/call/random', { method: 'POST' });
         if (!res.ok) {
@@ -1961,6 +1965,8 @@
 
     async function manualCallSong(songId) {
       if (gameState.calledNumbers.includes(songId)) return;
+      initWebAudio();
+      resumeAudioContext();
       try {
         const res = await fetch(`/api/call/${songId}`, { method: 'POST' });
         if (res.ok) {
@@ -2007,6 +2013,14 @@
     let isAudioMuted = false;
     let prevVolumeBeforeMute = 1.0;
 
+    async function resumeAudioContext() {
+      if (audioCtx && audioCtx.state === 'suspended') {
+        try {
+          await audioCtx.resume();
+        } catch (e) {}
+      }
+    }
+
     function initWebAudio() {
       if (audioCtx) {
         if (audioCtx.state === 'suspended') {
@@ -2024,9 +2038,13 @@
 
         const player = document.getElementById('mainAudioPlayer');
         player.crossOrigin = "anonymous";
-        audioSourceNode = audioCtx.createMediaElementSource(player);
-        audioSourceNode.connect(analyserNode);
-        analyserNode.connect(audioCtx.destination);
+        try {
+          audioSourceNode = audioCtx.createMediaElementSource(player);
+          audioSourceNode.connect(analyserNode);
+          analyserNode.connect(audioCtx.destination);
+        } catch (err) {
+          console.warn("MediaElementSource connection warning:", err);
+        }
         freqDataArray = new Uint8Array(analyserNode.frequencyBinCount); // 128 bins
 
         const sourceBadge = document.getElementById('sphereFftSourceBadge');
@@ -2057,34 +2075,66 @@
     async function playSongAudio(songId) {
       currentActiveSongId = songId;
       initWebAudio();
+      await resumeAudioContext();
 
       const player = document.getElementById('mainAudioPlayer');
       const songObj = gameState.songsDict[songId] || {};
       const title = songObj.title || `Song #${songId}`;
-      const startSec = songObj.start_time || 0.0;
+      const startSec = Math.max(0, parseFloat(songObj.start_time || 0));
       currentActiveStartCue = startSec;
 
-      player.src = `/api/audio/${songId}`;
+      // Stop previous playback and reset listeners to avoid race condition on first track
+      player.pause();
+      player.onloadedmetadata = null;
+      player.oncanplay = null;
+
+      // Cache-buster query avoids stale 304 or byte-range stalls on 1st load
+      player.src = `/api/audio/${songId}?t=${Date.now()}`;
       player.load();
 
       updateAudioStatusHUD(`Loading — ${title} (#${String(songId).padStart(2, '0')})`, false);
 
-      player.onloadedmetadata = () => {
+      let hasFired = false;
+      const onCanPlay = async () => {
+        if (hasFired) return;
+        hasFired = true;
+
+        player.removeEventListener('loadedmetadata', onCanPlay);
+        player.removeEventListener('canplay', onCanPlay);
+
         const dur = player.duration || 0;
         updateScrubberDuration(dur);
         updateCueMarkerPositions(startSec, dur);
 
-        if (startSec > 0 && startSec < dur) {
-          player.currentTime = startSec;
+        // Apply start_time cue safely after metadata has loaded
+        if (startSec > 0 && startSec < (dur || Infinity)) {
+          try {
+            player.currentTime = startSec;
+          } catch (e) {
+            console.warn("Could not set currentTime yet:", e);
+          }
         }
-        player.play().then(() => {
+
+        await resumeAudioContext();
+
+        try {
+          await player.play();
           updateAudioStatusHUD(`Playing — ${title} (#${String(songId).padStart(2, '0')})`, true);
           updatePlayPauseButtonUI(true);
-        }).catch(err => {
+        } catch (err) {
+          console.warn("Playback blocked / tap to play:", err);
           updateAudioStatusHUD(`Ready — ${title} (Tap Play)`, false);
           updatePlayPauseButtonUI(false);
-        });
+        }
       };
+
+      player.addEventListener('loadedmetadata', onCanPlay, { once: true });
+      player.addEventListener('canplay', onCanPlay, { once: true });
+
+      if (player.readyState >= 1) {
+        onCanPlay();
+      }
+    }
 
       player.ontimeupdate = () => {
         if (!isUserScrubbing) {

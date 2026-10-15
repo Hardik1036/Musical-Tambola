@@ -666,9 +666,28 @@ async def import_catalog_file(file: UploadFile = File(...)):
     return {"status": "success", "imported": total, "mapped": mapped}
 
 
-# Serve Single Page Application at root /
+# Serve Single Page Application at root / and new UI routes
 @app.get("/", response_class=HTMLResponse)
 def index_page():
+    index_file = BASE_DIR / "index.html"
+    if index_file.exists():
+        with open(index_file, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse(content=INDEX_HTML)
+
+
+@app.get("/new-ui", response_class=HTMLResponse)
+@app.get("/stage", response_class=HTMLResponse)
+def new_ui_page():
+    index_file = BASE_DIR / "index.html"
+    if index_file.exists():
+        with open(index_file, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse(content=INDEX_HTML)
+
+
+@app.get("/studio", response_class=HTMLResponse)
+def studio_page():
     return HTMLResponse(content=INDEX_HTML)
 
 

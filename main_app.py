@@ -2,18 +2,18 @@
 Musical Housie (Tambola) - Master Desktop Application & Host Studio
 ===================================================================
 A complete, production-grade, multi-screen offline desktop application
-implementing a clean, solid body aesthetic using light pastel/accent colors
-(#F4F6FB, #FFFFFF, #E5EAF2, #5B61F4, #05B384, #FF5A5F, #F49D37).
-
-Features:
-  - Screen 1: Live Caller & Master Stage (Hero Calling Deck, Animated Equalizer,
-              Seek Scrubber, 10x9 Calling Board with Satyam/Shivam/Sundaram pillars)
-  - Screen 2: Lucky Draw & Raffle Module (Animated rolling lottery slot effect,
-              configurable winners, tie-breaker categories, persistent audit log)
-  - Screen 3: Claim Verifier & Ticket Inspector (Batch registry auto-loader,
+featuring a solid off-white/light theme (#F4F7FC), solid white cards (#FFFFFF),
+crisp borders (#E2E8F4), and rich micro-interactions:
+  - Screen 1: Live Ball Roller & Caller Stage (Physics-based lotto ball chute & roll,
+              Hero calling deck, Pygame audio engine, master 10x9 calling matrix)
+  - Screen 2: 3D Particle Audio Sphere of Dots (Fibonacci lattice distribution,
+              continuous 3D rotation, real-time audio beat modulation & breathing)
+  - Screen 3: Lucky Draw & Slot Machine Roller (Mechanical rotating digit drums with
+              motion blur, configurable winners, tie-breaker categories, persistent audit log)
+  - Screen 4: Claim Verifier & Ticket Inspector (Batch registry auto-loader,
               interactive 3x9 visual grid overlay, real-time auto-verdict engine)
-  - Screen 4: Ticket Generator & Template Studio (Print-ahead batch generator,
-              strict non-destructive collision protection, template picker & browser)
+  - Screen 5: Ticket Generator & Template Studio (Print-ahead batch generator,
+              STRICT non-destructive collision protection, template picker & browser)
 
 Zero cloud dependencies. Built with PyQt/PySide and Pygame.
 """
@@ -37,7 +37,8 @@ if str(BASE_DIR) not in sys.path:
 # Qt Compatibility Layer
 from qt_compat import (
     Qt, QTimer, pyqtSignal,
-    QFont, QColor, QIcon, QPainter, QPen, QBrush, QLinearGradient, QPainterPath, QPixmap, QRect, QRectF,
+    QFont, QColor, QIcon, QPainter, QPen, QBrush, QLinearGradient, QRadialGradient,
+    QPainterPath, QPixmap, QRect, QRectF, QPolygon,
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QSlider, QProgressBar, QFrame, QMessageBox, QScrollArea,
     QCheckBox, QRadioButton, QButtonGroup, QSizePolicy, QSpinBox, QComboBox,
@@ -55,38 +56,38 @@ from generator.generate_housie_tickets import (
 )
 
 # ---------------------------------------------------------------------------
-# Design System & Color Palette Tokens (Light Pastel / Accent System)
+# Design System & Color Palette Tokens (Off-White Solid Theme)
 # ---------------------------------------------------------------------------
 PALETTE = {
-    "bg_main": "#F4F6FB",          # Solid off-white main background
+    "bg_main": "#F4F7FC",          # Solid off-white main background
     "bg_card": "#FFFFFF",          # Pure white container cards
     "bg_card_alt": "#F8FAFD",      # Light tinted card
-    "border": "#E5EAF2",           # Crisp border
+    "border": "#E2E8F4",           # Crisp border
     "border_light": "#EDF2F7",     # Ultra-subtle border
-    "border_focus": "#5B61F4",     # Soft indigo border highlight
+    "border_focus": "#4F46E5",     # Soft indigo border highlight
 
-    "indigo": "#5B61F4",           # Soft Indigo (Primary action)
-    "indigo_hover": "#4D53E8",
-    "indigo_light": "#EEF0FE",
-    "indigo_dark": "#3B40B5",
+    "indigo": "#4F46E5",           # Soft Indigo (Primary action)
+    "indigo_hover": "#4338CA",
+    "indigo_light": "#EEF2FF",
+    "indigo_dark": "#3730A3",
 
-    "emerald": "#05B384",          # Emerald (Called / Verified / Success)
-    "emerald_hover": "#04966F",
-    "emerald_light": "#E6F8F3",
-    "emerald_dark": "#036C50",
+    "emerald": "#059669",          # Emerald (Called / Verified / Success)
+    "emerald_hover": "#047857",
+    "emerald_light": "#ECFDF5",
+    "emerald_dark": "#065F46",
 
-    "coral": "#FF5A5F",            # Coral (Pending / Warning / Alert)
-    "coral_hover": "#E84E53",
-    "coral_light": "#FFF0F1",
-    "coral_dark": "#BA3A3E",
+    "coral": "#F43F5E",            # Light Coral (Pending / Warning / Alert)
+    "coral_hover": "#E11D48",
+    "coral_light": "#FFF1F2",
+    "coral_dark": "#9F1239",
 
-    "amber": "#F49D37",            # Amber / Gold (Active Track / Highlight)
-    "amber_hover": "#E08C25",
-    "amber_light": "#FEF5EB",
-    "amber_dark": "#B36B15",
+    "amber": "#D97706",            # Amber / Gold (Active Track / Highlight)
+    "amber_hover": "#B45309",
+    "amber_light": "#FFFBEB",
+    "amber_dark": "#78350F",
 
-    "text_primary": "#1E293B",     # Dark Slate primary text
-    "text_secondary": "#64748B",   # Medium Slate secondary text
+    "text_primary": "#0F172A",     # Dark Slate primary text
+    "text_secondary": "#475569",   # Medium Slate secondary text
     "text_muted": "#94A3B8",       # Muted slate text
     "text_white": "#FFFFFF",
 
@@ -112,14 +113,14 @@ QTabBar::tab {{
     color: {PALETTE['text_secondary']};
     font-weight: 600;
     font-size: 13px;
-    padding: 10px 20px;
-    margin-right: 8px;
+    padding: 11px 20px;
+    margin-right: 6px;
     margin-top: 6px;
     border: 1px solid {PALETTE['border']};
     border-bottom: none;
     border-top-left-radius: 10px;
     border-top-right-radius: 10px;
-    min-width: 130px;
+    min-width: 140px;
 }}
 
 QTabBar::tab:selected {{
@@ -153,13 +154,18 @@ QPushButton {{
     border: 1px solid {PALETTE['border']};
     border-radius: 8px;
     padding: 8px 16px;
-    font-size: 13px;
     font-weight: 600;
+    font-size: 13px;
 }}
 
 QPushButton:hover {{
     background-color: {PALETTE['bg_card_alt']};
-    border-color: #CBD5E1;
+    border-color: {PALETTE['indigo']};
+    color: {PALETTE['indigo']};
+}}
+
+QPushButton:pressed {{
+    background-color: {PALETTE['indigo_light']};
 }}
 
 QPushButton.btn-primary {{
@@ -167,9 +173,11 @@ QPushButton.btn-primary {{
     color: {PALETTE['text_white']};
     border: 1px solid {PALETTE['indigo']};
 }}
+
 QPushButton.btn-primary:hover {{
     background-color: {PALETTE['indigo_hover']};
     border-color: {PALETTE['indigo_hover']};
+    color: {PALETTE['text_white']};
 }}
 
 QPushButton.btn-emerald {{
@@ -177,9 +185,11 @@ QPushButton.btn-emerald {{
     color: {PALETTE['text_white']};
     border: 1px solid {PALETTE['emerald']};
 }}
+
 QPushButton.btn-emerald:hover {{
     background-color: {PALETTE['emerald_hover']};
     border-color: {PALETTE['emerald_hover']};
+    color: {PALETTE['text_white']};
 }}
 
 QPushButton.btn-amber {{
@@ -187,9 +197,11 @@ QPushButton.btn-amber {{
     color: {PALETTE['text_white']};
     border: 1px solid {PALETTE['amber']};
 }}
+
 QPushButton.btn-amber:hover {{
     background-color: {PALETTE['amber_hover']};
     border-color: {PALETTE['amber_hover']};
+    color: {PALETTE['text_white']};
 }}
 
 QPushButton.btn-coral {{
@@ -197,34 +209,61 @@ QPushButton.btn-coral {{
     color: {PALETTE['text_white']};
     border: 1px solid {PALETTE['coral']};
 }}
+
 QPushButton.btn-coral:hover {{
     background-color: {PALETTE['coral_hover']};
     border-color: {PALETTE['coral_hover']};
+    color: {PALETTE['text_white']};
 }}
 
-/* Inputs, Spinners & Combos */
+/* Inputs & Combos */
 QLineEdit, QSpinBox, QComboBox {{
     background-color: {PALETTE['bg_card']};
     color: {PALETTE['text_primary']};
-    border: 1.5px solid {PALETTE['border']};
+    border: 1px solid {PALETTE['border']};
     border-radius: 8px;
     padding: 7px 12px;
     font-size: 13px;
 }}
 
 QLineEdit:focus, QSpinBox:focus, QComboBox:focus {{
-    border-color: {PALETTE['indigo']};
+    border: 1.5px solid {PALETTE['indigo']};
+    background-color: #FFFFFF;
 }}
 
 QComboBox::drop-down {{
     border: none;
-    width: 24px;
+    padding-right: 8px;
+}}
+
+/* Sliders */
+QSlider::groove:horizontal {{
+    height: 6px;
+    background: {PALETTE['border']};
+    border-radius: 3px;
+}}
+
+QSlider::sub-page:horizontal {{
+    background: {PALETTE['indigo']};
+    border-radius: 3px;
+}}
+
+QSlider::handle:horizontal {{
+    background: {PALETTE['indigo']};
+    border: 2px solid #FFFFFF;
+    width: 16px;
+    margin-top: -5px;
+    margin-bottom: -5px;
+    border-radius: 8px;
+}}
+
+QSlider::handle:horizontal:hover {{
+    background: {PALETTE['indigo_hover']};
 }}
 
 /* Tables */
 QTableWidget {{
     background-color: {PALETTE['bg_card']};
-    color: {PALETTE['text_primary']};
     border: 1px solid {PALETTE['border']};
     border-radius: 8px;
     gridline-color: {PALETTE['border_light']};
@@ -235,756 +274,1225 @@ QHeaderView::section {{
     background-color: {PALETTE['bg_card_alt']};
     color: {PALETTE['text_secondary']};
     font-weight: 700;
-    font-size: 11px;
-    padding: 8px 6px;
     border: none;
-    border-bottom: 1.5px solid {PALETTE['border']};
+    border-bottom: 1px solid {PALETTE['border']};
+    padding: 6px 10px;
 }}
 
-/* Sliders */
-QSlider::groove:horizontal {{
-    height: 6px;
-    background: {PALETTE['border']};
-    border-radius: 3px;
-}}
-QSlider::sub-page:horizontal {{
-    background: {PALETTE['indigo']};
-    border-radius: 3px;
-}}
-QSlider::handle:horizontal {{
-    background: {PALETTE['indigo']};
-    width: 16px;
-    height: 16px;
-    margin: -5px 0;
-    border-radius: 8px;
-    border: 2px solid #FFFFFF;
-}}
-QSlider::handle:horizontal:hover {{
-    background: {PALETTE['indigo_hover']};
-}}
-
-/* Progress Bar */
-QProgressBar {{
-    background-color: {PALETTE['border_light']};
-    border: 1px solid {PALETTE['border']};
-    border-radius: 6px;
-    text-align: center;
-    color: {PALETTE['text_primary']};
-    font-size: 11px;
-    font-weight: 700;
-    height: 14px;
-}}
-QProgressBar::chunk {{
-    background-color: {PALETTE['emerald']};
-    border-radius: 5px;
-}}
-
-/* Scrollbar */
 QScrollBar:vertical {{
     border: none;
     background: {PALETTE['bg_main']};
     width: 8px;
-    margin: 0;
     border-radius: 4px;
 }}
+
 QScrollBar::handle:vertical {{
-    background: #CBD5E1;
-    min-height: 24px;
+    background: {PALETTE['border']};
+    min-height: 20px;
     border-radius: 4px;
 }}
+
 QScrollBar::handle:vertical:hover {{
-    background: #94A3B8;
-}}
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
-    height: 0px;
+    background: {PALETTE['text_muted']};
 }}
 """
 
 
 # ---------------------------------------------------------------------------
-# Animated Equalizer Graphic Widget
+# WIDGET 1: Interactive Physics-Based Lotto Ball Drop & Chute Roller
 # ---------------------------------------------------------------------------
-class EqualizerVisualizer(QWidget):
+class LottoBallChuteWidget(QWidget):
     """
-    Real-time animated reactive sound equalizer bar graphic.
-    Pulses rhythmically when music is playing, drops to a gentle idle baseline when stopped.
+    Simulates a high-fidelity lotto ball dropping through an acrylic chute,
+    bouncing with physical damping, and rolling 360° across a deceleration track
+    into the hero cradle socket before revealing the drawn number.
     """
-    def __init__(self, num_bars: int = 24, parent=None):
-        super().__init__(parent)
-        self.num_bars = num_bars
-        self.is_active = False
-        self.setMinimumHeight(44)
-        self.setMaximumHeight(54)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+    ball_settled = pyqtSignal(int)
 
-        # Bar heights and velocities
-        self.levels = [0.15] * self.num_bars
-        self.target_levels = [0.15] * self.num_bars
-        self.phase = 0.0
-
-        # Animation timer (35ms ~ 28 FPS)
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self._update_levels)
-        self.timer.start(35)
-
-    def set_active(self, active: bool):
-        self.is_active = active
-
-    def _update_levels(self):
-        self.phase += 0.12
-        if self.is_active:
-            for i in range(self.num_bars):
-                # Harmonic wave pattern with slight random jitter
-                wave1 = math.sin(self.phase + i * 0.4) * 0.45
-                wave2 = math.cos(self.phase * 1.5 - i * 0.25) * 0.35
-                jitter = random.uniform(0.0, 0.25)
-                val = max(0.12, min(1.0, 0.45 + wave1 + wave2 + jitter))
-                self.target_levels[i] = val
-        else:
-            # Gentle breathing baseline
-            for i in range(self.num_bars):
-                idle_wave = 0.12 + 0.06 * math.sin(self.phase * 0.5 + i * 0.3)
-                self.target_levels[i] = idle_wave
-
-        # Smooth interpolation (lerp)
-        for i in range(self.num_bars):
-            self.levels[i] += (self.target_levels[i] - self.levels[i]) * 0.35
-
-        self.update()
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-        w = self.width()
-        h = self.height()
-        bar_w = max(2.0, (w - (self.num_bars - 1) * 3) / self.num_bars)
-
-        for i in range(self.num_bars):
-            bar_h = max(3.0, self.levels[i] * (h - 6))
-            x = i * (bar_w + 3)
-            y = h - bar_h - 2
-
-            # Smooth pastel gradient: Indigo to Emerald/Amber
-            grad = QLinearGradient(x, y + bar_h, x, y)
-            if self.is_active:
-                grad.setColorAt(0.0, QColor(PALETTE["indigo"]))
-                grad.setColorAt(0.65, QColor(PALETTE["emerald"]))
-                grad.setColorAt(1.0, QColor(PALETTE["amber"]))
-            else:
-                grad.setColorAt(0.0, QColor("#CBD5E1"))
-                grad.setColorAt(1.0, QColor("#94A3B8"))
-
-            painter.setBrush(QBrush(grad))
-            painter.setPen(Qt.PenStyle.NoPen)
-            rect = QRectF(x, y, bar_w, bar_h)
-            painter.drawRoundedRect(rect, 2.0, 2.0)
-
-
-# ---------------------------------------------------------------------------
-# Pulsing Hero Call Badge Widget
-# ---------------------------------------------------------------------------
-class HeroCallBadge(QWidget):
-    """
-    Hero calling deck track badge displaying current number (#01 to #90)
-    with subtle zoom/pulse animation on call.
-    """
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setFixedSize(140, 140)
+        self.setMinimumSize(280, 220)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setFixedHeight(230)
+
+        # Simulation state
         self.current_number: Optional[int] = None
-        self.pulse_scale = 1.0
-        self.anim_step = 0
+        self.is_animating = False
+        self.phase = "idle"  # "idle", "drop", "bounce", "roll", "settled"
 
-        self.pulse_timer = QTimer(self)
-        self.pulse_timer.timeout.connect(self._animate_pulse)
+        # Ball physics coordinates
+        self.ball_radius = 38.0
+        self.ball_x = 0.0
+        self.ball_y = 0.0
+        self.vel_x = 0.0
+        self.vel_y = 0.0
+        self.ball_angle = 0.0
+        self.bounce_count = 0
 
-    def trigger_call(self, number: int):
+        # Visual pop & pulse on settle
+        self.settle_scale = 1.0
+        self.settle_anim_tick = 0
+        self.pulse_ring = 0.0
+
+        # Animation timer (60 FPS)
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self._step_physics)
+
+    def trigger_drop(self, number: int):
+        """Initiate physical lotto ball drop and roll for the drawn number."""
         self.current_number = number
-        self.pulse_scale = 1.25
-        self.anim_step = 0
-        self.pulse_timer.start(25)
+        self.is_animating = True
+        self.phase = "drop"
+        self.bounce_count = 0
+        self.settle_scale = 1.0
+        self.settle_anim_tick = 0
+        self.pulse_ring = 0.0
+
+        w = max(280, self.width())
+        # Chute entry point: top-left area
+        self.ball_x = 55.0
+        self.ball_y = -self.ball_radius
+        self.vel_x = 1.2
+        self.vel_y = 3.5
+        self.ball_angle = 0.0
+
+        self.timer.start(16)
         self.update()
 
     def reset(self):
+        """Clear current ball and return to idle ready state."""
+        self.timer.stop()
+        self.is_animating = False
+        self.phase = "idle"
         self.current_number = None
-        self.pulse_scale = 1.0
+        self.ball_angle = 0.0
         self.update()
 
-    def _animate_pulse(self):
-        self.anim_step += 1
-        self.pulse_scale -= 0.02
-        if self.pulse_scale <= 1.0:
-            self.pulse_scale = 1.0
-            self.pulse_timer.stop()
+    def _step_physics(self):
+        w = float(self.width())
+        h = float(self.height())
+        ground_y = h - 55.0
+        cradle_x = w / 2.0
+
+        if self.phase == "drop":
+            # Gravity acceleration down chute
+            self.vel_y += 0.85
+            self.ball_y += self.vel_y
+            self.ball_x += self.vel_x
+            self.ball_angle += 0.08
+
+            # Hit the curved chute bottom / bounce plate
+            if self.ball_y >= ground_y - self.ball_radius:
+                self.ball_y = ground_y - self.ball_radius
+                self.vel_y = -self.vel_y * 0.42
+                self.bounce_count += 1
+                self.phase = "bounce"
+                # Impart strong forward roll velocity
+                self.vel_x = 7.5
+
+        elif self.phase == "bounce":
+            self.vel_y += 0.85
+            self.ball_y += self.vel_y
+            self.ball_x += self.vel_x
+            self.ball_angle += (self.vel_x / self.ball_radius) * 1.5
+
+            if self.ball_y >= ground_y - self.ball_radius:
+                self.ball_y = ground_y - self.ball_radius
+                if abs(self.vel_y) < 1.5 or self.bounce_count >= 2:
+                    self.vel_y = 0.0
+                    self.phase = "roll"
+                else:
+                    self.vel_y = -self.vel_y * 0.35
+                    self.bounce_count += 1
+
+        elif self.phase == "roll":
+            # Rolling across horizontal tray with deceleration
+            self.ball_x += self.vel_x
+            self.ball_angle += (self.vel_x / self.ball_radius)
+            self.vel_x *= 0.955
+
+            # Transition toward center cradle
+            dist_to_cradle = cradle_x - self.ball_x
+            if self.ball_x < cradle_x and dist_to_cradle > 0:
+                # Keep rolling toward cradle
+                if self.vel_x < 1.0:
+                    self.vel_x = 1.0
+            else:
+                # Settling into cradle
+                if abs(self.vel_x) < 0.6:
+                    self.ball_x = cradle_x
+                    self.vel_x = 0.0
+                    self.phase = "settled"
+                    self.settle_scale = 1.25
+                    if self.current_number is not None:
+                        self.ball_settled.emit(self.current_number)
+
+        elif self.phase == "settled":
+            # Scale pop and radial aura breathing
+            self.settle_anim_tick += 1
+            if self.settle_scale > 1.0:
+                self.settle_scale = max(1.0, self.settle_scale - 0.02)
+            self.pulse_ring = (self.pulse_ring + 0.08) % (math.pi * 2)
+            if self.settle_anim_tick > 45:
+                # Stop physics timer once fully settled
+                self.is_animating = False
+                self.timer.stop()
+
+        self.update()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+
+        w = float(self.width())
+        h = float(self.height())
+        ground_y = h - 55.0
+        cradle_x = w / 2.0
+
+        # 1. Background Track & Acrylic Chute Infrastructure
+        # Chute Tube (Top Left)
+        chute_path = QPainterPath()
+        chute_path.moveTo(35.0, 10.0)
+        chute_path.lineTo(75.0, 10.0)
+        chute_path.lineTo(75.0, ground_y - 30.0)
+        chute_path.quadTo(75.0, ground_y, 115.0, ground_y)
+        chute_path.lineTo(w - 30.0, ground_y)
+        chute_path.lineTo(w - 30.0, ground_y + 12.0)
+        chute_path.lineTo(110.0, ground_y + 12.0)
+        chute_path.quadTo(55.0, ground_y + 12.0, 55.0, ground_y - 25.0)
+        chute_path.lineTo(35.0, 10.0)
+
+        # Draw acrylic chute styling
+        chute_grad = QLinearGradient(35.0, 10.0, 95.0, ground_y)
+        chute_grad.setColorAt(0.0, QColor(255, 255, 255, 180))
+        chute_grad.setColorAt(0.5, QColor(226, 232, 244, 140))
+        chute_grad.setColorAt(1.0, QColor(241, 245, 249, 100))
+        painter.setBrush(QBrush(chute_grad))
+        painter.setPen(QPen(QColor(PALETTE["border"]), 1.8))
+        painter.drawPath(chute_path)
+
+        # Chute funnel mouth at top
+        painter.setBrush(QBrush(QColor(PALETTE["indigo_light"])))
+        painter.setPen(QPen(QColor(PALETTE["indigo"]), 1.5))
+        painter.drawRoundedRect(QRectF(30.0, 6.0, 50.0, 12.0), 4.0, 4.0)
+
+        # Horizontal Rolling Runway Rails
+        painter.setPen(QPen(QColor(PALETTE["border"]), 3.0))
+        painter.drawLine(int(85.0), int(ground_y + 4.0), int(w - 35.0), int(ground_y + 4.0))
+
+        # Center Hero Cradle Pedestal
+        cradle_w = 90.0
+        cradle_rect = QRectF(cradle_x - cradle_w / 2.0, ground_y - 4.0, cradle_w, 24.0)
+        cradle_grad = QLinearGradient(0, ground_y, 0, ground_y + 24.0)
+        cradle_grad.setColorAt(0.0, QColor(PALETTE["bg_card"]))
+        cradle_grad.setColorAt(1.0, QColor(PALETTE["bg_card_alt"]))
+        painter.setBrush(QBrush(cradle_grad))
+        painter.setPen(QPen(QColor(PALETTE["border"]), 1.5))
+        painter.drawRoundedRect(cradle_rect, 8.0, 8.0)
+
+        # Cradle Notch
+        painter.setBrush(QBrush(QColor(PALETTE["border_light"])))
+        painter.drawEllipse(QRectF(cradle_x - 30.0, ground_y - 2.0, 60.0, 10.0))
+
+        # 2. Render Lotto Ball (Animated or Ready State)
+        ball_r = self.ball_radius * self.settle_scale
+        bx = self.ball_x if self.is_animating or self.phase == "settled" else cradle_x
+        by = self.ball_y if self.is_animating or self.phase == "settled" else (ground_y - self.ball_radius)
+
+        # Cast Shadow beneath ball
+        shadow_w = ball_r * 1.6
+        shadow_h = 10.0 * (self.settle_scale if self.phase == "settled" else 0.8)
+        shadow_y = ground_y - 2.0
+        shadow_grad = QRadialGradient(bx, shadow_y, shadow_w / 2.0)
+        shadow_grad.setColorAt(0.0, QColor(15, 23, 42, 70))
+        shadow_grad.setColorAt(1.0, QColor(15, 23, 42, 0))
+        painter.setBrush(QBrush(shadow_grad))
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawEllipse(QRectF(bx - shadow_w / 2.0, shadow_y - shadow_h / 2.0, shadow_w, shadow_h))
+
+        # Pulsing Ring around ball when settled
+        if self.phase == "settled" and self.current_number is not None:
+            ring_extra = 8.0 + math.sin(self.pulse_ring) * 4.0
+            ring_r = ball_r + ring_extra
+            ring_pen = QPen(QColor(PALETTE["amber"]), 2.2)
+            ring_pen.setStyle(Qt.PenStyle.DashLine)
+            painter.setPen(ring_pen)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawEllipse(QRectF(bx - ring_r, by - ring_r, ring_r * 2.0, ring_r * 2.0))
+
+        # 3D Shaded Lotto Ball Sphere
+        ball_grad = QRadialGradient(bx - ball_r * 0.35, by - ball_r * 0.35, ball_r * 1.4)
+        if self.current_number is not None:
+            # Vibrant 3D Amber / Gold Lotto Ball
+            ball_grad.setColorAt(0.0, QColor("#FFFBEB"))
+            ball_grad.setColorAt(0.25, QColor("#FDE68A"))
+            ball_grad.setColorAt(0.65, QColor(PALETTE["amber"]))
+            ball_grad.setColorAt(1.0, QColor(PALETTE["amber_dark"]))
+            border_col = QColor(PALETTE["amber_dark"])
+        else:
+            # Idle Clean White / Silver Ball
+            ball_grad.setColorAt(0.0, QColor("#FFFFFF"))
+            ball_grad.setColorAt(0.5, QColor("#F1F5F9"))
+            ball_grad.setColorAt(1.0, QColor(PALETTE["border"]))
+            border_col = QColor(PALETTE["border"])
+
+        painter.setBrush(QBrush(ball_grad))
+        painter.setPen(QPen(border_col, 2.0))
+        painter.drawEllipse(QRectF(bx - ball_r, by - ball_r, ball_r * 2.0, ball_r * 2.0))
+
+        # Inner Decorative Lotto Ring & Specular Highlight
+        painter.save()
+        painter.translate(bx, by)
+        if self.is_animating and self.phase in ("drop", "bounce", "roll"):
+            painter.rotate(math.degrees(self.ball_angle))
+
+        # Inner circular number disc
+        disc_r = ball_r * 0.65
+        painter.setBrush(QBrush(QColor(255, 255, 255, 235)))
+        painter.setPen(QPen(QColor(border_col), 1.2))
+        painter.drawEllipse(QRectF(-disc_r, -disc_r, disc_r * 2.0, disc_r * 2.0))
+
+        # Number or Ready Label
+        if self.current_number is not None and (self.phase == "settled" or not self.is_animating):
+            painter.setPen(QColor(PALETTE["amber_dark"]))
+            painter.setFont(QFont("Segoe UI", int(24 * self.settle_scale), QFont.Weight.Bold))
+            num_text = f"#{self.current_number:02d}"
+            painter.drawText(QRectF(-disc_r, -disc_r, disc_r * 2.0, disc_r * 2.0),
+                             Qt.AlignmentFlag.AlignCenter, num_text)
+        elif self.current_number is not None and self.is_animating:
+            # Motion spinning lines while rolling
+            painter.setPen(QPen(QColor(PALETTE["amber_dark"]), 3.0))
+            painter.drawLine(int(-disc_r * 0.7), 0, int(disc_r * 0.7), 0)
+            painter.drawLine(0, int(-disc_r * 0.7), 0, int(disc_r * 0.7))
+        else:
+            painter.setPen(QColor(PALETTE["text_muted"]))
+            painter.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
+            painter.drawText(QRectF(-disc_r, -disc_r, disc_r * 2.0, disc_r * 2.0),
+                             Qt.AlignmentFlag.AlignCenter, "READY")
+
+        painter.restore()
+
+        # Specular light gleam on ball crown
+        gleam_w = ball_r * 0.5
+        gleam_h = ball_r * 0.25
+        painter.setBrush(QBrush(QColor(255, 255, 255, 160)))
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawEllipse(QRectF(bx - ball_r * 0.45, by - ball_r * 0.65, gleam_w, gleam_h))
+
+
+# ---------------------------------------------------------------------------
+# WIDGET 2: 3D Particle Audio Sphere Visualizer Canvas (Fibonacci Lattice)
+# ---------------------------------------------------------------------------
+class ParticleAudioSphereWidget(QWidget):
+    """
+    Renders a continuous 3D rotating particle sphere using a Fibonacci lattice
+    distribution (~360 points) with depth shading, perspective projection,
+    and real-time audio beat modulation that expands and breathes with sound.
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setMinimumSize(400, 360)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+
+        # 3D Lattice Constants
+        self.num_points = 360
+        self.base_points: List[Tuple[float, float, float]] = []
+        self._generate_fibonacci_sphere()
+
+        # Dynamic Visualizer Parameters
+        self.base_radius = 160.0
+        self.dynamic_radius = 160.0
+        self.yaw = 0.0
+        self.pitch = 0.0
+        self.yaw_speed = 0.012
+        self.pitch_speed = 0.007
+
+        # Beat Modulation State
+        self.modulate_beat = True
+        self.is_audio_playing = False
+        self.beat_phase = 0.0
+        self.beat_energy = 0.0
+        self.harmonic_time = 0.0
+
+        # Animation Loop (60 FPS)
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self._step_frame)
+        self.timer.start(16)
+
+    def _generate_fibonacci_sphere(self):
+        """Precalculate spherical coordinates using the golden ratio spiral."""
+        self.base_points.clear()
+        phi_golden = math.pi * (3.0 - math.sqrt(5.0))  # ~2.39996 rad
+
+        for i in range(self.num_points):
+            y = 1.0 - (float(i) / float(self.num_points - 1)) * 2.0  # +1 to -1
+            r = math.sqrt(max(0.0, 1.0 - y * y))
+            theta = phi_golden * float(i)
+            x = math.cos(theta) * r
+            z = math.sin(theta) * r
+            self.base_points.append((x, y, z))
+
+    def set_audio_playing(self, playing: bool):
+        """Link sphere breathing rhythm to audio playback engine state."""
+        self.is_audio_playing = playing
+
+    def set_beat_modulation(self, enabled: bool):
+        self.modulate_beat = enabled
+
+    def set_rotation_speed(self, speed_factor: float):
+        self.yaw_speed = 0.012 * speed_factor
+        self.pitch_speed = 0.007 * speed_factor
+
+    def set_sphere_scale(self, scale_px: float):
+        self.base_radius = scale_px
+
+    def _step_frame(self):
+        # Update 3D rotation angles
+        self.yaw = (self.yaw + self.yaw_speed) % (math.pi * 2)
+        self.pitch = (self.pitch + self.pitch_speed) % (math.pi * 2)
+        self.harmonic_time += 0.04
+
+        # Beat modulation physics
+        if self.modulate_beat:
+            # If audio is playing, pulse with bass-driven breathing
+            if self.is_audio_playing:
+                self.beat_phase = (self.beat_phase + 0.12) % (math.pi * 2)
+                bass_pulse = math.sin(self.beat_phase) ** 4
+                harmonic = math.sin(self.harmonic_time * 2.5) * 0.15
+                self.beat_energy = bass_pulse * 0.28 + harmonic
+            else:
+                # Gentle ambient breathing when idle
+                self.beat_energy = math.sin(self.harmonic_time * 1.2) * 0.08
+
+            self.dynamic_radius = self.base_radius * (1.0 + self.beat_energy)
+        else:
+            self.dynamic_radius = self.base_radius
+
         self.update()
 
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        center_x = self.width() / 2.0
-        center_y = self.height() / 2.0
-        base_radius = 56.0 * self.pulse_scale
+        cx = float(self.width()) / 2.0
+        cy = float(self.height()) / 2.0
+        camera_dist = 420.0
+        fov = 380.0
 
-        # Outer soft glow circle
-        if self.current_number is not None:
-            glow_grad = QLinearGradient(0, 0, self.width(), self.height())
-            glow_grad.setColorAt(0.0, QColor(PALETTE["amber_light"]))
-            glow_grad.setColorAt(1.0, QColor(PALETTE["indigo_light"]))
-            painter.setBrush(QBrush(glow_grad))
-            painter.setPen(QPen(QColor(PALETTE["amber"]), 3.0))
-        else:
-            painter.setBrush(QBrush(QColor(PALETTE["bg_card_alt"])))
-            painter.setPen(QPen(QColor(PALETTE["border"]), 2.0))
+        # Precompute rotation trigonometry
+        cos_y, sin_y = math.cos(self.yaw), math.sin(self.yaw)
+        cos_p, sin_p = math.cos(self.pitch), math.sin(self.pitch)
 
-        painter.drawEllipse(QRectF(center_x - base_radius, center_y - base_radius, base_radius * 2, base_radius * 2))
+        # Transform and project 3D points
+        projected = []
+        for idx, (bx, by, bz) in enumerate(self.base_points):
+            # Dynamic ripple per point
+            ripple = 0.0
+            if self.modulate_beat and self.is_audio_playing:
+                ripple = math.sin(self.harmonic_time * 3.0 + float(idx) * 0.1) * 6.0
 
-        # Text rendering
-        painter.setPen(QColor(PALETTE["amber_dark"] if self.current_number else PALETTE["text_muted"]))
-        if self.current_number is not None:
-            painter.setFont(QFont("Segoe UI", 36, QFont.Weight.Bold))
-            num_str = f"#{self.current_number:02d}"
-        else:
-            painter.setFont(QFont("Segoe UI", 20, QFont.Weight.Bold))
-            num_str = "READY"
+            r_point = self.dynamic_radius + ripple
 
-        painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, num_str)
+            # 1. Yaw rotation (around Y axis)
+            x1 = bx * cos_y + bz * sin_y
+            y1 = by
+            z1 = -bx * sin_y + bz * cos_y
+
+            # 2. Pitch rotation (around X axis)
+            x2 = x1
+            y2 = y1 * cos_p - z1 * sin_p
+            z2 = y1 * sin_p + z1 * cos_p
+
+            # 3. Perspective projection
+            world_z = z2 * r_point
+            proj_scale = fov / (camera_dist + world_z)
+            screen_x = cx + (x2 * r_point) * proj_scale
+            screen_y = cy + (y2 * r_point) * proj_scale
+
+            # Depth normalized: -1.0 (furthest) to +1.0 (closest)
+            depth_norm = z2
+            projected.append((depth_norm, screen_x, screen_y, idx))
+
+        # Sort points back-to-front for proper depth buffering
+        projected.sort(key=lambda p: p[0])
+
+        # Draw subtle foreground constellation web between close front particles
+        painter.setPen(QPen(QColor(79, 70, 229, 35), 0.8))
+        front_points = [p for p in projected if p[0] > 0.35]
+        for i in range(0, len(front_points), 3):
+            p1 = front_points[i]
+            for j in range(i + 1, min(i + 4, len(front_points))):
+                p2 = front_points[j]
+                dx = p1[1] - p2[1]
+                dy = p1[2] - p2[2]
+                if dx * dx + dy * dy < 1600.0:  # Distance < 40px
+                    painter.drawLine(int(p1[1]), int(p1[2]), int(p2[1]), int(p2[2]))
+
+        # Render 3D Dots with depth-scaled size and alpha shading
+        for depth_norm, sx, sy, idx in projected:
+            # Map depth (-1 to 1) to radius (1.4px to 5.2px) and opacity (0.2 to 1.0)
+            t = (depth_norm + 1.0) / 2.0  # 0.0 to 1.0
+            dot_r = 1.4 + t * 3.8
+            alpha = int(50 + t * 205)
+
+            # Chromatic distribution across latitude and depth
+            if t > 0.75:
+                # Golden / Amber highlight for closest particles
+                col = QColor(PALETTE["amber"])
+                col.setAlpha(alpha)
+            elif t > 0.4:
+                # Soft Indigo primary body
+                col = QColor(PALETTE["indigo"])
+                col.setAlpha(alpha)
+            else:
+                # Emerald / Teal background particles
+                col = QColor(PALETTE["emerald"])
+                col.setAlpha(alpha)
+
+            painter.setBrush(QBrush(col))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawEllipse(QRectF(sx - dot_r, sy - dot_r, dot_r * 2.0, dot_r * 2.0))
 
 
 # ---------------------------------------------------------------------------
-# SCREEN 1: Live Caller & Master Stage (PRD 2.3)
+# WIDGET 3: Mechanical Slot Machine Drum Reel (Lucky Draw)
+# ---------------------------------------------------------------------------
+class SlotMachineDrumWidget(QWidget):
+    """
+    Renders animated mechanical slot-machine digit drums with 3D cylindrical
+    bevels, motion blur during rapid spinning, and sequential locked clicks.
+    """
+    draw_finished = pyqtSignal(list)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setMinimumSize(320, 150)
+        self.setFixedHeight(160)
+
+        self.num_drums = 3
+        self.drum_values = [0, 0, 0]
+        self.drum_offsets = [0.0, 0.0, 0.0]
+        self.drum_speeds = [0.0, 0.0, 0.0]
+        self.drum_targets = [0, 0, 0]
+        self.drum_locked = [True, True, True]
+
+        self.is_spinning = False
+        self.spin_ticks = 0
+
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self._step_spin)
+
+    def spin_to_number(self, target_num: int):
+        """Spin mechanical drums and sequentially stop on target number (0-999)."""
+        self.target_num = target_num
+        digits = [
+            (target_num // 100) % 10,
+            (target_num // 10) % 10,
+            target_num % 10
+        ]
+        self.drum_targets = digits
+        self.drum_locked = [False, False, False]
+        self.drum_speeds = [18.0, 22.0, 26.0]
+        self.is_spinning = True
+        self.spin_ticks = 0
+
+        self.timer.start(16)
+        self.update()
+
+    def _step_spin(self):
+        self.spin_ticks += 1
+        all_locked = True
+
+        for i in range(self.num_drums):
+            if not self.drum_locked[i]:
+                all_locked = False
+                self.drum_offsets[i] = (self.drum_offsets[i] + self.drum_speeds[i]) % 100.0
+
+                # Sequential stopping milestones (Drum 1 at ~45 ticks, Drum 2 at ~75, Drum 3 at ~105)
+                stop_tick = 45 + i * 30
+                if self.spin_ticks >= stop_tick:
+                    # Decelerate smoothly
+                    self.drum_speeds[i] *= 0.88
+                    if self.drum_speeds[i] < 1.0:
+                        self.drum_offsets[i] = float(self.drum_targets[i] * 10.0)
+                        self.drum_values[i] = self.drum_targets[i]
+                        self.drum_locked[i] = True
+
+        self.update()
+
+        if all_locked and self.is_spinning:
+            self.is_spinning = False
+            self.timer.stop()
+            self.draw_finished.emit(self.drum_values)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        w = float(self.width())
+        h = float(self.height())
+
+        # Outer Metallic Chrome Chassis
+        chassis_rect = QRectF(10.0, 10.0, w - 20.0, h - 20.0)
+        chassis_grad = QLinearGradient(0, 10.0, 0, h - 10.0)
+        chassis_grad.setColorAt(0.0, QColor("#E2E8F0"))
+        chassis_grad.setColorAt(0.5, QColor("#FFFFFF"))
+        chassis_grad.setColorAt(1.0, QColor("#CBD5E1"))
+        painter.setBrush(QBrush(chassis_grad))
+        painter.setPen(QPen(QColor(PALETTE["border"]), 2.0))
+        painter.drawRoundedRect(chassis_rect, 14.0, 14.0)
+
+        # Inner Drum Display Window
+        window_rect = QRectF(24.0, 24.0, w - 48.0, h - 48.0)
+        painter.setBrush(QBrush(QColor(PALETTE["bg_main"])))
+        painter.setPen(QPen(QColor(PALETTE["border"]), 1.5))
+        painter.drawRoundedRect(window_rect, 8.0, 8.0)
+
+        drum_spacing = 16.0
+        total_drum_w = window_rect.width() - (drum_spacing * (self.num_drums + 1))
+        drum_w = total_drum_w / float(self.num_drums)
+        drum_h = window_rect.height() - 16.0
+        drum_top = window_rect.top() + 8.0
+
+        for i in range(self.num_drums):
+            dx = window_rect.left() + drum_spacing + i * (drum_w + drum_spacing)
+            drect = QRectF(dx, drum_top, drum_w, drum_h)
+
+            # Drum Background Card
+            painter.setBrush(QBrush(QColor(PALETTE["bg_card"])))
+            painter.setPen(QPen(QColor(PALETTE["border"]), 1.5))
+            painter.drawRoundedRect(drect, 8.0, 8.0)
+
+            # Top & Bottom Cylindrical Curvature Shadows
+            top_shadow = QLinearGradient(0, drect.top(), 0, drect.top() + 24.0)
+            top_shadow.setColorAt(0.0, QColor(15, 23, 42, 45))
+            top_shadow.setColorAt(1.0, QColor(15, 23, 42, 0))
+            painter.fillRect(QRectF(dx, drect.top(), drum_w, 24.0), QBrush(top_shadow))
+
+            bot_shadow = QLinearGradient(0, drect.bottom() - 24.0, 0, drect.bottom())
+            bot_shadow.setColorAt(0.0, QColor(15, 23, 42, 0))
+            bot_shadow.setColorAt(1.0, QColor(15, 23, 42, 45))
+            painter.fillRect(QRectF(dx, drect.bottom() - 24.0, drum_w, 24.0), QBrush(bot_shadow))
+
+            # Digit Rendering
+            center_y = drect.center().y()
+            if self.drum_locked[i]:
+                # Locked Clean Digit
+                painter.setPen(QColor(PALETTE["indigo"] if not self.is_spinning else PALETTE["text_primary"]))
+                painter.setFont(QFont("Segoe UI", 36, QFont.Weight.Bold))
+                painter.drawText(drect, Qt.AlignmentFlag.AlignCenter, str(self.drum_values[i]))
+            else:
+                # Rapid Motion Blur Scrolling Digits
+                offset = self.drum_offsets[i]
+                current_digit = int(offset / 10.0) % 10
+                next_digit = (current_digit + 1) % 10
+                fraction = (offset % 10.0) / 10.0
+
+                painter.setFont(QFont("Segoe UI", 34, QFont.Weight.Bold))
+                painter.setPen(QColor(PALETTE["text_secondary"]))
+
+                # Draw current rolling digit
+                y1 = center_y - (fraction * drum_h * 0.7)
+                painter.drawText(QRectF(dx, y1 - 25.0, drum_w, 50.0),
+                                 Qt.AlignmentFlag.AlignCenter, str(current_digit))
+
+                # Draw incoming rolling digit
+                y2 = y1 + (drum_h * 0.7)
+                painter.drawText(QRectF(dx, y2 - 25.0, drum_w, 50.0),
+                                 Qt.AlignmentFlag.AlignCenter, str(next_digit))
+
+                # Motion blur speed streaks
+                painter.setPen(QPen(QColor(PALETTE["border"]), 1.0))
+                painter.drawLine(int(dx + 6.0), int(center_y - 12.0), int(dx + drum_w - 6.0), int(center_y - 12.0))
+                painter.drawLine(int(dx + 6.0), int(center_y + 12.0), int(dx + drum_w - 6.0), int(center_y + 12.0))
+
+            # Center Alignment Glass Reticle Indicator
+            reticle_pen = QPen(QColor(PALETTE["amber"]), 1.5)
+            reticle_pen.setStyle(Qt.PenStyle.DotLine)
+            painter.setPen(reticle_pen)
+            painter.drawLine(int(dx), int(center_y), int(dx + drum_w), int(center_y))
+
+
+# ---------------------------------------------------------------------------
+# SCREEN 1: Live Ball Roller & Caller Stage
 # ---------------------------------------------------------------------------
 class LiveCallerStageScreen(QWidget):
     """
-    Split-view gameplay stage:
-      - Left: Hero calling deck with animated equalizer, song details, audio controls, seek slider.
-      - Right: 10x9 Master Calling Board organized into Satyam/Shivam/Sundaram pillars.
+    Master interactive calling stage featuring:
+      - Left Deck: LottoBallChuteWidget physics drop, dynamic hero track details,
+        audio player controller with volume slider, session tracking counter,
+        and quick jump button to the 3D particle sphere visualizer.
+      - Right Matrix: Master 10x9 Calling Board categorized across Satyam,
+        Shivam, and Sundaram pillars with reactive color badges.
     """
     number_called = pyqtSignal(int)
     game_reset = pyqtSignal()
+    open_dot_sphere_requested = pyqtSignal()
 
     def __init__(self, audio_player: AudioPlayer, parent=None):
         super().__init__(parent)
         self.audio_player = audio_player
+
+        # Session calling state (persists until explicit confirmation reset)
         self.called_numbers: List[int] = []
         self.current_number: Optional[int] = None
 
-        # Auto-Draw mode
-        self.auto_draw_timer = QTimer(self)
-        self.auto_draw_timer.timeout.connect(self.draw_next_track)
-
-        # Scrubber & position tracking timer
-        self.position_timer = QTimer(self)
-        self.position_timer.timeout.connect(self._update_playback_position)
-        self.position_timer.start(100)
+        # Matrix button lookup {1: QPushButton}
+        self.matrix_buttons: Dict[int, QPushButton] = {}
 
         self._init_ui()
+        self._setup_player_timer()
 
     def _init_ui(self):
         main_layout = QHBoxLayout(self)
-        main_layout.setContentsMargins(14, 14, 14, 14)
-        main_layout.setSpacing(14)
+        main_layout.setContentsMargins(16, 14, 16, 14)
+        main_layout.setSpacing(16)
 
-        # -------------------------------------------------------------------
-        # LEFT PANEL: Hero Calling Deck
-        # -------------------------------------------------------------------
+        # ===================================================================
+        # LEFT PANEL: Hero Deck & Audio Engine
+        # ===================================================================
         left_panel = QFrame()
         left_panel.setProperty("class", "card-panel")
-        left_panel.setFixedWidth(430)
+        left_panel.setFixedWidth(460)
         left_layout = QVBoxLayout(left_panel)
         left_layout.setContentsMargins(18, 16, 18, 16)
-        left_layout.setSpacing(10)
+        left_layout.setSpacing(12)
 
-        # Hero Header Pill
-        deck_header = QHBoxLayout()
-        header_title = QLabel("🎙️ MASTER CALLING DECK")
-        header_title.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
-        header_title.setStyleSheet(f"color: {PALETTE['indigo']}; letter-spacing: 0.5px;")
-        deck_header.addWidget(header_title)
-        deck_header.addStretch()
+        # 1. Physics Lotto Ball Chute Widget
+        self.chute_widget = LottoBallChuteWidget(self)
+        self.chute_widget.ball_settled.connect(self._on_ball_settled)
+        left_layout.addWidget(self.chute_widget)
 
-        self.call_counter_badge = QLabel("0 / 90")
-        self.call_counter_badge.setStyleSheet(
-            f"background: {PALETTE['indigo_light']}; color: {PALETTE['indigo']}; "
-            f"font-weight: 700; font-size: 12px; padding: 3px 10px; border-radius: 12px;"
-        )
-        deck_header.addWidget(self.call_counter_badge)
-        left_layout.addLayout(deck_header)
+        # 2. Main Call Action Button (Primary CTA)
+        self.btn_draw = QPushButton("🎲 ROLL & DROP NEXT NUMBER")
+        self.btn_draw.setProperty("class", "btn-primary")
+        self.btn_draw.setFixedHeight(48)
+        self.btn_draw.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
+        self.btn_draw.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_draw.clicked.connect(self.draw_next_track)
+        left_layout.addWidget(self.btn_draw)
 
-        # Centered Hero Call Badge
-        badge_container = QHBoxLayout()
-        badge_container.addStretch()
-        self.hero_badge = HeroCallBadge(self)
-        badge_container.addWidget(self.hero_badge)
-        badge_container.addStretch()
-        left_layout.addLayout(badge_container)
+        # 3. Dynamic Hero Track Details Card
+        hero_card = QFrame()
+        hero_card.setProperty("class", "card-subtle")
+        hero_card_layout = QVBoxLayout(hero_card)
+        hero_card_layout.setContentsMargins(14, 12, 14, 12)
+        hero_card_layout.setSpacing(4)
 
-        # Animated Reactive Equalizer
-        self.equalizer = EqualizerVisualizer(num_bars=24, parent=self)
-        left_layout.addWidget(self.equalizer)
+        self.lbl_hero_pillar = QLabel("READY TO COMMENCE GAME")
+        self.lbl_hero_pillar.setStyleSheet(f"color: {PALETTE['indigo']}; font-size: 11px; font-weight: 700; letter-spacing: 1px;")
+        hero_card_layout.addWidget(self.lbl_hero_pillar)
 
-        # Song Details Card
-        details_box = QFrame()
-        details_box.setProperty("class", "card-subtle")
-        details_layout = QVBoxLayout(details_box)
-        details_layout.setContentsMargins(12, 10, 12, 10)
-        details_layout.setSpacing(4)
+        self.lbl_hero_title = QLabel("Press 'Roll & Drop' or Spacebar")
+        self.lbl_hero_title.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
+        self.lbl_hero_title.setStyleSheet(f"color: {PALETTE['text_primary']};")
+        self.lbl_hero_title.setWordWrap(True)
+        hero_card_layout.addWidget(self.lbl_hero_title)
 
-        self.lbl_pillar_tag = QLabel("PILLAR: READY TO DRAW")
-        self.lbl_pillar_tag.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
-        self.lbl_pillar_tag.setStyleSheet(f"color: {PALETTE['amber_dark']};")
-        details_layout.addWidget(self.lbl_pillar_tag)
+        self.lbl_hero_subtitle = QLabel("90 Evergreen Indian Songs • Full Decade Mapping")
+        self.lbl_hero_subtitle.setStyleSheet(f"color: {PALETTE['text_secondary']}; font-size: 12px;")
+        self.lbl_hero_subtitle.setWordWrap(True)
+        hero_card_layout.addWidget(self.lbl_hero_subtitle)
+        left_layout.addWidget(hero_card)
 
-        self.lbl_song_title = QLabel("Press 'Draw Next Track' to Begin")
-        self.lbl_song_title.setFont(QFont("Segoe UI", 15, QFont.Weight.Bold))
-        self.lbl_song_title.setStyleSheet(f"color: {PALETTE['text_primary']};")
-        self.lbl_song_title.setWordWrap(True)
-        details_layout.addWidget(self.lbl_song_title)
+        # 4. Pygame Audio Player Deck
+        audio_box = QFrame()
+        audio_box.setProperty("class", "card-subtle")
+        audio_layout = QVBoxLayout(audio_box)
+        audio_layout.setContentsMargins(14, 10, 14, 10)
+        audio_layout.setSpacing(8)
 
-        self.lbl_song_sub = QLabel("Master 90 Evergreen Bollywood & Indian Hits")
-        self.lbl_song_sub.setFont(QFont("Segoe UI", 11, QFont.Weight.Normal))
-        self.lbl_song_sub.setStyleSheet(f"color: {PALETTE['text_secondary']};")
-        self.lbl_song_sub.setWordWrap(True)
-        details_layout.addWidget(self.lbl_song_sub)
+        # Audio status row
+        audio_top = QHBoxLayout()
+        self.lbl_audio_status = QLabel("Audio: Ready")
+        self.lbl_audio_status.setStyleSheet(f"color: {PALETTE['text_secondary']}; font-size: 11px; font-weight: 600;")
+        audio_top.addWidget(self.lbl_audio_status)
+        audio_top.addStretch()
 
-        self.lbl_audio_status = QLabel("")
-        self.lbl_audio_status.setStyleSheet("font-size: 11px; font-weight: 600; color: #FF5A5F;")
-        details_layout.addWidget(self.lbl_audio_status)
+        self.lbl_audio_time = QLabel("0:00 / 0:00")
+        self.lbl_audio_time.setStyleSheet(f"color: {PALETTE['text_muted']}; font-size: 11px;")
+        audio_top.addWidget(self.lbl_audio_time)
+        audio_layout.addLayout(audio_top)
 
-        left_layout.addWidget(details_box)
-
-        # Real-time Audio Seek Scrubber
-        scrubber_container = QVBoxLayout()
-        scrubber_container.setSpacing(2)
-
-        scrubber_labels = QHBoxLayout()
-        self.lbl_cur_time = QLabel("00:00")
-        self.lbl_cur_time.setStyleSheet(f"color: {PALETTE['text_secondary']}; font-size: 11px; font-weight: 600;")
-        self.lbl_tot_time = QLabel("00:00")
-        self.lbl_tot_time.setStyleSheet(f"color: {PALETTE['text_secondary']}; font-size: 11px; font-weight: 600;")
-        scrubber_labels.addWidget(self.lbl_cur_time)
-        scrubber_labels.addStretch()
-        scrubber_labels.addWidget(self.lbl_tot_time)
-        scrubber_container.addLayout(scrubber_labels)
-
+        # Seek position scrubber
         self.slider_seek = QSlider(Qt.Orientation.Horizontal)
         self.slider_seek.setRange(0, 1000)
         self.slider_seek.setValue(0)
         self.slider_seek.sliderMoved.connect(self._on_seek_moved)
-        scrubber_container.addWidget(self.slider_seek)
-        left_layout.addLayout(scrubber_container)
+        audio_layout.addWidget(self.slider_seek)
 
-        # Audio Transport Buttons
-        transport_layout = QHBoxLayout()
-        transport_layout.setSpacing(6)
+        # Controls & Volume Row
+        ctrl_row = QHBoxLayout()
+        ctrl_row.setSpacing(8)
 
-        self.btn_play_pause = QPushButton("▶ Play")
-        self.btn_play_pause.setProperty("class", "btn-primary")
+        self.btn_play_pause = QPushButton("⏸ Pause")
+        self.btn_play_pause.setFixedHeight(32)
         self.btn_play_pause.clicked.connect(self._toggle_play_pause)
-        transport_layout.addWidget(self.btn_play_pause)
+        ctrl_row.addWidget(self.btn_play_pause)
 
         self.btn_replay = QPushButton("↺ Replay")
-        self.btn_replay.clicked.connect(self._replay_current_track)
-        transport_layout.addWidget(self.btn_replay)
+        self.btn_replay.setFixedHeight(32)
+        self.btn_replay.clicked.connect(self._replay_current_song)
+        ctrl_row.addWidget(self.btn_replay)
 
         self.btn_stop = QPushButton("⏹ Stop")
-        self.btn_stop.clicked.connect(self._stop_playback)
-        transport_layout.addWidget(self.btn_stop)
+        self.btn_stop.setFixedHeight(32)
+        self.btn_stop.clicked.connect(self._stop_audio)
+        ctrl_row.addWidget(self.btn_stop)
 
-        left_layout.addLayout(transport_layout)
-
-        # Volume Slider
-        vol_layout = QHBoxLayout()
-        lbl_vol = QLabel("🔊")
-        vol_layout.addWidget(lbl_vol)
-
+        ctrl_row.addSpacing(10)
+        ctrl_row.addWidget(QLabel("Vol:"))
         self.slider_vol = QSlider(Qt.Orientation.Horizontal)
         self.slider_vol.setRange(0, 100)
         self.slider_vol.setValue(80)
+        self.slider_vol.setFixedWidth(80)
         self.slider_vol.valueChanged.connect(self._on_volume_changed)
-        vol_layout.addWidget(self.slider_vol)
+        ctrl_row.addWidget(self.slider_vol)
 
-        self.lbl_vol_val = QLabel("80%")
-        self.lbl_vol_val.setFixedWidth(36)
-        self.lbl_vol_val.setStyleSheet(f"color: {PALETTE['text_secondary']}; font-size: 11px; font-weight: 600;")
-        vol_layout.addWidget(self.lbl_vol_val)
-        left_layout.addLayout(vol_layout)
+        audio_layout.addLayout(ctrl_row)
+        left_layout.addWidget(audio_box)
 
-        # Draw Next Action Button (Vibrant & Hero)
-        self.btn_draw = QPushButton("🎲 Draw Next Track (Space)")
-        self.btn_draw.setProperty("class", "btn-emerald")
-        self.btn_draw.setMinimumHeight(44)
-        self.btn_draw.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
-        self.btn_draw.clicked.connect(self.draw_next_track)
-        left_layout.addWidget(self.btn_draw)
+        # 5. Session Counter & Last 5 Drawn Chips
+        session_box = QFrame()
+        session_box.setProperty("class", "card-subtle")
+        session_layout = QVBoxLayout(session_box)
+        session_layout.setContentsMargins(12, 8, 12, 8)
+        session_layout.setSpacing(6)
 
-        # Session Progress & Stats
-        stats_layout = QVBoxLayout()
-        stats_layout.setSpacing(4)
+        self.lbl_session_count = QLabel("Drawn: 0 / 90  •  Remaining: 90")
+        self.lbl_session_count.setStyleSheet(f"color: {PALETTE['text_primary']}; font-weight: 700; font-size: 12px;")
+        session_layout.addWidget(self.lbl_session_count)
 
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setRange(0, 90)
-        self.progress_bar.setValue(0)
-        stats_layout.addWidget(self.progress_bar)
+        self.chips_row = QHBoxLayout()
+        self.chips_row.setSpacing(6)
+        self.chip_labels: List[QLabel] = []
+        for i in range(5):
+            lbl_chip = QLabel("—")
+            lbl_chip.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            lbl_chip.setStyleSheet(f"background: {PALETTE['bg_card']}; border: 1px solid {PALETTE['border']}; border-radius: 6px; font-weight: 700; color: {PALETTE['text_muted']}; padding: 3px 6px; font-size: 11px;")
+            self.chip_labels.append(lbl_chip)
+            self.chips_row.addWidget(lbl_chip)
+        session_layout.addLayout(self.chips_row)
+        left_layout.addWidget(session_box)
 
-        stats_row = QHBoxLayout()
-        self.lbl_stats = QLabel("Called: 0 • Remaining: 90")
-        self.lbl_stats.setStyleSheet(f"color: {PALETTE['text_secondary']}; font-size: 11px; font-weight: 600;")
-        stats_row.addWidget(self.lbl_stats)
-        stats_row.addStretch()
+        # 6. Quick Action Button -> Screen 2 Visualizer
+        btn_view_sphere = QPushButton("🔮 View Live Audio Dot-Sphere →")
+        btn_view_sphere.setFixedHeight(36)
+        btn_view_sphere.setStyleSheet(f"background: {PALETTE['indigo_light']}; color: {PALETTE['indigo']}; border: 1.5px solid {PALETTE['indigo']}; font-weight: 700;")
+        btn_view_sphere.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_view_sphere.clicked.connect(self.open_dot_sphere_requested.emit)
+        left_layout.addWidget(btn_view_sphere)
 
-        self.btn_reset = QPushButton("Reset Game")
-        self.btn_reset.setStyleSheet(f"font-size: 11px; color: {PALETTE['coral']}; border: none; font-weight: 700; padding: 2px 4px;")
-        self.btn_reset.clicked.connect(self.confirm_reset_game)
-        stats_row.addWidget(self.btn_reset)
-        stats_layout.addLayout(stats_row)
-
-        left_layout.addLayout(stats_layout)
-
-        # Auto-Draw Mode Row
-        auto_layout = QHBoxLayout()
-        self.chk_auto = QCheckBox("Auto-Call")
-        self.chk_auto.setStyleSheet("font-size: 12px; font-weight: 600;")
-        self.chk_auto.toggled.connect(self._toggle_auto_draw)
-        auto_layout.addWidget(self.chk_auto)
-
-        self.spin_interval = QSpinBox()
-        self.spin_interval.setRange(8, 60)
-        self.spin_interval.setValue(18)
-        self.spin_interval.setSuffix(" sec")
-        auto_layout.addWidget(self.spin_interval)
-        auto_layout.addStretch()
-
-        self.btn_prev = QPushButton("⏮ Re-check Last")
-        self.btn_prev.setStyleSheet("font-size: 11px;")
-        self.btn_prev.clicked.connect(self._replay_last_call)
-        auto_layout.addWidget(self.btn_prev)
-
-        left_layout.addLayout(auto_layout)
         main_layout.addWidget(left_panel)
 
-        # -------------------------------------------------------------------
-        # RIGHT PANEL: 10x9 Master Calling Board
-        # -------------------------------------------------------------------
+        # ===================================================================
+        # RIGHT PANEL: Master 10x9 Calling Board (3 Pillars)
+        # ===================================================================
         right_panel = QFrame()
         right_panel.setProperty("class", "card-panel")
         right_layout = QVBoxLayout(right_panel)
         right_layout.setContentsMargins(18, 16, 18, 16)
         right_layout.setSpacing(10)
 
-        # Traditional Pillars Header
-        pillars_header = QHBoxLayout()
-        pillars_header.setSpacing(10)
+        # Header with Pillar Labels
+        top_matrix_bar = QHBoxLayout()
+        lbl_matrix_title = QLabel("MASTER CALLING BOARD (1–90)")
+        lbl_matrix_title.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
+        lbl_matrix_title.setStyleSheet(f"color: {PALETTE['text_primary']};")
+        top_matrix_bar.addWidget(lbl_matrix_title)
+        top_matrix_bar.addStretch()
 
-        # Satyam (Cols 1-3)
-        lbl_satyam = QLabel("🌸 SATYAM (Cols 1–3 • Nos 1–29)")
-        lbl_satyam.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lbl_satyam.setStyleSheet(
-            f"background: {PALETTE['indigo_light']}; color: {PALETTE['indigo']}; "
-            f"font-weight: 700; font-size: 12px; padding: 6px; border-radius: 8px;"
-        )
-        pillars_header.addWidget(lbl_satyam, 3)
+        # Pillar Legend Pills
+        pillar_satyam = QLabel("Satyam (1–29)")
+        pillar_satyam.setStyleSheet(f"background: {PALETTE['indigo_light']}; color: {PALETTE['indigo']}; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;")
+        top_matrix_bar.addWidget(pillar_satyam)
 
-        # Shivam (Cols 4-6)
-        lbl_shivam = QLabel("🌿 SHIVAM (Cols 4–6 • Nos 30–59)")
-        lbl_shivam.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lbl_shivam.setStyleSheet(
-            f"background: {PALETTE['emerald_light']}; color: {PALETTE['emerald_dark']}; "
-            f"font-weight: 700; font-size: 12px; padding: 6px; border-radius: 8px;"
-        )
-        pillars_header.addWidget(lbl_shivam, 3)
+        pillar_shivam = QLabel("Shivam (30–59)")
+        pillar_shivam.setStyleSheet(f"background: {PALETTE['amber_light']}; color: {PALETTE['amber_dark']}; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;")
+        top_matrix_bar.addWidget(pillar_shivam)
 
-        # Sundaram (Cols 7-9)
-        lbl_sundaram = QLabel("✨ SUNDARAM (Cols 7–9 • Nos 60–90)")
-        lbl_sundaram.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lbl_sundaram.setStyleSheet(
-            f"background: {PALETTE['amber_light']}; color: {PALETTE['amber_dark']}; "
-            f"font-weight: 700; font-size: 12px; padding: 6px; border-radius: 8px;"
-        )
-        pillars_header.addWidget(lbl_sundaram, 3)
-        right_layout.addLayout(pillars_header)
+        pillar_sundaram = QLabel("Sundaram (60–90)")
+        pillar_sundaram.setStyleSheet(f"background: {PALETTE['emerald_light']}; color: {PALETTE['emerald_dark']}; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;")
+        top_matrix_bar.addWidget(pillar_sundaram)
 
-        # 10x9 Grid of Interactive Cells
+        right_layout.addLayout(top_matrix_bar)
+
+        # 10x9 Interactive Matrix Grid
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setFrameShape(QFrame.Shape.NoFrame)
         scroll_area.setStyleSheet("background: transparent;")
 
-        grid_container = QWidget()
-        grid_container.setStyleSheet("background: transparent;")
-        self.grid_layout = QGridLayout(grid_container)
-        self.grid_layout.setSpacing(6)
-        self.grid_layout.setContentsMargins(4, 4, 4, 4)
+        matrix_widget = QWidget()
+        matrix_grid = QGridLayout(matrix_widget)
+        matrix_grid.setContentsMargins(0, 0, 0, 0)
+        matrix_grid.setSpacing(6)
 
-        self.cell_buttons: Dict[int, QPushButton] = {}
-        for num in range(1, 91):
-            col = song_bank.get_column_for_index(num)
-            start_num, _ = song_bank.COLUMN_RANGES[col]
-            row = num - start_num
+        # Column Header Labels (0-8)
+        col_headers = ["1–9", "10–19", "20–29", "30–39", "40–49", "50–59", "60–69", "70–79", "80–90"]
+        for c_idx, head_text in enumerate(col_headers):
+            lbl_head = QLabel(head_text)
+            lbl_head.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            lbl_head.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
+            lbl_head.setStyleSheet(f"color: {PALETTE['text_secondary']}; background: {PALETTE['bg_card_alt']}; border-radius: 4px; padding: 4px 0;")
+            matrix_grid.addWidget(lbl_head, 0, c_idx)
 
-            btn = QPushButton(f"{num}")
-            btn.setFixedSize(54, 44)
-            btn.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
-            btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            s_meta = song_bank.get_song(num)
-            title = s_meta.get("title", f"Track #{num}") if s_meta else f"Track #{num}"
-            btn.setToolTip(f"#{num}: {title}\n(Click to inspect or play)")
-            btn.clicked.connect(lambda _, n=num: self._on_cell_clicked(n))
+        # 90 Cells mapped across columns
+        # Col 0 has 9 numbers (1-9), Col 8 has 11 numbers (80-90), others have 10 numbers
+        for c_idx, (start_n, end_n) in enumerate(song_bank.COLUMN_RANGES):
+            r_idx = 1
+            for n in range(start_n, end_n + 1):
+                btn = QPushButton(f"{n:02d}")
+                btn.setFixedSize(54, 42)
+                btn.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
+                btn.setCursor(Qt.CursorShape.PointingHandCursor)
+                btn.setToolTip(f"Track #{n}: {song_bank.get_song_title(n)}")
+                btn.clicked.connect(lambda checked, num=n: self.manual_call_number(num))
 
-            # Store and apply pending style
-            self.cell_buttons[num] = btn
-            self._apply_cell_style(btn, status="pending")
-            self.grid_layout.addWidget(btn, row, col)
+                # Default Uncalled Style
+                self._apply_cell_style(btn, "uncalled")
+                self.matrix_buttons[n] = btn
+                matrix_grid.addWidget(btn, r_idx, c_idx)
+                r_idx += 1
 
-        scroll_area.setWidget(grid_container)
-        right_layout.addWidget(scroll_area)
+        scroll_area.setWidget(matrix_widget)
+        right_layout.addWidget(scroll_area, 1)
+
         main_layout.addWidget(right_panel, 1)
 
-    def _apply_cell_style(self, btn: QPushButton, status: str):
-        """Dynamic color states for calling board cells."""
-        if status == "active":
+    def _setup_player_timer(self):
+        """Timer to update seek position and time display smoothly."""
+        self.poll_timer = QTimer(self)
+        self.poll_timer.timeout.connect(self._sync_player_status)
+        self.poll_timer.start(250)
+
+    def draw_next_track(self):
+        """Draw next random uncalled number from 1 to 90 with physics roll."""
+        if self.chute_widget.is_animating:
+            return
+
+        available = [n for n in range(1, 91) if n not in self.called_numbers]
+        if not available:
+            QMessageBox.information(self, "Game Finished", "All 90 numbers have been called!")
+            return
+
+        next_num = random.choice(available)
+        self.current_number = next_num
+
+        # Trigger physics drop & roll in chute widget
+        self.chute_widget.trigger_drop(next_num)
+
+    def _on_ball_settled(self, number: int):
+        """Called once the lotto ball has rolled and settled in the hero cradle."""
+        if number not in self.called_numbers:
+            self.called_numbers.append(number)
+
+        self._update_hero_details(number)
+        self._update_matrix_cell(number, is_active=True)
+        self._update_session_chips()
+
+        # Play audio clip
+        self._play_song_for_number(number)
+
+        # Notify parent app and child screens
+        self.number_called.emit(number)
+
+    def manual_call_number(self, number: int):
+        """Allow host to click an uncalled cell to manually call it."""
+        if number in self.called_numbers:
+            # Already called, replay song
+            self._play_song_for_number(number)
+            self._update_hero_details(number)
+            return
+
+        reply = QMessageBox.question(
+            self, "Manual Call Confirmation",
+            f"Are you sure you want to call Track #{number:02d} ({song_bank.get_song_title(number)})?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            self.current_number = number
+            self.chute_widget.trigger_drop(number)
+
+    def _update_hero_details(self, number: int):
+        song = song_bank.get_song(number)
+        title = song.get("title", f"Track #{number}") if song else f"Track #{number}"
+        artist = song.get("artist", "Evergreen Hit") if song else ""
+        year = song.get("year", "") if song else ""
+
+        pillar_name = "Satyam" if number <= 29 else ("Shivam" if number <= 59 else "Sundaram")
+        col_idx = song.get("column", 0) + 1 if song else 1
+
+        self.lbl_hero_pillar.setText(f"✦ NOW CALLING: {pillar_name.upper()} • COLUMN {col_idx}")
+        self.lbl_hero_title.setText(f"#{number:02d} • {title}")
+        sub = f"Album/Artist: {artist}"
+        if year:
+            sub += f" ({year})"
+        self.lbl_hero_subtitle.setText(sub)
+
+    def _play_song_for_number(self, number: int):
+        audio_path = song_bank.find_audio_file(number)
+        if audio_path and os.path.exists(audio_path):
+            self.audio_player.play_track(audio_path)
+            self.lbl_audio_status.setText(f"Playing: Track #{number:02d}")
+            self.btn_play_pause.setText("⏸ Pause")
+        else:
+            self.lbl_audio_status.setText(f"Audio for #{number:02d} missing (Silent Mode)")
+
+    def _toggle_play_pause(self):
+        if self.audio_player.is_playing:
+            if self.audio_player.is_paused:
+                self.audio_player.unpause()
+                self.btn_play_pause.setText("⏸ Pause")
+                self.lbl_audio_status.setText("Playing")
+            else:
+                self.audio_player.pause()
+                self.btn_play_pause.setText("▶ Resume")
+                self.lbl_audio_status.setText("Paused")
+        elif self.current_number:
+            self._play_song_for_number(self.current_number)
+
+    def _replay_current_song(self):
+        if self.current_number:
+            self._play_song_for_number(self.current_number)
+
+    def _stop_audio(self):
+        self.audio_player.stop()
+        self.btn_play_pause.setText("▶ Play")
+        self.lbl_audio_status.setText("Stopped")
+
+    def _on_seek_moved(self, val: int):
+        if self.audio_player.total_duration > 0:
+            target_time = (val / 1000.0) * self.audio_player.total_duration
+            self.audio_player.seek(target_time)
+
+    def _on_volume_changed(self, val: int):
+        self.audio_player.set_volume(val / 100.0)
+
+    def _sync_player_status(self):
+        if self.audio_player.is_playing and not self.audio_player.is_paused:
+            pos = self.audio_player.get_current_position()
+            total = self.audio_player.total_duration
+            if total > 0:
+                frac = min(1000, int((pos / total) * 1000))
+                self.slider_seek.blockSignals(True)
+                self.slider_seek.setValue(frac)
+                self.slider_seek.blockSignals(False)
+
+                pos_m, pos_s = divmod(int(pos), 60)
+                tot_m, tot_s = divmod(int(total), 60)
+                self.lbl_audio_time.setText(f"{pos_m}:{pos_s:02d} / {tot_m}:{tot_s:02d}")
+
+    def _update_matrix_cell(self, number: int, is_active: bool = True):
+        # Update past active button to called
+        for n, btn in self.matrix_buttons.items():
+            if n in self.called_numbers:
+                if n == number and is_active:
+                    self._apply_cell_style(btn, "active")
+                else:
+                    self._apply_cell_style(btn, "called")
+            else:
+                self._apply_cell_style(btn, "uncalled")
+
+    def _apply_cell_style(self, btn: QPushButton, state: str):
+        if state == "active":
             btn.setStyleSheet(f"""
                 QPushButton {{
                     background-color: {PALETTE['amber_light']};
                     color: {PALETTE['amber_dark']};
                     border: 2px solid {PALETTE['amber']};
-                    border-radius: 8px;
-                    font-size: 13px;
+                    border-radius: 6px;
                     font-weight: 800;
                 }}
             """)
-        elif status == "called":
+        elif state == "called":
             btn.setStyleSheet(f"""
                 QPushButton {{
                     background-color: {PALETTE['emerald_light']};
                     color: {PALETTE['emerald_dark']};
                     border: 1.5px solid {PALETTE['emerald']};
-                    border-radius: 8px;
-                    font-size: 12px;
+                    border-radius: 6px;
                     font-weight: 700;
                 }}
-                QPushButton:hover {{
-                    background-color: #D1F5EA;
-                }}
             """)
-        else: # pending
+        else:
             btn.setStyleSheet(f"""
                 QPushButton {{
                     background-color: {PALETTE['bg_card']};
                     color: {PALETTE['text_secondary']};
                     border: 1px solid {PALETTE['border']};
-                    border-radius: 8px;
-                    font-size: 12px;
-                    font-weight: 600;
+                    border-radius: 6px;
                 }}
                 QPushButton:hover {{
-                    background-color: {PALETTE['bg_card_alt']};
-                    border-color: #CBD5E1;
+                    border-color: {PALETTE['indigo']};
+                    color: {PALETTE['indigo']};
                 }}
             """)
 
-    def draw_next_track(self):
-        """Draw next track non-repeating from remaining numbers 1-90."""
-        available = [i for i in range(1, 91) if i not in self.called_numbers]
-        if not available:
-            self.auto_draw_timer.stop()
-            self.chk_auto.setChecked(False)
-            QMessageBox.information(self, "House Full", "All 90 numbers have been called!")
-            return
+    def _update_session_chips(self):
+        drawn = len(self.called_numbers)
+        remaining = 90 - drawn
+        self.lbl_session_count.setText(f"Drawn: {drawn} / 90  •  Remaining: {remaining}")
 
-        next_num = random.choice(available)
-        self.call_number(next_num)
-
-    def call_number(self, num: int):
-        """Process drawing a specific number."""
-        if num in self.called_numbers:
-            return
-
-        # Demote previous active cell to called
-        if self.current_number and self.current_number in self.cell_buttons:
-            self._apply_cell_style(self.cell_buttons[self.current_number], "called")
-
-        self.current_number = num
-        self.called_numbers.append(num)
-
-        # Highlight cell
-        if num in self.cell_buttons:
-            self._apply_cell_style(self.cell_buttons[num], "active")
-
-        # Update hero deck
-        self.hero_badge.trigger_call(num)
-        self.audio_player.play_draw_chime()
-
-        # Update metadata
-        s_meta = song_bank.get_song(num)
-        if s_meta:
-            title = s_meta.get("title", f"Track #{num}")
-            artist = s_meta.get("artist", "")
-            year = s_meta.get("year", "")
-            col = s_meta.get("column", 0)
-            pillar = "SATYAM" if col < 3 else ("SHIVAM" if col < 6 else "SUNDARAM")
-
-            self.lbl_pillar_tag.setText(f"PILLAR: {pillar} (COL {col + 1}) • TRACK #{num}")
-            self.lbl_song_title.setText(title)
-            self.lbl_song_sub.setText(f"{artist} • {year}" if artist or year else "Evergreen Hit")
-        else:
-            self.lbl_pillar_tag.setText(f"TRACK #{num}")
-            self.lbl_song_title.setText(f"Song #{num}")
-            self.lbl_song_sub.setText("")
-
-        # Update stats
-        called_count = len(self.called_numbers)
-        self.call_counter_badge.setText(f"{called_count} / 90")
-        self.lbl_stats.setText(f"Called: {called_count} • Remaining: {90 - called_count}")
-        self.progress_bar.setValue(called_count)
-
-        # Audio playback with graceful missing audio fallback
-        audio_file = song_bank.find_audio_file(num)
-        if audio_file and Path(audio_file).is_file():
-            self.lbl_audio_status.setText("")
-            self.audio_player.play_track(audio_file, start_pos=0.0)
-            self.btn_play_pause.setText("⏸ Pause")
-            self.equalizer.set_active(True)
-        else:
-            self.lbl_audio_status.setText("⚠️ Audio clip missing (Visual mode active)")
-            self.audio_player.stop()
-            self.btn_play_pause.setText("▶ Play")
-            self.equalizer.set_active(False)
-
-        # Emit signal for verifier & raffle
-        self.number_called.emit(num)
-
-    def _on_cell_clicked(self, num: int):
-        """Click cell on board to inspect or replay audio."""
-        if num in self.called_numbers:
-            # Replay track
-            audio_file = song_bank.find_audio_file(num)
-            if audio_file and Path(audio_file).is_file():
-                self.audio_player.play_track(audio_file)
-                self.btn_play_pause.setText("⏸ Pause")
-                self.equalizer.set_active(True)
-        else:
-            # Option to manually call
-            reply = QMessageBox.question(
-                self, "Manual Call",
-                f"Number #{num} is uncalled.\nWould you like to draw #{num} now?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-            )
-            if reply == QMessageBox.StandardButton.Yes:
-                self.call_number(num)
-
-    def _toggle_play_pause(self):
-        if self.audio_player.is_playing and not self.audio_player.is_paused:
-            self.audio_player.pause()
-            self.btn_play_pause.setText("▶ Resume")
-            self.equalizer.set_active(False)
-        elif self.audio_player.is_paused:
-            self.audio_player.resume()
-            self.btn_play_pause.setText("⏸ Pause")
-            self.equalizer.set_active(True)
-        elif self.current_number:
-            audio_file = song_bank.find_audio_file(self.current_number)
-            if audio_file:
-                self.audio_player.play_track(audio_file)
-                self.btn_play_pause.setText("⏸ Pause")
-                self.equalizer.set_active(True)
-
-    def _replay_current_track(self):
-        if self.current_number:
-            audio_file = song_bank.find_audio_file(self.current_number)
-            if audio_file:
-                self.audio_player.play_track(audio_file, start_pos=0.0)
-                self.btn_play_pause.setText("⏸ Pause")
-                self.equalizer.set_active(True)
-
-    def _stop_playback(self):
-        self.audio_player.stop()
-        self.btn_play_pause.setText("▶ Play")
-        self.equalizer.set_active(False)
-        self.slider_seek.setValue(0)
-        self.lbl_cur_time.setText("00:00")
-
-    def _replay_last_call(self):
-        if self.current_number:
-            self._replay_current_track()
-
-    def _on_volume_changed(self, val: int):
-        self.audio_player.set_volume(val)
-        self.lbl_vol_val.setText(f"{val}%")
-
-    def _on_seek_moved(self, slider_val: int):
-        dur = self.audio_player.total_duration
-        if dur > 0:
-            target = (slider_val / 1000.0) * dur
-            self.audio_player.seek(target)
-
-    def _update_playback_position(self):
-        if self.audio_player.is_playing:
-            cur = self.audio_player.get_current_position()
-            tot = self.audio_player.total_duration
-            if tot > 0:
-                pct = int((cur / tot) * 1000)
-                self.slider_seek.setValue(pct)
-                self.lbl_cur_time.setText(f"{int(cur//60):02d}:{int(cur%60):02d}")
-                self.lbl_tot_time.setText(f"{int(tot//60):02d}:{int(tot%60):02d}")
-            self.equalizer.set_active(True)
-        else:
-            if not self.audio_player.is_paused:
-                self.equalizer.set_active(False)
-
-    def _toggle_auto_draw(self, enabled: bool):
-        if enabled:
-            interval_ms = self.spin_interval.value() * 1000
-            self.auto_draw_timer.start(interval_ms)
-        else:
-            self.auto_draw_timer.stop()
+        # Show last 5 calls in chips
+        last_five = self.called_numbers[-5:] if len(self.called_numbers) >= 5 else self.called_numbers
+        for i in range(5):
+            idx = len(last_five) - 1 - i
+            if idx >= 0:
+                n = last_five[idx]
+                self.chip_labels[i].setText(f"#{n:02d}")
+                if i == 0:
+                    self.chip_labels[i].setStyleSheet(f"background: {PALETTE['amber_light']}; border: 1px solid {PALETTE['amber']}; border-radius: 6px; font-weight: 800; color: {PALETTE['amber_dark']}; padding: 3px 6px; font-size: 11px;")
+                else:
+                    self.chip_labels[i].setStyleSheet(f"background: {PALETTE['emerald_light']}; border: 1px solid {PALETTE['emerald']}; border-radius: 6px; font-weight: 700; color: {PALETTE['emerald_dark']}; padding: 3px 6px; font-size: 11px;")
+            else:
+                self.chip_labels[i].setText("—")
+                self.chip_labels[i].setStyleSheet(f"background: {PALETTE['bg_card']}; border: 1px solid {PALETTE['border']}; border-radius: 6px; font-weight: 700; color: {PALETTE['text_muted']}; padding: 3px 6px; font-size: 11px;")
 
     def confirm_reset_game(self):
+        """Prompt user with explicit confirmation dialog before resetting board state."""
         reply = QMessageBox.question(
             self, "Reset Game Session",
-            "Are you sure you want to reset the current game session?\n"
-            "This will clear all 90 calling board cells and draw history.",
+            "Are you sure you want to reset the current game?\nAll called numbers and board highlights will be cleared.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
         if reply == QMessageBox.StandardButton.Yes:
-            self.reset_session()
+            self.called_numbers.clear()
+            self.current_number = None
+            self.chute_widget.reset()
+            self.audio_player.stop()
 
-    def reset_session(self):
-        self.auto_draw_timer.stop()
-        self.chk_auto.setChecked(False)
-        self.audio_player.stop()
-        self.equalizer.set_active(False)
-        self.called_numbers.clear()
-        self.current_number = None
+            self.lbl_hero_pillar.setText("READY TO COMMENCE GAME")
+            self.lbl_hero_title.setText("Press 'Roll & Drop' or Spacebar")
+            self.lbl_hero_subtitle.setText("90 Evergreen Indian Songs • Full Decade Mapping")
+            self.lbl_audio_status.setText("Audio: Ready")
 
-        # Reset all cell styles
-        for num, btn in self.cell_buttons.items():
-            self._apply_cell_style(btn, "pending")
+            for btn in self.matrix_buttons.values():
+                self._apply_cell_style(btn, "uncalled")
 
-        self.hero_badge.reset()
-        self.lbl_pillar_tag.setText("PILLAR: READY TO DRAW")
-        self.lbl_song_title.setText("Press 'Draw Next Track' to Begin")
-        self.lbl_song_sub.setText("Master 90 Evergreen Bollywood & Indian Hits")
-        self.lbl_audio_status.setText("")
-        self.call_counter_badge.setText("0 / 90")
-        self.lbl_stats.setText("Called: 0 • Remaining: 90")
-        self.progress_bar.setValue(0)
-        self.btn_play_pause.setText("▶ Play")
-        self.slider_seek.setValue(0)
-        self.lbl_cur_time.setText("00:00")
-        self.lbl_tot_time.setText("00:00")
-
-        self.game_reset.emit()
+            self._update_session_chips()
+            self.game_reset.emit()
 
 
 # ---------------------------------------------------------------------------
-# SCREEN 2: Lucky Draw & Raffle Module (PRD 2.4)
+# SCREEN 2: 3D Particle Audio Sphere Visualizer Screen
+# ---------------------------------------------------------------------------
+class ParticleSphereScreen(QWidget):
+    """
+    Dedicated immersive visualizer screen hosting the rotating 3D particle sphere.
+    Provides beat modulation toggle, speed controls, now playing track card,
+    and a quick return button to the live caller stage.
+    """
+    return_to_caller_requested = pyqtSignal()
+
+    def __init__(self, audio_player: AudioPlayer, parent=None):
+        super().__init__(parent)
+        self.audio_player = audio_player
+        self.current_song_name = "Ready for Calling"
+
+        self._init_ui()
+
+    def _init_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(18, 14, 18, 14)
+        layout.setSpacing(12)
+
+        # Header Control Bar
+        header = QFrame()
+        header.setProperty("class", "card-panel")
+        header_layout = QHBoxLayout(header)
+        header_layout.setContentsMargins(16, 10, 16, 10)
+
+        title = QLabel("🔮 3D PARTICLE AUDIO SPHERE • LIVE RESONATOR")
+        title.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
+        title.setStyleSheet(f"color: {PALETTE['indigo']};")
+        header_layout.addWidget(title)
+
+        header_layout.addStretch()
+
+        # Quick Return Button
+        btn_return = QPushButton("← Return to Live Caller Stage")
+        btn_return.setFixedHeight(34)
+        btn_return.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_return.clicked.connect(self.return_to_caller_requested.emit)
+        header_layout.addWidget(btn_return)
+
+        layout.addWidget(header)
+
+        # Main 3D Canvas
+        self.sphere_widget = ParticleAudioSphereWidget(self)
+        layout.addWidget(self.sphere_widget, 1)
+
+        # Bottom Floating Control Deck
+        deck = QFrame()
+        deck.setProperty("class", "card-panel")
+        deck_layout = QHBoxLayout(deck)
+        deck_layout.setContentsMargins(16, 10, 16, 10)
+        deck_layout.setSpacing(16)
+
+        # Beat Modulation Toggle
+        self.btn_beat_mod = QPushButton("✨ Beat Modulation: ACTIVE")
+        self.btn_beat_mod.setCheckable(True)
+        self.btn_beat_mod.setChecked(True)
+        self.btn_beat_mod.setFixedHeight(34)
+        self.btn_beat_mod.setStyleSheet(f"background: {PALETTE['emerald_light']}; color: {PALETTE['emerald_dark']}; border: 1.5px solid {PALETTE['emerald']}; font-weight: 700;")
+        self.btn_beat_mod.clicked.connect(self._toggle_beat_modulation)
+        deck_layout.addWidget(self.btn_beat_mod)
+
+        # Rotation Speed Slider
+        deck_layout.addWidget(QLabel("Rotation Speed:"))
+        self.slider_speed = QSlider(Qt.Orientation.Horizontal)
+        self.slider_speed.setRange(2, 30)
+        self.slider_speed.setValue(10)
+        self.slider_speed.setFixedWidth(100)
+        self.slider_speed.valueChanged.connect(lambda v: self.sphere_widget.set_rotation_speed(v / 10.0))
+        deck_layout.addWidget(self.slider_speed)
+
+        # Sphere Scale Slider
+        deck_layout.addWidget(QLabel("Sphere Size:"))
+        self.slider_scale = QSlider(Qt.Orientation.Horizontal)
+        self.slider_scale.setRange(100, 240)
+        self.slider_scale.setValue(160)
+        self.slider_scale.setFixedWidth(100)
+        self.slider_scale.valueChanged.connect(lambda v: self.sphere_widget.set_sphere_scale(float(v)))
+        deck_layout.addWidget(self.slider_scale)
+
+        deck_layout.addStretch()
+
+        # Now Playing Track Indicator
+        self.lbl_now_playing = QLabel("Now Playing: —")
+        self.lbl_now_playing.setStyleSheet(f"color: {PALETTE['text_secondary']}; font-weight: 600; font-size: 12px;")
+        deck_layout.addWidget(self.lbl_now_playing)
+
+        layout.addWidget(deck)
+
+    def _toggle_beat_modulation(self):
+        active = self.btn_beat_mod.isChecked()
+        self.sphere_widget.set_beat_modulation(active)
+        if active:
+            self.btn_beat_mod.setText("✨ Beat Modulation: ACTIVE")
+            self.btn_beat_mod.setStyleSheet(f"background: {PALETTE['emerald_light']}; color: {PALETTE['emerald_dark']}; border: 1.5px solid {PALETTE['emerald']}; font-weight: 700;")
+        else:
+            self.btn_beat_mod.setText("⏸ Beat Modulation: OFF")
+            self.btn_beat_mod.setStyleSheet(f"background: {PALETTE['bg_card_alt']}; color: {PALETTE['text_muted']}; border: 1px solid {PALETTE['border']}; font-weight: 600;")
+
+    def sync_track_info(self, number: int):
+        song = song_bank.get_song(number)
+        title = song.get("title", f"Track #{number}") if song else f"Track #{number}"
+        self.current_song_name = f"#{number:02d} • {title}"
+        self.lbl_now_playing.setText(f"Now Playing: {self.current_song_name}")
+        self.sphere_widget.set_audio_playing(True)
+
+
+# ---------------------------------------------------------------------------
+# SCREEN 3: Lucky Draw & Slot Machine Roller (Tie-Breaker & Raffle)
 # ---------------------------------------------------------------------------
 class LuckyDrawScreen(QWidget):
     """
-    Dedicated tie-breaker & raffle module featuring animated rolling lottery slot effect,
-    configurable simultaneous winners, category selection, and persistent session audit log.
+    Dedicated tie-breaker and raffle module featuring animated mechanical
+    slot-machine drums, configurable winners, category presets, and a persistent
+    session audit log table.
     """
     def __init__(self, audio_player: AudioPlayer, parent=None):
         super().__init__(parent)
@@ -992,54 +1500,47 @@ class LuckyDrawScreen(QWidget):
         self.called_numbers_ref: List[int] = []
         self.registered_tickets_ref: List[Dict[str, Any]] = []
 
-        # Slot animation state
-        self.is_rolling = False
-        self.anim_ticks = 0
-        self.total_anim_ticks = 40
-        self.winner_candidates: List[Dict[str, Any]] = []
-
-        self.slot_timer = QTimer(self)
-        self.slot_timer.timeout.connect(self._step_slot_animation)
-
         self._init_ui()
 
     def set_called_numbers(self, called: List[int]):
         self.called_numbers_ref = called
+        self._update_pool_labels()
 
     def set_registered_tickets(self, tickets: List[Dict[str, Any]]):
         self.registered_tickets_ref = tickets
+        self._update_pool_labels()
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(18, 16, 18, 16)
+        layout.setContentsMargins(18, 14, 18, 14)
         layout.setSpacing(14)
 
         # Header Title Card
-        header_box = QFrame()
-        header_box.setProperty("class", "card-panel")
-        header_layout = QHBoxLayout(header_box)
-        header_layout.setContentsMargins(16, 12, 16, 12)
+        header = QFrame()
+        header.setProperty("class", "card-panel")
+        header_layout = QHBoxLayout(header)
+        header_layout.setContentsMargins(16, 10, 16, 10)
 
         title = QLabel("🎰 LUCKY DRAW & TIE-BREAKER RAFFLE")
-        title.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
+        title.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
         title.setStyleSheet(f"color: {PALETTE['indigo']};")
         header_layout.addWidget(title)
         header_layout.addStretch()
 
-        lbl_desc = QLabel("Provably Fair Random Tie-Breakers & Lucky Draw Engine")
-        lbl_desc.setStyleSheet(f"color: {PALETTE['text_secondary']}; font-size: 12px;")
-        header_layout.addWidget(lbl_desc)
-        layout.addWidget(header_box)
+        desc = QLabel("Provably Fair Random Tie-Breakers & Mechanical Slot Drum Engine")
+        desc.setStyleSheet(f"color: {PALETTE['text_secondary']}; font-size: 12px;")
+        header_layout.addWidget(desc)
+        layout.addWidget(header)
 
         # Main Split Content
-        content_split = QHBoxLayout()
-        content_split.setSpacing(14)
+        split_layout = QHBoxLayout()
+        split_layout.setSpacing(14)
 
-        # Left Column: Configuration & Controls
-        left_cfg = QFrame()
-        left_cfg.setProperty("class", "card-panel")
-        left_cfg.setFixedWidth(380)
-        cfg_layout = QVBoxLayout(left_cfg)
+        # Left Config Panel
+        cfg_frame = QFrame()
+        cfg_frame.setProperty("class", "card-panel")
+        cfg_frame.setFixedWidth(380)
+        cfg_layout = QVBoxLayout(cfg_frame)
         cfg_layout.setContentsMargins(16, 16, 16, 16)
         cfg_layout.setSpacing(12)
 
@@ -1047,130 +1548,127 @@ class LuckyDrawScreen(QWidget):
         cfg_title.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
         cfg_layout.addWidget(cfg_title)
 
-        # Prize / Category Selector
+        # Prize / Category Preset Dropdown
         cfg_layout.addWidget(QLabel("Prize / Claim Category:"))
         self.combo_category = QComboBox()
-        self.combo_category.setEditable(True)
-        categories = [
+        self.combo_category.addItems([
             "Early 5 Tie-Breaker",
             "Top Line Tie-Breaker",
             "Middle Line Tie-Breaker",
             "Bottom Line Tie-Breaker",
             "Four Corners Tie-Breaker",
             "Full House Tie-Breaker",
-            "Lucky Star Raffle",
-            "Fastest Finger Bonus",
-            "Surprise Gift Draw"
-        ]
-        self.combo_category.addItems(categories)
+            "Lucky Participant Raffle",
+            "Bumper Jackpot Draw",
+            "Consolation Gift",
+            "Custom Claim..."
+        ])
+        self.combo_category.currentIndexChanged.connect(self._on_category_changed)
         cfg_layout.addWidget(self.combo_category)
 
-        # Winner Count SpinBox
-        cfg_layout.addWidget(QLabel("Simultaneous Winners (1 to 10):"))
+        # Custom Category Text Input
+        self.txt_custom_cat = QLineEdit()
+        self.txt_custom_cat.setPlaceholderText("Enter custom prize name...")
+        self.txt_custom_cat.setVisible(False)
+        cfg_layout.addWidget(self.txt_custom_cat)
+
+        # Winner Count Spinbox
+        cfg_layout.addWidget(QLabel("Simultaneous Winner(s) to Draw (1–10):"))
         self.spin_winners = QSpinBox()
         self.spin_winners.setRange(1, 10)
         self.spin_winners.setValue(1)
         cfg_layout.addWidget(self.spin_winners)
 
-        # Pool Source Selection
-        cfg_layout.addWidget(QLabel("Participant Draw Pool Source:"))
+        # Selection Pool Radio Group
+        cfg_layout.addWidget(QLabel("Draw Selection Pool:"))
         self.btn_group_pool = QButtonGroup(self)
 
-        self.radio_called = QRadioButton("Already-Called Numbers (Screen 1)")
-        self.radio_called.setChecked(True)
-        self.btn_group_pool.addButton(self.radio_called, 1)
-        cfg_layout.addWidget(self.radio_called)
+        self.radio_called_songs = QRadioButton("Already Called Numbers (Screen 1)")
+        self.radio_called_songs.setChecked(True)
+        self.btn_group_pool.addButton(self.radio_called_songs, 1)
+        cfg_layout.addWidget(self.radio_called_songs)
 
-        self.radio_tickets = QRadioButton("Registered Ticket IDs (Current Batch)")
-        self.btn_group_pool.addButton(self.radio_tickets, 2)
-        cfg_layout.addWidget(self.radio_tickets)
+        self.lbl_called_pool_count = QLabel("Available called numbers: 0")
+        self.lbl_called_pool_count.setStyleSheet(f"color: {PALETTE['text_muted']}; font-size: 11px; margin-left: 20px;")
+        cfg_layout.addWidget(self.lbl_called_pool_count)
 
-        self.radio_all_songs = QRadioButton("All Game Numbers (1–90)")
-        self.btn_group_pool.addButton(self.radio_all_songs, 3)
-        cfg_layout.addWidget(self.radio_all_songs)
+        self.radio_ticket_ids = QRadioButton("Registered Ticket IDs (Screen 4)")
+        self.btn_group_pool.addButton(self.radio_ticket_ids, 2)
+        cfg_layout.addWidget(self.radio_ticket_ids)
 
-        cfg_layout.addSpacing(10)
+        self.lbl_ticket_pool_count = QLabel("Available registered tickets: 0")
+        self.lbl_ticket_pool_count.setStyleSheet(f"color: {PALETTE['text_muted']}; font-size: 11px; margin-left: 20px;")
+        cfg_layout.addWidget(self.lbl_ticket_pool_count)
 
-        # Trigger Button
-        self.btn_roll = QPushButton("🎰 Roll & Draw Winners!")
-        self.btn_roll.setProperty("class", "btn-primary")
-        self.btn_roll.setMinimumHeight(46)
-        self.btn_roll.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
-        self.btn_roll.clicked.connect(self.start_draw)
-        cfg_layout.addWidget(self.btn_roll)
         cfg_layout.addStretch()
 
-        content_split.addWidget(left_cfg)
+        # Primary Action Button
+        self.btn_start_draw = QPushButton("🎰 ROLL & DRAW WINNERS")
+        self.btn_start_draw.setProperty("class", "btn-primary")
+        self.btn_start_draw.setFixedHeight(46)
+        self.btn_start_draw.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
+        self.btn_start_draw.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_start_draw.clicked.connect(self.start_draw)
+        cfg_layout.addWidget(self.btn_start_draw)
 
-        # Right Column: Animated Slot Screen & Winner Announcement
-        right_slot_frame = QFrame()
-        right_slot_frame.setProperty("class", "card-panel")
-        right_layout = QVBoxLayout(right_slot_frame)
-        right_layout.setContentsMargins(20, 20, 20, 20)
-        right_layout.setSpacing(16)
+        split_layout.addWidget(cfg_frame)
 
-        # Big Animated Slot Drum Display
-        self.slot_box = QFrame()
-        self.slot_box.setProperty("class", "card-subtle")
-        self.slot_box.setMinimumHeight(150)
-        slot_box_layout = QVBoxLayout(self.slot_box)
-        slot_box_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # Right Slot Drum & Winner Reveal Deck
+        right_deck = QFrame()
+        right_deck.setProperty("class", "card-panel")
+        right_layout = QVBoxLayout(right_deck)
+        right_layout.setContentsMargins(18, 16, 18, 16)
+        right_layout.setSpacing(12)
 
-        self.lbl_slot_display = QLabel("READY TO ROLL")
-        self.lbl_slot_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.lbl_slot_display.setFont(QFont("Segoe UI", 28, QFont.Weight.Bold))
-        self.lbl_slot_display.setStyleSheet(f"color: {PALETTE['indigo']}; letter-spacing: 2px;")
-        slot_box_layout.addWidget(self.lbl_slot_display)
+        # Mechanical Slot Machine Drums
+        self.drum_widget = SlotMachineDrumWidget(self)
+        self.drum_widget.draw_finished.connect(self._on_draw_animation_finished)
+        right_layout.addWidget(self.drum_widget)
 
-        self.lbl_slot_sub = QLabel("Select parameters and click 'Roll & Draw Winners'")
-        self.lbl_slot_sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.lbl_slot_sub.setStyleSheet(f"color: {PALETTE['text_secondary']}; font-size: 13px;")
-        slot_box_layout.addWidget(self.lbl_slot_sub)
-        right_layout.addWidget(self.slot_box)
+        # Winner Cards Area
+        lbl_winner_header = QLabel("🏆 Drawn Winner(s):")
+        lbl_winner_header.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
+        right_layout.addWidget(lbl_winner_header)
 
-        # Winner Cards Container
-        lbl_winners_heading = QLabel("🏆 Drawn Winner(s):")
-        lbl_winners_heading.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
-        right_layout.addWidget(lbl_winners_heading)
+        self.scroll_winners = QScrollArea()
+        self.scroll_winners.setWidgetResizable(True)
+        self.scroll_winners.setFrameShape(QFrame.Shape.NoFrame)
+        self.scroll_winners.setStyleSheet("background: transparent;")
 
-        self.winners_scroll = QScrollArea()
-        self.winners_scroll.setWidgetResizable(True)
-        self.winners_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        self.winners_scroll.setStyleSheet("background: transparent;")
-
-        self.winners_widget = QWidget()
-        self.winners_layout = QVBoxLayout(self.winners_widget)
+        self.winners_container = QWidget()
+        self.winners_layout = QVBoxLayout(self.winners_container)
         self.winners_layout.setContentsMargins(0, 0, 0, 0)
         self.winners_layout.setSpacing(8)
-        self.winners_scroll.setWidget(self.winners_widget)
-        right_layout.addWidget(self.winners_scroll, 1)
+        self.scroll_winners.setWidget(self.winners_container)
+        right_layout.addWidget(self.scroll_winners, 1)
 
-        content_split.addWidget(right_slot_frame, 1)
-        layout.addLayout(content_split, 1)
+        split_layout.addWidget(right_deck, 1)
+        layout.addLayout(split_layout, 1)
 
         # Bottom Frame: Persistent Session Audit Log Table
         log_frame = QFrame()
         log_frame.setProperty("class", "card-panel")
-        log_frame.setFixedHeight(210)
+        log_frame.setFixedHeight(200)
         log_layout = QVBoxLayout(log_frame)
-        log_layout.setContentsMargins(16, 12, 16, 12)
+        log_layout.setContentsMargins(16, 10, 16, 10)
         log_layout.setSpacing(8)
 
         log_top = QHBoxLayout()
-        lbl_log_title = QLabel("📋 Session Raffle Audit Log")
-        lbl_log_title.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
-        log_top.addWidget(lbl_log_title)
+        lbl_log = QLabel("📋 Session Raffle Audit Log")
+        lbl_log.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
+        log_top.addWidget(lbl_log)
         log_top.addStretch()
 
-        btn_copy_log = QPushButton("Copy Log")
-        btn_copy_log.setStyleSheet("font-size: 11px;")
-        btn_copy_log.clicked.connect(self._copy_log)
-        log_top.addWidget(btn_copy_log)
+        btn_copy = QPushButton("Copy Log")
+        btn_copy.setStyleSheet("font-size: 11px;")
+        btn_copy.clicked.connect(self._copy_log)
+        log_top.addWidget(btn_copy)
 
-        btn_clear_log = QPushButton("Clear Log")
-        btn_clear_log.setStyleSheet(f"font-size: 11px; color: {PALETTE['coral']};")
-        btn_clear_log.clicked.connect(self._clear_log)
-        log_top.addWidget(btn_clear_log)
+        btn_clear = QPushButton("Clear Log")
+        btn_clear.setStyleSheet(f"font-size: 11px; color: {PALETTE['coral']};")
+        btn_clear.clicked.connect(self._clear_log)
+        log_top.addWidget(btn_clear)
+
         log_layout.addLayout(log_top)
 
         self.table_log = QTableWidget(0, 5)
@@ -1181,145 +1679,110 @@ class LuckyDrawScreen(QWidget):
 
         layout.addWidget(log_frame)
 
-    def start_draw(self):
-        if self.is_rolling:
-            return
+    def _on_category_changed(self, idx: int):
+        is_custom = self.combo_category.currentText() == "Custom Claim..."
+        self.txt_custom_cat.setVisible(is_custom)
 
-        # Determine pool candidates
+    def _update_pool_labels(self):
+        self.lbl_called_pool_count.setText(f"Available called numbers: {len(self.called_numbers_ref)}")
+        self.lbl_ticket_pool_count.setText(f"Available registered tickets: {len(self.registered_tickets_ref)}")
+
+    def start_draw(self):
         pool_type = self.btn_group_pool.checkedId()
         candidates: List[Dict[str, Any]] = []
 
-        if pool_type == 1: # Called numbers
+        if pool_type == 1:
             if not self.called_numbers_ref:
                 QMessageBox.warning(self, "Empty Pool", "No numbers have been called yet in Screen 1!")
                 return
             for n in self.called_numbers_ref:
-                s = song_bank.get_song(n)
-                title = s.get("title", f"Track #{n}") if s else f"Track #{n}"
-                candidates.append({"id": f"#{n:02d}", "name": title, "source": "Called Numbers"})
-        elif pool_type == 2: # Registered tickets
+                title = song_bank.get_song_title(n)
+                candidates.append({"id": n, "label": f"#{n:02d}", "details": title, "source": "Called Songs"})
+        else:
             if not self.registered_tickets_ref:
-                QMessageBox.warning(self, "No Tickets Loaded", "No ticket batch registry loaded. Generate or select a batch first in Screen 3 or 4!")
+                QMessageBox.warning(self, "No Tickets Loaded", "No ticket registry loaded. Select a batch in Screen 4 first!")
                 return
             for t in self.registered_tickets_ref:
                 tid = t.get("ticket_id", "001")
-                candidates.append({"id": f"Ticket #{tid}", "name": f"Registered Sheet {tid}", "source": "Ticket Registry"})
-        else: # All numbers 1-90
-            for n in range(1, 91):
-                s = song_bank.get_song(n)
-                title = s.get("title", f"Track #{n}") if s else f"Track #{n}"
-                candidates.append({"id": f"#{n:02d}", "name": title, "source": "All Numbers (1-90)"})
+                num_id = int(str(tid).lstrip("#")) if str(tid).isdigit() else 1
+                candidates.append({"id": num_id, "label": f"Ticket #{tid}", "details": "Verified Participant", "source": "Ticket Registry"})
 
-        num_winners = min(self.spin_winners.value(), len(candidates))
-        self.winner_candidates = random.sample(candidates, num_winners)
+        k = min(self.spin_winners.value(), len(candidates))
+        drawn_winners = random.sample(candidates, k)
+        self.pending_winners = drawn_winners
 
-        # Start slot animation
-        self.is_rolling = True
-        self.anim_ticks = 0
-        self.btn_roll.setEnabled(False)
-        self.slot_timer.start(45)
+        # Animate slot machine drum to the 1st winner's number
+        first_num = drawn_winners[0]["id"]
+        self.drum_widget.spin_to_number(first_num)
 
-    def _step_slot_animation(self):
-        self.anim_ticks += 1
-        self.audio_player.play_tick()
-
-        # Generate rolling slot display string
-        r_num = random.randint(1, 90)
-        self.lbl_slot_display.setText(f"🎲 ROLLING... #{r_num:02d}")
-        self.lbl_slot_sub.setText("Selecting lucky winner(s)...")
-
-        # Slow down near the end
-        if self.anim_ticks > 25:
-            self.slot_timer.setInterval(self.slot_timer.interval() + 15)
-
-        if self.anim_ticks >= self.total_anim_ticks:
-            self.slot_timer.stop()
-            self._reveal_winners()
-
-    def _reveal_winners(self):
-        self.is_rolling = False
-        self.btn_roll.setEnabled(True)
-        self.audio_player.play_fanfare()
-
+    def _on_draw_animation_finished(self, drum_values: list):
         # Clear existing winner cards
         while self.winners_layout.count():
             item = self.winners_layout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
 
-        category = self.combo_category.currentText().strip()
-        ts = datetime.now().strftime("%H:%M:%S")
+        cat = self.txt_custom_cat.text().strip() if self.combo_category.currentText() == "Custom Claim..." else self.combo_category.currentText()
+        now_str = datetime.now().strftime("%H:%M:%S")
 
-        # Display winner cards
-        summary_names = []
-        for idx, w in enumerate(self.winner_candidates, start=1):
-            summary_names.append(w["id"])
-
+        for rank, w in enumerate(self.pending_winners, 1):
             card = QFrame()
-            card.setStyleSheet(f"""
-                QFrame {{
-                    background: {PALETTE['amber_light']};
-                    border: 1.5px solid {PALETTE['amber']};
-                    border-radius: 8px;
-                    padding: 8px;
-                }}
-            """)
-            card_layout = QHBoxLayout(card)
-            card_layout.setContentsMargins(12, 8, 12, 8)
+            card.setProperty("class", "card-subtle")
+            c_layout = QHBoxLayout(card)
+            c_layout.setContentsMargins(12, 8, 12, 8)
 
-            lbl_rank = QLabel(f"🏆 WINNER #{idx}")
-            lbl_rank.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
+            lbl_rank = QLabel(f"#{rank}")
+            lbl_rank.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
             lbl_rank.setStyleSheet(f"color: {PALETTE['amber_dark']};")
-            card_layout.addWidget(lbl_rank)
+            c_layout.addWidget(lbl_rank)
 
-            lbl_id = QLabel(f"{w['id']}")
-            lbl_id.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
-            lbl_id.setStyleSheet(f"color: {PALETTE['text_primary']};")
-            card_layout.addWidget(lbl_id)
+            lbl_name = QLabel(f"<b>{w['label']}</b> • {w['details']}")
+            lbl_name.setFont(QFont("Segoe UI", 12))
+            c_layout.addWidget(lbl_name)
 
-            lbl_name = QLabel(f"— {w['name']}")
-            lbl_name.setFont(QFont("Segoe UI", 11, QFont.Weight.Normal))
-            lbl_name.setStyleSheet(f"color: {PALETTE['text_secondary']};")
-            card_layout.addWidget(lbl_name)
-            card_layout.addStretch()
+            c_layout.addStretch()
+
+            lbl_source = QLabel(w["source"])
+            lbl_source.setStyleSheet(f"background: {PALETTE['indigo_light']}; color: {PALETTE['indigo']}; font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 700;")
+            c_layout.addWidget(lbl_source)
 
             self.winners_layout.addWidget(card)
 
-            # Insert into audit log table
-            row = self.table_log.rowCount()
-            self.table_log.insertRow(row)
-            self.table_log.setItem(row, 0, QTableWidgetItem(ts))
-            self.table_log.setItem(row, 1, QTableWidgetItem(category))
-            self.table_log.setItem(row, 2, QTableWidgetItem(w["source"]))
-            self.table_log.setItem(row, 3, QTableWidgetItem(w["id"]))
-            self.table_log.setItem(row, 4, QTableWidgetItem(w["name"]))
-
-        self.lbl_slot_display.setText(f"🎉 {' & '.join(summary_names)} 🎉")
-        self.lbl_slot_sub.setText(f"Awarded: {category} • Verified at {ts}")
+            # Append to persistent audit log
+            r_idx = self.table_log.rowCount()
+            self.table_log.insertRow(r_idx)
+            self.table_log.setItem(r_idx, 0, QTableWidgetItem(now_str))
+            self.table_log.setItem(r_idx, 1, QTableWidgetItem(cat))
+            self.table_log.setItem(r_idx, 2, QTableWidgetItem(w["source"]))
+            self.table_log.setItem(r_idx, 3, QTableWidgetItem(str(w["label"])))
+            self.table_log.setItem(r_idx, 4, QTableWidgetItem(str(w["details"])))
 
     def _copy_log(self):
-        rows = self.table_log.rowCount()
-        if rows == 0:
-            return
-        lines = []
-        for r in range(rows):
-            line = " | ".join(self.table_log.item(r, c).text() for c in range(5))
-            lines.append(line)
-        QApplication.clipboard().setText("\n".join(lines))
-        QMessageBox.information(self, "Copied", "Audit log copied to clipboard!")
+        rows = []
+        for r in range(self.table_log.rowCount()):
+            cols = [self.table_log.item(r, c).text() if self.table_log.item(r, c) else "" for c in range(5)]
+            rows.append("\t".join(cols))
+        text = "\n".join(rows)
+        QApplication.clipboard().setText(text)
+        QMessageBox.information(self, "Copied", "Raffle audit log copied to clipboard!")
 
     def _clear_log(self):
-        self.table_log.setRowCount(0)
+        reply = QMessageBox.question(self, "Clear Log", "Clear session raffle audit log?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        if reply == QMessageBox.StandardButton.Yes:
+            self.table_log.setRowCount(0)
 
 
 # ---------------------------------------------------------------------------
-# SCREEN 3: Claim Verifier & Ticket Inspector (PRD 2.5)
+# SCREEN 4: Claim Verifier & Ticket Inspector
 # ---------------------------------------------------------------------------
 class ClaimVerifierScreen(QWidget):
     """
-    Automated cross-check engine with batch registry loader, 3x9 visual grid display,
-    called vs. pending cell highlighting, and real-time auto-verdict evaluation.
+    Automated cross-check engine with batch registry auto-loader,
+    ticket ID search, 3x9 visual grid overlay with CALLED/PENDING status badges,
+    and a real-time automated verdict evaluation engine.
     """
+    tickets_loaded = pyqtSignal(list)
+
     def __init__(self, audio_player: AudioPlayer, parent=None):
         super().__init__(parent)
         self.audio_player = audio_player
@@ -1329,6 +1792,7 @@ class ClaimVerifierScreen(QWidget):
         self.active_ticket_idx = 0
 
         self._init_ui()
+        self.reload_batch_registries()
 
     def set_called_numbers(self, called: List[int]):
         self.called_numbers_ref = called
@@ -1336,14 +1800,14 @@ class ClaimVerifierScreen(QWidget):
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(18, 16, 18, 16)
-        layout.setSpacing(14)
+        layout.setContentsMargins(18, 14, 18, 14)
+        layout.setSpacing(12)
 
         # Header Control Bar
-        header_card = QFrame()
-        header_card.setProperty("class", "card-panel")
-        header_layout = QHBoxLayout(header_card)
-        header_layout.setContentsMargins(16, 12, 16, 12)
+        header = QFrame()
+        header.setProperty("class", "card-panel")
+        header_layout = QHBoxLayout(header)
+        header_layout.setContentsMargins(16, 10, 16, 10)
         header_layout.setSpacing(12)
 
         title = QLabel("🔍 CLAIM VERIFIER & INSPECTOR")
@@ -1351,189 +1815,126 @@ class ClaimVerifierScreen(QWidget):
         title.setStyleSheet(f"color: {PALETTE['indigo']};")
         header_layout.addWidget(title)
 
-        # Batch Selector Dropdown
         header_layout.addWidget(QLabel("Batch Registry:"))
         self.combo_batch = QComboBox()
         self.combo_batch.setMinimumWidth(260)
         self.combo_batch.currentIndexChanged.connect(self._on_batch_selected)
         header_layout.addWidget(self.combo_batch)
 
-        btn_refresh_batches = QPushButton("🔄 Refresh")
-        btn_refresh_batches.clicked.connect(self.reload_batch_registries)
-        header_layout.addWidget(btn_refresh_batches)
+        btn_refresh = QPushButton("🔄 Refresh")
+        btn_refresh.clicked.connect(self.reload_batch_registries)
+        header_layout.addWidget(btn_refresh)
 
         header_layout.addSpacing(16)
 
-        # Ticket ID Search Input
         header_layout.addWidget(QLabel("Ticket ID:"))
         self.txt_search_id = QLineEdit()
         self.txt_search_id.setPlaceholderText("e.g. 001")
         self.txt_search_id.setFixedWidth(90)
-        self.txt_search_id.returnPressed.connect(self._on_search_ticket)
+        self.txt_search_id.returnPressed.connect(self._search_ticket)
         header_layout.addWidget(self.txt_search_id)
 
         btn_search = QPushButton("Find")
-        btn_search.clicked.connect(self._on_search_ticket)
+        btn_search.clicked.connect(self._search_ticket)
         header_layout.addWidget(btn_search)
 
-        self.btn_prev_ticket = QPushButton("◀ Prev")
-        self.btn_prev_ticket.clicked.connect(self._prev_ticket)
-        header_layout.addWidget(self.btn_prev_ticket)
+        btn_prev = QPushButton("◀ Prev")
+        btn_prev.clicked.connect(self._prev_ticket)
+        header_layout.addWidget(btn_prev)
 
-        self.btn_next_ticket = QPushButton("Next ▶")
-        self.btn_next_ticket.clicked.connect(self._next_ticket)
-        header_layout.addWidget(self.btn_next_ticket)
+        btn_next = QPushButton("Next ▶")
+        btn_next.clicked.connect(self._next_ticket)
+        header_layout.addWidget(btn_next)
 
         header_layout.addStretch()
-        layout.addWidget(header_card)
+        layout.addWidget(header)
 
-        # Grand Auto-Verdict Banner Card
-        self.verdict_banner = QFrame()
-        self.verdict_banner.setProperty("class", "card-panel")
-        self.verdict_layout = QVBoxLayout(self.verdict_banner)
+        # Real-Time Verdict Banner
+        self.verdict_frame = QFrame()
+        self.verdict_frame.setProperty("class", "card-panel")
+        self.verdict_layout = QVBoxLayout(self.verdict_frame)
         self.verdict_layout.setContentsMargins(16, 12, 16, 12)
+        self.verdict_layout.setSpacing(6)
 
-        self.lbl_verdict_title = QLabel("NO TICKET LOADED")
-        self.lbl_verdict_title.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
-        self.lbl_verdict_title.setStyleSheet(f"color: {PALETTE['text_secondary']};")
+        self.lbl_verdict_title = QLabel("WAITING FOR TICKET SELECTION")
+        self.lbl_verdict_title.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
         self.verdict_layout.addWidget(self.lbl_verdict_title)
 
-        self.lbl_verdict_details = QLabel("Select an archived batch registry to inspect tickets")
+        self.lbl_verdict_details = QLabel("Select a batch registry above to inspect claims in real time.")
         self.lbl_verdict_details.setStyleSheet(f"color: {PALETTE['text_secondary']}; font-size: 12px;")
         self.verdict_layout.addWidget(self.lbl_verdict_details)
-        layout.addWidget(self.verdict_banner)
 
-        # Main Split: 3x9 Ticket Visualizer on Left, Claim Status Checklist on Right
-        split_layout = QHBoxLayout()
-        split_layout.setSpacing(14)
+        # Claim qualification badges row
+        self.claim_badges_row = QHBoxLayout()
+        self.claim_badges_row.setSpacing(8)
+        self.claim_labels: Dict[str, QLabel] = {}
+        for cname in ["Early 5", "Top Line", "Middle Line", "Bottom Line", "Four Corners", "Full House"]:
+            lbl = QLabel(f"{cname}: —")
+            lbl.setStyleSheet(f"background: {PALETTE['bg_card_alt']}; color: {PALETTE['text_muted']}; border: 1px solid {PALETTE['border']}; border-radius: 6px; padding: 4px 8px; font-size: 11px; font-weight: 700;")
+            self.claim_labels[cname] = lbl
+            self.claim_badges_row.addWidget(lbl)
+        self.claim_badges_row.addStretch()
+        self.verdict_layout.addLayout(self.claim_badges_row)
 
-        # 3x9 Visual Ticket Container (Left)
-        ticket_card = QFrame()
-        ticket_card.setProperty("class", "card-panel")
-        ticket_layout = QVBoxLayout(ticket_card)
-        ticket_layout.setContentsMargins(16, 14, 16, 14)
-        ticket_layout.setSpacing(10)
+        layout.addWidget(self.verdict_frame)
 
-        # Ticket Strip Header
-        strip_hdr = QHBoxLayout()
-        self.lbl_ticket_strip_title = QLabel("TICKET STRIP OVERLAY (3x9)")
-        self.lbl_ticket_strip_title.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
-        strip_hdr.addWidget(self.lbl_ticket_strip_title)
-        strip_hdr.addStretch()
+        # 3x9 Visual Ticket Grid Overlay
+        ticket_box = QFrame()
+        ticket_box.setProperty("class", "card-panel")
+        t_layout = QVBoxLayout(ticket_box)
+        t_layout.setContentsMargins(18, 14, 18, 14)
+        t_layout.setSpacing(10)
 
-        self.lbl_strip_badge = QLabel("Strip 1 of 2")
-        self.lbl_strip_badge.setStyleSheet(
-            f"background: {PALETTE['indigo_light']}; color: {PALETTE['indigo']}; "
-            f"padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 11px;"
-        )
-        strip_hdr.addWidget(self.lbl_strip_badge)
-        ticket_layout.addLayout(strip_hdr)
+        self.lbl_ticket_heading = QLabel("TICKET #001 • 3×9 TAMBOLA MATRIX")
+        self.lbl_ticket_heading.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
+        t_layout.addWidget(self.lbl_ticket_heading)
 
-        # 3x9 Visual Table Grid
         self.grid_ticket = QGridLayout()
-        self.grid_ticket.setSpacing(6)
-        ticket_layout.addLayout(self.grid_ticket, 1)
+        self.grid_ticket.setSpacing(8)
+        t_layout.addLayout(self.grid_ticket, 1)
 
-        split_layout.addWidget(ticket_card, 2)
-
-        # Claim Condition Checklist Cards (Right)
-        checklist_card = QFrame()
-        checklist_card.setProperty("class", "card-panel")
-        checklist_card.setFixedWidth(340)
-        check_layout = QVBoxLayout(checklist_card)
-        check_layout.setContentsMargins(16, 14, 16, 14)
-        check_layout.setSpacing(10)
-
-        check_hdr = QLabel("🏆 Claim Conditions Status")
-        check_hdr.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
-        check_layout.addWidget(check_hdr)
-
-        self.check_labels: Dict[str, QLabel] = {}
-        conditions = [
-            ("early_5", "Early 5 (Any 5 Numbers)"),
-            ("top_line", "Top Line (Row 1)"),
-            ("mid_line", "Middle Line (Row 2)"),
-            ("bot_line", "Bottom Line (Row 3)"),
-            ("four_corners", "Four Corners"),
-            ("full_house", "Full House (All 15 Numbers)")
-        ]
-
-        for key, name in conditions:
-            box = QFrame()
-            box.setProperty("class", "card-subtle")
-            b_layout = QVBoxLayout(box)
-            b_layout.setContentsMargins(10, 8, 10, 8)
-            b_layout.setSpacing(2)
-
-            lbl_n = QLabel(name)
-            lbl_n.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
-            b_layout.addWidget(lbl_n)
-
-            lbl_v = QLabel("Pending evaluation")
-            lbl_v.setStyleSheet(f"color: {PALETTE['text_secondary']}; font-size: 11px;")
-            b_layout.addWidget(lbl_v)
-
-            self.check_labels[key] = lbl_v
-            check_layout.addWidget(box)
-
-        check_layout.addStretch()
-        split_layout.addWidget(checklist_card, 1)
-
-        layout.addLayout(split_layout, 1)
-
-        # Load registries initially
-        self.reload_batch_registries()
+        layout.addWidget(ticket_box, 1)
 
     def reload_batch_registries(self):
-        """Scan tickets_archive for *_registry.json files."""
+        self.combo_batch.blockSignals(True)
         self.combo_batch.clear()
-        if not TICKETS_ARCHIVE_DIR.exists():
+
+        archive_dir = TICKETS_ARCHIVE_DIR
+        if archive_dir.exists():
+            reg_files = sorted(list(archive_dir.glob("*_registry.json")), key=lambda p: p.stat().st_mtime, reverse=True)
+            for rf in reg_files:
+                display_name = rf.name.replace("_registry.json", "")
+                self.combo_batch.addItem(f"📁 {display_name}", str(rf))
+
+        self.combo_batch.blockSignals(False)
+        if self.combo_batch.count() > 0:
+            self._on_batch_selected(0)
+
+    def _on_batch_selected(self, idx: int):
+        if idx < 0 or idx >= self.combo_batch.count():
             return
-
-        registry_files = sorted(
-            list(TICKETS_ARCHIVE_DIR.glob("*_registry.json")),
-            key=lambda p: p.stat().st_mtime,
-            reverse=True
-        )
-
-        for p in registry_files:
-            clean_name = p.stem.replace("_registry", "")
-            self.combo_batch.addItem(clean_name, str(p))
-
-    def _on_batch_selected(self, index: int):
-        if index < 0:
-            return
-        file_path = self.combo_batch.itemData(index)
-        if not file_path or not Path(file_path).is_file():
-            return
-
+        rf_path = self.combo_batch.itemData(idx)
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            self.current_registry_data = data
-            self.current_tickets = data.get("tickets", [])
+            with open(rf_path, "r", encoding="utf-8") as f:
+                self.current_registry_data = json.load(f)
+            self.current_tickets = self.current_registry_data.get("tickets", [])
             self.active_ticket_idx = 0
+            self.tickets_loaded.emit(self.current_tickets)
             self._refresh_ticket_view()
         except Exception as e:
-            QMessageBox.warning(self, "Load Error", f"Could not load batch registry: {e}")
+            QMessageBox.critical(self, "Load Error", f"Failed to load registry: {e}")
 
-    def _on_search_ticket(self):
-        query = self.txt_search_id.text().strip()
-        if not query or not self.current_tickets:
+    def _search_ticket(self):
+        query = self.txt_search_id.text().strip().lstrip("#")
+        if not query:
             return
-
-        found_idx = -1
         for idx, t in enumerate(self.current_tickets):
-            t_id = str(t.get("ticket_id", "")).strip()
-            if t_id == query or t_id == query.zfill(3) or str(idx + 1) == query:
-                found_idx = idx
-                break
-
-        if found_idx >= 0:
-            self.active_ticket_idx = found_idx
-            self._refresh_ticket_view()
-        else:
-            QMessageBox.information(self, "Not Found", f"Ticket ID '{query}' not found in active batch.")
+            tid = str(t.get("ticket_id", "")).lstrip("#")
+            if tid == query or tid.endswith(query):
+                self.active_ticket_idx = idx
+                self._refresh_ticket_view()
+                return
+        QMessageBox.warning(self, "Not Found", f"Ticket ID '{query}' not found in this batch!")
 
     def _prev_ticket(self):
         if self.current_tickets and self.active_ticket_idx > 0:
@@ -1546,16 +1947,14 @@ class ClaimVerifierScreen(QWidget):
             self._refresh_ticket_view()
 
     def _refresh_ticket_view(self):
-        """Re-render 3x9 grid and update auto-verdict banner."""
-        # Clear grid layout
+        # Clear grid
         while self.grid_ticket.count():
             item = self.grid_ticket.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
 
         if not self.current_tickets or self.active_ticket_idx >= len(self.current_tickets):
-            self.lbl_verdict_title.setText("NO TICKET SELECTED")
-            self.lbl_verdict_details.setText("Choose a valid ticket batch registry")
+            self.lbl_verdict_title.setText("NO TICKET LOADED")
             return
 
         ticket = self.current_tickets[self.active_ticket_idx]
@@ -1564,24 +1963,21 @@ class ClaimVerifierScreen(QWidget):
         if not strips:
             return
 
-        # Use strip 0 by default
         strip = strips[0]
-        self.lbl_ticket_strip_title.setText(f"TICKET #{tid} • 3x9 TAMBOLA GRID")
+        self.lbl_ticket_heading.setText(f"TICKET #{tid} • 3×9 TAMBOLA MATRIX")
         self.txt_search_id.setText(str(tid))
 
-        # Flatten strip numbers for claim evaluation
+        # Collect numbers per row and overall
         strip_numbers = []
         row_numbers: List[List[int]] = [[], [], []]
-        corners = []
 
         for r_idx, row in enumerate(strip):
             for c_idx, cell in enumerate(row):
-                # cell may be int or dict
                 cell_id = cell["id"] if isinstance(cell, dict) else int(cell)
 
                 cell_frame = QFrame()
                 c_layout = QVBoxLayout(cell_frame)
-                c_layout.setContentsMargins(4, 4, 4, 4)
+                c_layout.setContentsMargins(6, 6, 6, 6)
                 c_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
                 if cell_id > 0:
@@ -1589,14 +1985,14 @@ class ClaimVerifierScreen(QWidget):
                     row_numbers[r_idx].append(cell_id)
 
                     is_called = cell_id in self.called_numbers_ref
-                    s_meta = song_bank.get_song(cell_id)
-                    title = s_meta.get("title", f"Track #{cell_id}") if s_meta else f"Track #{cell_id}"
+                    song = song_bank.get_song(cell_id)
+                    title = song.get("title", f"Track #{cell_id}") if song else f"Track #{cell_id}"
 
-                    lbl_num = QLabel(f"#{cell_id}")
+                    lbl_num = QLabel(f"#{cell_id:02d}")
                     lbl_num.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
 
                     lbl_title = QLabel(title)
-                    lbl_title.setFont(QFont("Segoe UI", 9, QFont.Weight.Normal))
+                    lbl_title.setFont(QFont("Segoe UI", 9))
                     lbl_title.setWordWrap(True)
                     lbl_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
@@ -1604,24 +2000,12 @@ class ClaimVerifierScreen(QWidget):
                     lbl_badge.setFont(QFont("Segoe UI", 8, QFont.Weight.Bold))
 
                     if is_called:
-                        cell_frame.setStyleSheet(f"""
-                            QFrame {{
-                                background: {PALETTE['emerald_light']};
-                                border: 1.5px solid {PALETTE['emerald']};
-                                border-radius: 6px;
-                            }}
-                        """)
+                        cell_frame.setStyleSheet(f"background: {PALETTE['emerald_light']}; border: 1.5px solid {PALETTE['emerald']}; border-radius: 6px;")
                         lbl_num.setStyleSheet(f"color: {PALETTE['emerald_dark']};")
                         lbl_title.setStyleSheet(f"color: {PALETTE['emerald_dark']};")
                         lbl_badge.setStyleSheet(f"color: {PALETTE['emerald_dark']}; font-weight: 800;")
                     else:
-                        cell_frame.setStyleSheet(f"""
-                            QFrame {{
-                                background: {PALETTE['coral_light']};
-                                border: 1px dashed {PALETTE['coral']};
-                                border-radius: 6px;
-                            }}
-                        """)
+                        cell_frame.setStyleSheet(f"background: {PALETTE['coral_light']}; border: 1px dashed {PALETTE['coral']}; border-radius: 6px;")
                         lbl_num.setStyleSheet(f"color: {PALETTE['coral_dark']};")
                         lbl_title.setStyleSheet(f"color: {PALETTE['coral_dark']};")
                         lbl_badge.setStyleSheet(f"color: {PALETTE['coral_dark']};")
@@ -1630,109 +2014,92 @@ class ClaimVerifierScreen(QWidget):
                     c_layout.addWidget(lbl_title)
                     c_layout.addWidget(lbl_badge)
                 else:
-                    # Blank Tambola slot
-                    cell_frame.setStyleSheet(f"""
-                        QFrame {{
-                            background: {PALETTE['cell_blank']};
-                            border: 1px solid {PALETTE['cell_blank_border']};
-                            border-radius: 6px;
-                        }}
-                    """)
+                    # Blank slot
+                    cell_frame.setStyleSheet(f"background: {PALETTE['cell_blank']}; border: 1px solid {PALETTE['cell_blank_border']}; border-radius: 6px;")
                     lbl_blank = QLabel("—")
                     lbl_blank.setStyleSheet(f"color: {PALETTE['text_muted']}; font-weight: 700;")
                     c_layout.addWidget(lbl_blank)
 
                 self.grid_ticket.addWidget(cell_frame, r_idx, c_idx)
 
-        # Four Corners detection: first and last number in row 1 & row 3
-        if row_numbers[0] and row_numbers[2]:
-            corners = [row_numbers[0][0], row_numbers[0][-1], row_numbers[2][0], row_numbers[2][-1]]
-
         # Evaluate Claims
+        self._evaluate_verdicts(strip_numbers, row_numbers)
+
+    def _evaluate_verdicts(self, all_nums: List[int], row_nums: List[List[int]]):
         called_set = set(self.called_numbers_ref)
-        strip_called = [n for n in strip_numbers if n in called_set]
+        total_called = sum(1 for n in all_nums if n in called_set)
 
         # 1. Early 5
-        early_5_valid = len(strip_called) >= 5
-        self.check_labels["early_5"].setText(f"✅ VALID ({len(strip_called)}/5 Called)" if early_5_valid else f"⏳ {len(strip_called)}/5 Called")
-        self.check_labels["early_5"].setStyleSheet(f"color: {PALETTE['emerald_dark'] if early_5_valid else PALETTE['text_secondary']}; font-weight: {'700' if early_5_valid else 'normal'};")
+        early5_ok = total_called >= 5
+        self._update_claim_label("Early 5", f"{min(5, total_called)}/5", early5_ok)
 
         # 2. Top Line
-        top_called = [n for n in row_numbers[0] if n in called_set]
-        top_valid = len(top_called) == len(row_numbers[0]) and len(row_numbers[0]) > 0
-        self.check_labels["top_line"].setText("✅ FULL LINE CALLED!" if top_valid else f"⏳ {len(top_called)}/{len(row_numbers[0])} Called")
-        self.check_labels["top_line"].setStyleSheet(f"color: {PALETTE['emerald_dark'] if top_valid else PALETTE['text_secondary']}; font-weight: {'700' if top_valid else 'normal'};")
+        r1_called = sum(1 for n in row_nums[0] if n in called_set)
+        r1_ok = (r1_called == len(row_nums[0]) and len(row_nums[0]) > 0)
+        self._update_claim_label("Top Line", f"{r1_called}/{len(row_nums[0])}", r1_ok)
 
         # 3. Middle Line
-        mid_called = [n for n in row_numbers[1] if n in called_set]
-        mid_valid = len(mid_called) == len(row_numbers[1]) and len(row_numbers[1]) > 0
-        self.check_labels["mid_line"].setText("✅ FULL LINE CALLED!" if mid_valid else f"⏳ {len(mid_called)}/{len(row_numbers[1])} Called")
-        self.check_labels["mid_line"].setStyleSheet(f"color: {PALETTE['emerald_dark'] if mid_valid else PALETTE['text_secondary']}; font-weight: {'700' if mid_valid else 'normal'};")
+        r2_called = sum(1 for n in row_nums[1] if n in called_set)
+        r2_ok = (r2_called == len(row_nums[1]) and len(row_nums[1]) > 0)
+        self._update_claim_label("Middle Line", f"{r2_called}/{len(row_nums[1])}", r2_ok)
 
         # 4. Bottom Line
-        bot_called = [n for n in row_numbers[2] if n in called_set]
-        bot_valid = len(bot_called) == len(row_numbers[2]) and len(row_numbers[2]) > 0
-        self.check_labels["bot_line"].setText("✅ FULL LINE CALLED!" if bot_valid else f"⏳ {len(bot_called)}/{len(row_numbers[2])} Called")
-        self.check_labels["bot_line"].setStyleSheet(f"color: {PALETTE['emerald_dark'] if bot_valid else PALETTE['text_secondary']}; font-weight: {'700' if bot_valid else 'normal'};")
+        r3_called = sum(1 for n in row_nums[2] if n in called_set)
+        r3_ok = (r3_called == len(row_nums[2]) and len(row_nums[2]) > 0)
+        self._update_claim_label("Bottom Line", f"{r3_called}/{len(row_nums[2])}", r3_ok)
 
         # 5. Four Corners
-        corners_called = [n for n in corners if n in called_set]
-        corners_valid = len(corners_called) == 4 and len(corners) == 4
-        self.check_labels["four_corners"].setText("✅ ALL 4 CORNERS CALLED!" if corners_valid else f"⏳ {len(corners_called)}/4 Corners Called")
-        self.check_labels["four_corners"].setStyleSheet(f"color: {PALETTE['emerald_dark'] if corners_valid else PALETTE['text_secondary']}; font-weight: {'700' if corners_valid else 'normal'};")
+        corners = []
+        if len(row_nums[0]) >= 2 and len(row_nums[2]) >= 2:
+            corners = [row_nums[0][0], row_nums[0][-1], row_nums[2][0], row_nums[2][-1]]
+        corn_called = sum(1 for n in corners if n in called_set)
+        corn_ok = (corn_called == 4)
+        self._update_claim_label("Four Corners", f"{corn_called}/4", corn_ok)
 
         # 6. Full House
-        full_house_valid = len(strip_called) == len(strip_numbers) and len(strip_numbers) > 0
-        self.check_labels["full_house"].setText("🏆 FULL HOUSE BINGO WON!" if full_house_valid else f"⏳ {len(strip_called)}/15 Numbers Called")
-        self.check_labels["full_house"].setStyleSheet(f"color: {PALETTE['amber_dark'] if full_house_valid else PALETTE['text_secondary']}; font-weight: {'700' if full_house_valid else 'normal'};")
+        fh_ok = (total_called == len(all_nums) and len(all_nums) > 0)
+        self._update_claim_label("Full House", f"{total_called}/{len(all_nums)}", fh_ok)
 
-        # Update Grand Banner
+        # Overall Status Banner
         valid_claims = []
-        if full_house_valid:
-            valid_claims.append("FULL HOUSE 🏆")
-        if top_valid:
-            valid_claims.append("TOP LINE")
-        if mid_valid:
-            valid_claims.append("MIDDLE LINE")
-        if bot_valid:
-            valid_claims.append("BOTTOM LINE")
-        if corners_valid:
-            valid_claims.append("FOUR CORNERS")
-        if early_5_valid:
-            valid_claims.append("EARLY 5")
+        if fh_ok: valid_claims.append("FULL HOUSE")
+        if r1_ok: valid_claims.append("TOP LINE")
+        if r2_ok: valid_claims.append("MIDDLE LINE")
+        if r3_ok: valid_claims.append("BOTTOM LINE")
+        if corn_ok: valid_claims.append("FOUR CORNERS")
+        if early5_ok: valid_claims.append("EARLY 5")
 
         if valid_claims:
-            self.lbl_verdict_title.setText(f"🎉 CLAIM VALID: {' & '.join(valid_claims)} 🎉")
-            self.lbl_verdict_title.setStyleSheet(f"color: {PALETTE['emerald_dark']};")
-            self.lbl_verdict_details.setText(f"Ticket #{tid} successfully cross-verified against active session ({len(strip_called)}/15 called numbers).")
-            self.verdict_banner.setStyleSheet(f"""
-                QFrame {{
-                    background: {PALETTE['emerald_light']};
-                    border: 2px solid {PALETTE['emerald']};
-                    border-radius: 12px;
-                }}
-            """)
+            self.lbl_verdict_title.setText(f"🎉 BOGEY VALIDATED: {', '.join(valid_claims)} QUALIFIED!")
+            self.lbl_verdict_title.setStyleSheet(f"color: {PALETTE['emerald_dark']}; font-size: 14px; font-weight: 800;")
+            self.lbl_verdict_details.setText(f"Ticket #{self.txt_search_id.text()} satisfies the claim criteria. {total_called} of 15 numbers called.")
+            self.verdict_frame.setStyleSheet(f"QFrame {{ background: {PALETTE['emerald_light']}; border: 2px solid {PALETTE['emerald']}; border-radius: 12px; }}")
         else:
-            rem = len(strip_numbers) - len(strip_called)
-            self.lbl_verdict_title.setText(f"⏳ CLAIM PENDING: {len(strip_called)} of 15 Numbers Called")
-            self.lbl_verdict_title.setStyleSheet(f"color: {PALETTE['text_primary']};")
-            self.lbl_verdict_details.setText(f"Ticket #{tid} requires {rem} more calls to complete a full house.")
-            self.verdict_banner.setStyleSheet(f"""
-                QFrame {{
-                    background: {PALETTE['bg_card']};
-                    border: 1px solid {PALETTE['border']};
-                    border-radius: 12px;
-                }}
-            """)
+            rem = len(all_nums) - total_called
+            self.lbl_verdict_title.setText(f"⏳ CLAIM PENDING • {rem} Numbers Remaining for Full House")
+            self.lbl_verdict_title.setStyleSheet(f"color: {PALETTE['coral_dark']}; font-size: 13px; font-weight: 800;")
+            self.lbl_verdict_details.setText(f"{total_called}/15 called. Check individual line progress badges below.")
+            self.verdict_frame.setStyleSheet(f"QFrame {{ background: {PALETTE['bg_card']}; border: 1px solid {PALETTE['border']}; border-radius: 12px; }}")
+
+    def _update_claim_label(self, name: str, progress: str, is_ok: bool):
+        lbl = self.claim_labels.get(name)
+        if lbl:
+            if is_ok:
+                lbl.setText(f"{name}: {progress} ✓")
+                lbl.setStyleSheet(f"background: {PALETTE['emerald_light']}; color: {PALETTE['emerald_dark']}; border: 1.5px solid {PALETTE['emerald']}; border-radius: 6px; padding: 4px 8px; font-size: 11px; font-weight: 800;")
+            else:
+                lbl.setText(f"{name}: {progress}")
+                lbl.setStyleSheet(f"background: {PALETTE['bg_card_alt']}; color: {PALETTE['text_secondary']}; border: 1px solid {PALETTE['border']}; border-radius: 6px; padding: 4px 8px; font-size: 11px; font-weight: 600;")
 
 
 # ---------------------------------------------------------------------------
-# SCREEN 4: Ticket Generator & Template Studio (PRD 2.1 & 2.2)
+# SCREEN 5: Ticket Generator & Template Studio (Non-Destructive Archival)
 # ---------------------------------------------------------------------------
 class TicketGeneratorScreen(QWidget):
     """
-    Print-ahead batch generator enforcing non-destructive archival, template selection,
-    algorithmic mathematical frequency balancing, and direct browser print opening.
+    Print-ahead batch generator enforcing STRICT non-destructive archival,
+    collision protection, template selection, mathematical constraint balancing,
+    and direct browser/folder opening.
     """
     batch_generated = pyqtSignal(str)
 
@@ -1745,14 +2112,14 @@ class TicketGeneratorScreen(QWidget):
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(18, 16, 18, 16)
+        layout.setContentsMargins(18, 14, 18, 14)
         layout.setSpacing(14)
 
         # Header Title Card
-        header_box = QFrame()
-        header_box.setProperty("class", "card-panel")
-        header_layout = QHBoxLayout(header_box)
-        header_layout.setContentsMargins(16, 12, 16, 12)
+        header = QFrame()
+        header.setProperty("class", "card-panel")
+        header_layout = QHBoxLayout(header)
+        header_layout.setContentsMargins(16, 10, 16, 10)
 
         title = QLabel("🎫 TICKET GENERATOR & TEMPLATE STUDIO")
         title.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
@@ -1760,10 +2127,10 @@ class TicketGeneratorScreen(QWidget):
         header_layout.addWidget(title)
         header_layout.addStretch()
 
-        lbl_safety = QLabel("🛡️ Strict Non-Destructive Archival Guaranteed")
-        lbl_safety.setStyleSheet(f"color: {PALETTE['emerald_dark']}; font-size: 11px; font-weight: 700;")
-        header_layout.addWidget(lbl_safety)
-        layout.addWidget(header_box)
+        safety_badge = QLabel("🛡️ Strict Non-Destructive Archival Guaranteed")
+        safety_badge.setStyleSheet(f"color: {PALETTE['emerald_dark']}; font-size: 11px; font-weight: 700; background: {PALETTE['emerald_light']}; padding: 3px 8px; border-radius: 6px;")
+        header_layout.addWidget(safety_badge)
+        layout.addWidget(header)
 
         # Main 2-Column Split
         split_layout = QHBoxLayout()
@@ -1777,30 +2144,30 @@ class TicketGeneratorScreen(QWidget):
         form_layout.setContentsMargins(18, 16, 18, 16)
         form_layout.setSpacing(10)
 
-        # 1. Custom Batch Name Input with Live Collision Guard
-        form_layout.addWidget(QLabel("Batch / Event Name (e.g. Diwali_Gala_2026):"))
+        # 1. Custom Batch Name with Live Collision Guard
+        form_layout.addWidget(QLabel("Batch / Event Name (e.g. Garba_Night_2026):"))
         self.txt_batch_name = QLineEdit()
         self.txt_batch_name.setText(datetime.now().strftime("Musical_Housie_%Y%m%d"))
         self.txt_batch_name.textChanged.connect(self._check_batch_collision)
         form_layout.addWidget(self.txt_batch_name)
 
-        # Live Collision Guard Badge
+        # Collision Guard Status Badge
         self.lbl_collision_status = QLabel("✓ Available batch name")
         self.lbl_collision_status.setStyleSheet(f"color: {PALETTE['emerald_dark']}; font-size: 11px; font-weight: 700;")
         form_layout.addWidget(self.lbl_collision_status)
 
         # 2. Template Picker
         form_layout.addWidget(QLabel("Background Template Image:"))
-        template_row = QHBoxLayout()
+        tpl_row = QHBoxLayout()
         self.combo_templates = QComboBox()
         self._populate_standard_templates()
         self.combo_templates.currentIndexChanged.connect(self._on_template_selected)
-        template_row.addWidget(self.combo_templates, 1)
+        tpl_row.addWidget(self.combo_templates, 1)
 
         btn_browse_tpl = QPushButton("Browse...")
         btn_browse_tpl.clicked.connect(self._browse_custom_template)
-        template_row.addWidget(btn_browse_tpl)
-        form_layout.addLayout(template_row)
+        tpl_row.addWidget(btn_browse_tpl)
+        form_layout.addLayout(tpl_row)
 
         # 3. Sheet Count
         form_layout.addWidget(QLabel("Number of Sheets to Generate:"))
@@ -1819,90 +2186,96 @@ class TicketGeneratorScreen(QWidget):
         # 4. Format & Options
         form_layout.addWidget(QLabel("Format Mode:"))
         self.combo_format = QComboBox()
-        self.combo_format.addItems(["2-strip (Landscape A4)", "1-strip (Portrait A4)"])
+        self.combo_format.addItems(["2-Strip Landscape (2 tickets per A4 page)", "1-Strip Landscape (1 ticket per page)"])
+        self.combo_format.currentIndexChanged.connect(self._on_sheet_count_changed)
         form_layout.addWidget(self.combo_format)
 
-        self.chk_show_song_numbers = QCheckBox("Show Song Index Numbers (#1–90) on Tickets")
-        self.chk_show_song_numbers.setChecked(False)
-        form_layout.addWidget(self.chk_show_song_numbers)
-
-        self.chk_participant_slots = QCheckBox("Include Participant Name & Mobile Fill Slots")
+        self.chk_participant_slots = QCheckBox("Include Participant Name & Mobile Slots")
         self.chk_participant_slots.setChecked(True)
         form_layout.addWidget(self.chk_participant_slots)
 
-        form_layout.addSpacing(6)
+        form_layout.addStretch()
 
-        # Action Button: Generate Batch
-        self.btn_generate = QPushButton("⚡ Generate Housie Tickets Batch")
+        # Generate Action Button
+        self.btn_generate = QPushButton("🚀 GENERATE & ARCHIVE HOUSIE TICKETS")
         self.btn_generate.setProperty("class", "btn-primary")
-        self.btn_generate.setMinimumHeight(44)
-        self.btn_generate.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
-        self.btn_generate.clicked.connect(self.generate_batch)
+        self.btn_generate.setFixedHeight(48)
+        self.btn_generate.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
+        self.btn_generate.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_generate.clicked.connect(self.generate_tickets)
         form_layout.addWidget(self.btn_generate)
 
-        # Post-Generation Action Buttons
-        post_row = QHBoxLayout()
-        self.btn_open_browser = QPushButton("🌐 Open in Browser")
-        self.btn_open_browser.setEnabled(False)
-        self.btn_open_browser.clicked.connect(self._open_in_browser)
-        post_row.addWidget(self.btn_open_browser)
-
-        self.btn_open_folder = QPushButton("📁 Open Archive")
-        self.btn_open_folder.clicked.connect(self._open_archive_folder)
-        post_row.addWidget(self.btn_open_folder)
-        form_layout.addLayout(post_row)
-
-        form_layout.addStretch()
         split_layout.addWidget(form_frame)
 
-        # Right Column: Template Preview & Archived Batches Table
-        right_frame = QFrame()
-        right_frame.setProperty("class", "card-panel")
-        right_layout = QVBoxLayout(right_frame)
-        right_layout.setContentsMargins(18, 16, 18, 16)
-        right_layout.setSpacing(12)
+        # Right Column: Live Template Preview & Output Actions
+        preview_frame = QFrame()
+        preview_frame.setProperty("class", "card-panel")
+        preview_layout = QVBoxLayout(preview_frame)
+        preview_layout.setContentsMargins(18, 16, 18, 16)
+        preview_layout.setSpacing(12)
 
-        # Template Preview Thumbnail
-        lbl_preview_title = QLabel("Template Preview")
-        lbl_preview_title.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
-        right_layout.addWidget(lbl_preview_title)
+        lbl_prev_title = QLabel("Template Preview & Generation Console")
+        lbl_prev_title.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
+        preview_layout.addWidget(lbl_prev_title)
 
-        self.lbl_preview_img = QLabel()
-        self.lbl_preview_img.setFixedSize(380, 150)
-        self.lbl_preview_img.setStyleSheet(f"background: {PALETTE['bg_card_alt']}; border: 1px dashed {PALETTE['border']}; border-radius: 8px;")
-        self.lbl_preview_img.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        right_layout.addWidget(self.lbl_preview_img)
+        # Template Thumbnail Image Box
+        self.lbl_img_preview = QLabel("No template preview available")
+        self.lbl_img_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lbl_img_preview.setFixedHeight(240)
+        self.lbl_img_preview.setStyleSheet(f"background: {PALETTE['bg_card_alt']}; border: 1px dashed {PALETTE['border']}; border-radius: 8px;")
+        preview_layout.addWidget(self.lbl_img_preview)
 
-        # Archived Batches History
-        lbl_archive_title = QLabel("Permanently Archived Batches (tickets_archive/):")
-        lbl_archive_title.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
-        right_layout.addWidget(lbl_archive_title)
+        # Generation Summary Box
+        self.summary_box = QFrame()
+        self.summary_box.setProperty("class", "card-subtle")
+        s_layout = QVBoxLayout(self.summary_box)
+        s_layout.setContentsMargins(14, 10, 14, 10)
+        s_layout.setSpacing(4)
 
-        self.table_archive = QTableWidget(0, 4)
-        self.table_archive.setHorizontalHeaderLabels(["Batch Name", "HTML File", "Registry JSON", "Action"])
-        self.table_archive.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.table_archive.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        right_layout.addWidget(self.table_archive, 1)
+        self.lbl_gen_status = QLabel("Ready to generate new immutable ticket batch.")
+        self.lbl_gen_status.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
+        s_layout.addWidget(self.lbl_gen_status)
 
-        split_layout.addWidget(right_frame, 1)
+        self.lbl_gen_path = QLabel("Output will be stored in tickets_archive/<Batch_Name>.html")
+        self.lbl_gen_path.setStyleSheet(f"color: {PALETTE['text_secondary']}; font-size: 11px;")
+        self.lbl_gen_path.setWordWrap(True)
+        s_layout.addWidget(self.lbl_gen_path)
+        preview_layout.addWidget(self.summary_box)
+
+        # Post-Generation Action Buttons
+        act_row = QHBoxLayout()
+        self.btn_open_browser = QPushButton("🌐 Open in Web Browser")
+        self.btn_open_browser.setEnabled(False)
+        self.btn_open_browser.setFixedHeight(40)
+        self.btn_open_browser.clicked.connect(self._open_in_browser)
+        act_row.addWidget(self.btn_open_browser)
+
+        self.btn_open_folder = QPushButton("📁 Open Archive Folder")
+        self.btn_open_folder.setFixedHeight(40)
+        self.btn_open_folder.clicked.connect(self._open_archive_folder)
+        act_row.addWidget(self.btn_open_folder)
+
+        preview_layout.addLayout(act_row)
+        split_layout.addWidget(preview_frame, 1)
+
         layout.addLayout(split_layout, 1)
 
-        # Initial populate
+        # Trigger initial checks
         self._check_batch_collision()
-        self._refresh_archive_table()
         self._update_template_preview()
 
     def _populate_standard_templates(self):
         self.combo_templates.clear()
-        if BRANDING_DIR.exists():
-            for f in BRANDING_DIR.glob("*.*"):
-                if f.suffix.lower() in [".png", ".jpg", ".jpeg"]:
-                    self.combo_templates.addItem(f.name, str(f))
+        self.combo_templates.addItem("None (Clean Off-White Minimalist)", "")
 
-    def _on_template_selected(self, index: int):
-        if index >= 0:
-            self.selected_template_path = self.combo_templates.itemData(index)
-            self._update_template_preview()
+        brand_dir = BRANDING_DIR
+        if brand_dir.exists():
+            for p in sorted(brand_dir.glob("*.png")) + sorted(brand_dir.glob("*.jpg")):
+                self.combo_templates.addItem(f"🎨 {p.name}", str(p))
+
+    def _on_template_selected(self, idx: int):
+        self.selected_template_path = self.combo_templates.itemData(idx)
+        self._update_template_preview()
 
     def _browse_custom_template(self):
         path, _ = QFileDialog.getOpenFileName(
@@ -1911,146 +2284,128 @@ class TicketGeneratorScreen(QWidget):
             "Images (*.png *.jpg *.jpeg)"
         )
         if path:
-            self.selected_template_path = path
-            self.combo_templates.addItem(f"[Custom] {Path(path).name}", path)
+            self.combo_templates.addItem(f"📁 {Path(path).name}", path)
             self.combo_templates.setCurrentIndex(self.combo_templates.count() - 1)
-            self._update_template_preview()
 
     def _update_template_preview(self):
-        if self.selected_template_path and Path(self.selected_template_path).is_file():
+        if self.selected_template_path and os.path.exists(self.selected_template_path):
             pix = QPixmap(self.selected_template_path)
             if not pix.isNull():
                 scaled = pix.scaled(
-                    self.lbl_preview_img.width(), self.lbl_preview_img.height(),
+                    self.lbl_img_preview.width() - 20, 220,
                     Qt.AspectRatioMode.KeepAspectRatio,
                     Qt.TransformationMode.SmoothTransformation
                 )
-                self.lbl_preview_img.setPixmap(scaled)
+                self.lbl_img_preview.setPixmap(scaled)
                 return
-        self.lbl_preview_img.setText("No Template Selected")
+        self.lbl_img_preview.setText("Minimalist Clean Layout (No Background Image)")
 
-    def _on_sheet_count_changed(self, count: int):
-        self.lbl_ticket_equiv.setText(f"(= {count * 2} Tickets in 2-Strip)")
+    def _on_sheet_count_changed(self):
+        sheets = self.spin_sheets.value()
+        is_2strip = "2-Strip" in self.combo_format.currentText()
+        factor = 2 if is_2strip else 1
+        total_tickets = sheets * factor
+        self.lbl_ticket_equiv.setText(f"(= {total_tickets} Tickets in {'2-Strip' if is_2strip else '1-Strip'})")
 
     def _check_batch_collision(self):
-        """Live validation of batch name against tickets_archive/."""
-        raw = self.txt_batch_name.text().strip()
-        clean = sanitize_batch_name(raw)
-        html_exists = (TICKETS_ARCHIVE_DIR / f"{clean}.html").exists()
-        json_exists = (TICKETS_ARCHIVE_DIR / f"{clean}_registry.json").exists()
+        raw_name = self.txt_batch_name.text().strip()
+        clean = sanitize_batch_name(raw_name)
+        archive_dir = TICKETS_ARCHIVE_DIR
 
-        if html_exists or json_exists:
-            unique_name = resolve_unique_batch_name(clean)
-            self.lbl_collision_status.setText(
-                f"⚠️ Batch exists! Non-destructive guard will save as '{unique_name}'"
-            )
+        html_exists = (archive_dir / f"{clean}.html").exists()
+        reg_exists = (archive_dir / f"{clean}_registry.json").exists()
+
+        if html_exists or reg_exists:
+            self.lbl_collision_status.setText(f"⚠️ Batch exists! Will auto-increment to {clean}_02 to protect previous tickets.")
             self.lbl_collision_status.setStyleSheet(f"color: {PALETTE['amber_dark']}; font-size: 11px; font-weight: 700;")
         else:
-            self.lbl_collision_status.setText("✓ Unique batch name available")
+            self.lbl_collision_status.setText(f"✓ Available batch name ({clean}.html)")
             self.lbl_collision_status.setStyleSheet(f"color: {PALETTE['emerald_dark']}; font-size: 11px; font-weight: 700;")
 
-    def generate_batch(self):
+    def generate_tickets(self):
         raw_name = self.txt_batch_name.text().strip()
-        sheets = self.spin_sheets.value()
-        format_mode = "2-strip" if self.combo_format.currentIndex() == 0 else "1-strip"
-        show_numbers = self.chk_show_song_numbers.isChecked()
-        show_slots = self.chk_participant_slots.isChecked()
+        if not raw_name:
+            QMessageBox.warning(self, "Invalid Name", "Please enter a batch or event name.")
+            return
 
-        # Non-destructive check & prompt
         clean = sanitize_batch_name(raw_name)
-        target_html = TICKETS_ARCHIVE_DIR / f"{clean}.html"
-        if target_html.exists():
-            resolved = resolve_unique_batch_name(clean)
+        unique_name = resolve_unique_batch_name(clean, TICKETS_ARCHIVE_DIR)
+
+        if unique_name != clean:
             reply = QMessageBox.question(
-                self, "Non-Destructive Batch Archival",
-                f"A batch named '{clean}' already exists in tickets_archive/.\n\n"
-                f"To protect previously printed tickets from being overwritten or lost,\n"
-                f"this batch will be saved as: '{resolved}'.\n\nProceed?",
+                self, "Non-Destructive Archival Notice",
+                f"Batch '{clean}' already exists in tickets_archive/.\n\n"
+                f"To protect all previously printed tickets, this new run will be saved as:\n"
+                f"👉 {unique_name}\n\nProceed with generation?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
             )
             if reply != QMessageBox.StandardButton.Yes:
                 return
-            batch_to_use = resolved
-        else:
-            batch_to_use = clean
+
+        sheets = self.spin_sheets.value()
+        format_mode = "2-strip" if "2-Strip" in self.combo_format.currentText() else "1-strip"
+        show_slots = self.chk_participant_slots.isChecked()
 
         try:
-            out_file = generate_housie_tickets(
+            self.btn_generate.setEnabled(False)
+            self.lbl_gen_status.setText("Generating mathematical ticket matrix...")
+            QApplication.processEvents()
+
+            out_html = generate_housie_tickets(
                 num_sheets=sheets,
                 format_mode=format_mode,
                 template_path=self.selected_template_path,
                 show_participant_slots=show_slots,
-                batch_name=batch_to_use,
-                show_song_number=show_numbers,
-                save_to_database=True
+                batch_name=unique_name
             )
 
-            self.last_generated_html = out_file
+            self.last_generated_html = out_html
             self.btn_open_browser.setEnabled(True)
-            self._refresh_archive_table()
-            self._check_batch_collision()
+            self.lbl_gen_status.setText(f"✓ Successfully generated {sheets} sheets ({unique_name})!")
+            self.lbl_gen_path.setText(f"Archived to: {out_html}")
+
+            self.batch_generated.emit(out_html)
 
             QMessageBox.information(
-                self, "Batch Generation Success",
-                f"Successfully generated {sheets} sheets ({sheets * 2 if format_mode == '2-strip' else sheets} tickets)!\n\n"
-                f"Saved to: {Path(out_file).name}\nRegistry: {Path(out_file).stem}_registry.json"
+                self, "Generation Complete",
+                f"Tickets generated successfully!\n\n"
+                f"Archived: {unique_name}.html\n"
+                f"Registry: {unique_name}_registry.json\n\n"
+                f"Click 'Open in Web Browser' to inspect or print."
             )
-
-            self.batch_generated.emit(str(out_file))
-
         except Exception as e:
             QMessageBox.critical(self, "Generation Error", f"Failed to generate tickets: {e}")
+            self.lbl_gen_status.setText("Error occurred during generation.")
+        finally:
+            self.btn_generate.setEnabled(True)
+            self._check_batch_collision()
 
     def _open_in_browser(self):
-        if self.last_generated_html and Path(self.last_generated_html).is_file():
+        if self.last_generated_html and os.path.exists(self.last_generated_html):
             webbrowser.open(Path(self.last_generated_html).resolve().as_uri())
 
     def _open_archive_folder(self):
-        if TICKETS_ARCHIVE_DIR.exists():
-            os.startfile(str(TICKETS_ARCHIVE_DIR.resolve()))
-
-    def _refresh_archive_table(self):
-        self.table_archive.setRowCount(0)
-        if not TICKETS_ARCHIVE_DIR.exists():
-            return
-
-        html_files = sorted(
-            list(TICKETS_ARCHIVE_DIR.glob("*.html")),
-            key=lambda p: p.stat().st_mtime,
-            reverse=True
-        )
-
-        for p in html_files:
-            clean_name = p.stem
-            reg_p = TICKETS_ARCHIVE_DIR / f"{clean_name}_registry.json"
-
-            row = self.table_archive.rowCount()
-            self.table_archive.insertRow(row)
-
-            self.table_archive.setItem(row, 0, QTableWidgetItem(clean_name))
-            self.table_archive.setItem(row, 1, QTableWidgetItem(f"{p.stat().st_size // 1024} KB"))
-            self.table_archive.setItem(row, 2, QTableWidgetItem("✓ Present" if reg_p.exists() else "Missing"))
-
-            btn_open = QPushButton("Open HTML")
-            btn_open.setStyleSheet("font-size: 11px; padding: 2px 8px;")
-            btn_open.clicked.connect(lambda _, fp=p: webbrowser.open(fp.resolve().as_uri()))
-            self.table_archive.setCellWidget(row, 3, btn_open)
+        folder = str(TICKETS_ARCHIVE_DIR.resolve())
+        if sys.platform == "win32":
+            os.startfile(folder)
+        else:
+            webbrowser.open(Path(folder).as_uri())
 
 
 # ---------------------------------------------------------------------------
-# MAIN APPLICATION CONTAINER & NAVIGATION HUB
+# MAIN APPLICATION HUB CONTAINER
 # ---------------------------------------------------------------------------
 class MusicalHousieApp(QMainWindow):
     """
     Primary desktop window for Musical Housie (Tambola).
-    Ties together Live Caller Stage, Lucky Draw Raffle, Claim Verifier,
-    and Ticket Generator into a cohesive pastel-themed master application.
+    Ties together all 5 screens in an elegant off-white light theme with rich
+    animations, zero cloud dependencies, and strict data safety.
     """
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Musical Housie (Tambola) — Offline Master Studio & Caller")
-        self.resize(1340, 860)
-        self.setMinimumSize(1100, 740)
+        self.resize(1380, 880)
+        self.setMinimumSize(1120, 760)
 
         # Shared Pygame Audio Controller
         self.audio_player = AudioPlayer()
@@ -2071,7 +2426,7 @@ class MusicalHousieApp(QMainWindow):
         root_layout.setContentsMargins(14, 12, 14, 12)
         root_layout.setSpacing(10)
 
-        # Top App Branding & System Bar
+        # Top System Navigation Bar
         nav_header = QHBoxLayout()
         nav_header.setSpacing(12)
 
@@ -2097,7 +2452,7 @@ class MusicalHousieApp(QMainWindow):
         )
         nav_header.addWidget(self.lbl_global_summary)
 
-        # Header Quick Actions
+        # Header Quick Reset
         btn_quick_reset = QPushButton("Reset Game")
         btn_quick_reset.setStyleSheet(f"font-size: 11px; color: {PALETTE['coral']}; border: 1px solid {PALETTE['coral']};")
         btn_quick_reset.clicked.connect(self._on_header_reset)
@@ -2105,39 +2460,51 @@ class MusicalHousieApp(QMainWindow):
 
         root_layout.addLayout(nav_header)
 
-        # Tab Navigation Container
+        # 5 Tab Screens Container
         self.tabs = QTabWidget()
         self.tabs.setDocumentMode(True)
 
-        # 4 Core Screens
         self.screen_caller = LiveCallerStageScreen(self.audio_player, self)
+        self.screen_sphere = ParticleSphereScreen(self.audio_player, self)
         self.screen_raffle = LuckyDrawScreen(self.audio_player, self)
         self.screen_verifier = ClaimVerifierScreen(self.audio_player, self)
         self.screen_generator = TicketGeneratorScreen(self)
 
-        self.tabs.addTab(self.screen_caller, "🎙️ Live Caller & Master Stage")
+        self.tabs.addTab(self.screen_caller, "🎙️ Live Caller Stage")
+        self.tabs.addTab(self.screen_sphere, "🔮 3D Audio Dot-Sphere")
         self.tabs.addTab(self.screen_raffle, "🎰 Lucky Draw & Raffle")
         self.tabs.addTab(self.screen_verifier, "🔍 Claim Verifier & Inspector")
         self.tabs.addTab(self.screen_generator, "🎫 Ticket Generator Studio")
 
         root_layout.addWidget(self.tabs, 1)
 
-        # Status Bar
+        # Bottom Status Bar
         self.status_bar = QStatusBar()
-        self.status_bar.setStyleSheet(f"background: {PALETTE['bg_card']}; color: {PALETTE['text_muted']}; font-size: 11px; border-top: 1px solid {PALETTE['border']};")
-        self.status_bar.showMessage("Musical Housie Offline Studio • Zero Cloud Dependencies • Non-Destructive Storage Engine Ready")
+        self.status_bar.setStyleSheet(
+            f"background: {PALETTE['bg_card']}; color: {PALETTE['text_muted']}; "
+            f"font-size: 11px; border-top: 1px solid {PALETTE['border']};"
+        )
+        self.status_bar.showMessage("Musical Housie Offline Studio • Strict Non-Destructive Archival Engine Ready")
         self.setStatusBar(self.status_bar)
 
     def _connect_signals(self):
-        # Sync game state across screens
+        # Cross-screen synchronization
         self.screen_caller.number_called.connect(self._sync_state_on_number_called)
         self.screen_caller.game_reset.connect(self._sync_state_on_reset)
+        self.screen_caller.open_dot_sphere_requested.connect(lambda: self.tabs.setCurrentIndex(1))
+
+        self.screen_sphere.return_to_caller_requested.connect(lambda: self.tabs.setCurrentIndex(0))
+
         self.screen_generator.batch_generated.connect(self._on_batch_generated)
+        self.screen_verifier.tickets_loaded.connect(self.screen_raffle.set_registered_tickets)
 
     def _sync_state_on_number_called(self, num: int):
         called = self.screen_caller.called_numbers
         count = len(called)
         self.lbl_global_summary.setText(f"Active Session: {count} / 90 Numbers Called (Last: #{num:02d})")
+
+        # Sync with Screen 2, 3, 4
+        self.screen_sphere.sync_track_info(num)
         self.screen_raffle.set_called_numbers(called)
         self.screen_verifier.set_called_numbers(called)
 
@@ -2150,12 +2517,11 @@ class MusicalHousieApp(QMainWindow):
         self.screen_caller.confirm_reset_game()
 
     def _on_batch_generated(self, html_path: str):
-        # Auto refresh verifier dropdown
         self.screen_verifier.reload_batch_registries()
-        self.status_bar.showMessage(f"Archived new batch: {Path(html_path).name}", 5000)
+        self.status_bar.showMessage(f"Archived new batch: {Path(html_path).name}", 6000)
 
     def keyPressEvent(self, event):
-        # Spacebar shortcut to draw next track when caller screen is active
+        # Spacebar shortcut to draw next track on Screen 1
         if event.key() == Qt.Key.Key_Space:
             if self.tabs.currentWidget() == self.screen_caller:
                 self.screen_caller.draw_next_track()

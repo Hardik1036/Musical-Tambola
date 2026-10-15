@@ -1,0 +1,299 @@
+{
+  "audio_folder_path": "E:\\Musical Housie Song Bank",
+  "song_cues": {
+    "1": {
+      "file_path": "E:\\Musical Housie Song Bank\\1. Khaike Paan Banaras Wala.mp3",
+      "start_time": 0.0,
+      "duration": 0.0
+    },
+    "10": {
+      "file_path": "E:\\Musical Housie Song Bank\\10. Om Shanti Om.mp3",
+      "start_time": 10.0,
+      "duration": 0.0
+    },
+    "11": {
+      "file_path": "E:\\Musical Housie Song Bank\\11. Kala Chashma.mp3"
+    },
+    "12": {
+      "file_path": "E:\\Musical Housie Song Bank\\12. London Thumakda.mp3"
+    },
+    "13": {
+      "file_path": "E:\\Musical Housie Song Bank\\13. Nagada Sang Dhol.mp3"
+    },
+    "14": {
+      "file_path": "E:\\Musical Housie Song Bank\\14. Hero Honda.mp3",
+      "start_time": 17.0,
+      "duration": 0.0
+    },
+    "15": {
+      "file_path": "E:\\Musical Housie Song Bank\\15. Jai Jai Shivshankar.mp3"
+    },
+    "16": {
+      "file_path": "E:\\Musical Housie Song Bank\\16. Param Sundari.mp3"
+    },
+    "17": {
+      "file_path": "E:\\Musical Housie Song Bank\\17. Chaudhary.mp3",
+      "start_time": 45.0,
+      "duration": 0.0
+    },
+    "18": {
+      "file_path": "E:\\Musical Housie Song Bank\\18. Joru Ka Ghulam.mp3",
+      "start_time": 10.0,
+      "duration": 0.0
+    },
+    "19": {
+      "file_path": "E:\\Musical Housie Song Bank\\19. Hawa Hawai.mp3"
+    },
+    "2": {
+      "file_path": "E:\\Musical Housie Song Bank\\2. Chunnari Chunnari.mp3",
+      "start_time": 25.0,
+      "duration": 0.0
+    },
+    "20": {
+      "file_path": "E:\\Musical Housie Song Bank\\20. What Jhumka.mp3"
+    },
+    "21": {
+      "file_path": "E:\\Musical Housie Song Bank\\21. Maine Tere Hi Bharose.mp3"
+    },
+    "22": {
+      "file_path": "E:\\Musical Housie Song Bank\\22. Dholida.mp3"
+    },
+    "23": {
+      "file_path": "E:\\Musical Housie Song Bank\\23. High Rated Gabru.mp3"
+    },
+    "24": {
+      "file_path": "E:\\Musical Housie Song Bank\\24. Namo Namo.mp3"
+    },
+    "25": {
+      "file_path": "E:\\Musical Housie Song Bank\\25. Tum Tum.mp3"
+    },
+    "26": {
+      "file_path": "E:\\Musical Housie Song Bank\\26. Jahan Teri Yeh Nazar Hai.mp3"
+    },
+    "27": {
+      "file_path": "E:\\Musical Housie Song Bank\\27. Naach Meri Rani.mp3"
+    },
+    "28": {
+      "file_path": "E:\\Musical Housie Song Bank\\28. Ek Do Teen.mp3"
+    },
+    "29": {
+      "file_path": "E:\\Musical Housie Song Bank\\29. Ghungroo.mp3"
+    },
+    "3": {
+      "file_path": "E:\\Musical Housie Song Bank\\3. Gallan Goodiyaan.mp3",
+      "start_time": 0.0,
+      "duration": 0.0
+    },
+    "30": {
+      "file_path": "E:\\Musical Housie Song Bank\\30. Morni Banke.mp3"
+    },
+    "31": {
+      "file_path": "E:\\Musical Housie Song Bank\\31. Kamariya.mp3"
+    },
+    "32": {
+      "file_path": "E:\\Musical Housie Song Bank\\32. Mahi Ve.mp3"
+    },
+    "33": {
+      "file_path": "E:\\Musical Housie Song Bank\\33. Saadi Gali.mp3"
+    },
+    "34": {
+      "file_path": "E:\\Musical Housie Song Bank\\34. Lutt Putt Gaya.mp3"
+    },
+    "35": {
+      "file_path": "E:\\Musical Housie Song Bank\\35. Chinta Ta Ta Chita Chita.mp3"
+    },
+    "36": {
+      "file_path": "E:\\Musical Housie Song Bank\\36. Parvati.mp3"
+    },
+    "37": {
+      "file_path": "E:\\Musical Housie Song Bank\\37. My Name Is Lakhan.mp3"
+    },
+    "38": {
+      "file_path": "E:\\Musical Housie Song Bank\\38. Aankh marey.mp3"
+    },
+    "39": {
+      "file_path": "E:\\Musical Housie Song Bank\\39. Nachde Ne Saare.mp3"
+    },
+    "4": {
+      "file_path": "E:\\Musical Housie Song Bank\\4. Chogada.mp3"
+    },
+    "40": {
+      "file_path": "E:\\Musical Housie Song Bank\\40. Udi Udi Jaye.mp3"
+    },
+    "41": {
+      "file_path": "E:\\Musical Housie Song Bank\\41. Deva Deva.mp3"
+    },
+    "42": {
+      "file_path": "E:\\Musical Housie Song Bank\\42. Har Har Gange.mp3"
+    },
+    "43": {
+      "file_path": "E:\\Musical Housie Song Bank\\43. Shoorveer.mp3"
+    },
+    "44": {
+      "file_path": "E:\\Musical Housie Song Bank\\44. Seeti maar.mp3"
+    },
+    "45": {
+      "file_path": "E:\\Musical Housie Song Bank\\45. Barsaat.mp3"
+    },
+    "46": {
+      "file_path": "E:\\Musical Housie Song Bank\\46. I Am A Disco Dancer.mp3"
+    },
+    "47": {
+      "file_path": "E:\\Musical Housie Song Bank\\47. Avi Avi Lut Gaya.mp3"
+    },
+    "48": {
+      "file_path": "E:\\Musical Housie Song Bank\\48. Mauja Hi Mauja.mp3"
+    },
+    "49": {
+      "file_path": "E:\\Musical Housie Song Bank\\49. Sanedo.mp3"
+    },
+    "5": {
+      "file_path": "E:\\Musical Housie Song Bank\\5. Bau Ji.mp3",
+      "start_time": 10.0,
+      "duration": 0.0
+    },
+    "50": {
+      "file_path": "E:\\Musical Housie Song Bank\\50. Mundian To Bach Ke.mp3"
+    },
+    "51": {
+      "file_path": "E:\\Musical Housie Song Bank\\51. Aigiri Nandini.mp3"
+    },
+    "52": {
+      "file_path": "E:\\Musical Housie Song Bank\\52. Tum kya mile.mp3"
+    },
+    "53": {
+      "file_path": "E:\\Musical Housie Song Bank\\53. Dheeme Dheeme.mp3"
+    },
+    "54": {
+      "file_path": "E:\\Musical Housie Song Bank\\54. Locha-E-Ulfat.mp3"
+    },
+    "55": {
+      "file_path": "E:\\Musical Housie Song Bank\\55. Mere Sapno Ki Rani.mp3"
+    },
+    "56": {
+      "file_path": "E:\\Musical Housie Song Bank\\56. U.P. Wala Thumka.mp3"
+    },
+    "57": {
+      "file_path": "E:\\Musical Housie Song Bank\\57. Sauda Khara Khara.mp3"
+    },
+    "58": {
+      "file_path": "E:\\Musical Housie Song Bank\\58. Pankhida Tu Udi jaje.mp3"
+    },
+    "59": {
+      "file_path": "E:\\Musical Housie Song Bank\\59. Illegal Weapon 2.0.mp3"
+    },
+    "6": {
+      "file_path": "E:\\Musical Housie Song Bank\\6. Deva Shree Ganesha.mp3",
+      "start_time": 10.0,
+      "duration": 0.0
+    },
+    "60": {
+      "file_path": "E:\\Musical Housie Song Bank\\60. Shankara Re Shankara.mp3"
+    },
+    "61": {
+      "file_path": "E:\\Musical Housie Song Bank\\61. Apna Bana Le.mp3"
+    },
+    "62": {
+      "file_path": "E:\\Musical Housie Song Bank\\62. Mere Samne Wali Khidki Mein.mp3"
+    },
+    "63": {
+      "file_path": "E:\\Musical Housie Song Bank\\63. Kala Kauwa.mp3"
+    },
+    "64": {
+      "file_path": "E:\\Musical Housie Song Bank\\64. Aaj Phir Jeene Ki Tamanna Hai.mp3"
+    },
+    "65": {
+      "file_path": "E:\\Musical Housie Song Bank\\65. India Waale.mp3"
+    },
+    "66": {
+      "file_path": "E:\\Musical Housie Song Bank\\66. Solid Body.mp3"
+    },
+    "67": {
+      "file_path": "E:\\Musical Housie Song Bank\\67. Ghani Cool Chori.mp3"
+    },
+    "68": {
+      "file_path": "E:\\Musical Housie Song Bank\\68. Kya Bhaat Ay 2.0.mp3"
+    },
+    "69": {
+      "file_path": "E:\\Musical Housie Song Bank\\69. Bam Bam Bholle.mp3"
+    },
+    "7": {
+      "file_path": "E:\\Musical Housie Song Bank\\7. Tu Cheez Badi Hai Mast Mast.mp3"
+    },
+    "70": {
+      "file_path": "E:\\Musical Housie Song Bank\\70. Bhor Bhayi Din Chadh Gaya.mp3"
+    },
+    "71": {
+      "file_path": "E:\\Musical Housie Song Bank\\71. Ankhiyon Se Goli Mare.mp3"
+    },
+    "72": {
+      "file_path": "E:\\Musical Housie Song Bank\\72. COCA COLA tu.mp3"
+    },
+    "73": {
+      "file_path": "E:\\Musical Housie Song Bank\\73. Eena Meena Deeka.mp3"
+    },
+    "74": {
+      "file_path": "E:\\Musical Housie Song Bank\\74. Kajra Re.mp3"
+    },
+    "75": {
+      "file_path": "E:\\Musical Housie Song Bank\\75. Laal Peeli Akhiyaan.mp3"
+    },
+    "76": {
+      "file_path": "E:\\Musical Housie Song Bank\\76. Radhe Radhe.mp3"
+    },
+    "77": {
+      "file_path": "E:\\Musical Housie Song Bank\\77. Nain Na Jodeen.mp3"
+    },
+    "78": {
+      "file_path": "E:\\Musical Housie Song Bank\\78. Ram Siya Ram.mp3"
+    },
+    "79": {
+      "file_path": "E:\\Musical Housie Song Bank\\79. Ruk Ruk Ruk aree baba ruk.mp3",
+      "start_time": 40.0,
+      "duration": 0.0
+    },
+    "8": {
+      "file_path": "E:\\Musical Housie Song Bank\\8. Not Ramaiya Vastavaiya.mp3"
+    },
+    "80": {
+      "file_path": "E:\\Musical Housie Song Bank\\80. Main Khiladi Tu Anari.mp3",
+      "start_time": 50.0,
+      "duration": 0.0
+    },
+    "81": {
+      "file_path": "E:\\Musical Housie Song Bank\\81. Makhna.mp3",
+      "start_time": 10.0,
+      "duration": 0.0
+    },
+    "82": {
+      "file_path": "E:\\Musical Housie Song Bank\\82. Yeh Dosti Hum Nahi Todenge.mp3"
+    },
+    "83": {
+      "file_path": "E:\\Musical Housie Song Bank\\83. Zingaat.mp3"
+    },
+    "84": {
+      "file_path": "E:\\Musical Housie Song Bank\\84. Gud Naal Ishq Mitha.mp3"
+    },
+    "85": {
+      "file_path": "E:\\Musical Housie Song Bank\\85. Shubhaarambh.mp3"
+    },
+    "86": {
+      "file_path": "E:\\Musical Housie Song Bank\\86. Bolo Tara Ra ra.mp3"
+    },
+    "87": {
+      "file_path": "E:\\Musical Housie Song Bank\\87. Mere Ghar Ram Aaye Hain.mp3"
+    },
+    "88": {
+      "file_path": "E:\\Musical Housie Song Bank\\88. MATARGASHTI.mp3"
+    },
+    "89": {
+      "file_path": "E:\\Musical Housie Song Bank\\89. Jalwa.mp3"
+    },
+    "9": {
+      "file_path": "E:\\Musical Housie Song Bank\\9. Illuminati.mp3"
+    },
+    "90": {
+      "file_path": "E:\\Musical Housie Song Bank\\90. HAULI HAULI.mp3"
+    }
+  }
+}

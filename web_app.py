@@ -4,6 +4,7 @@ FastAPI web application exposing interactive Host Studio, Claim Verifier,
 Ticket Generator, Lucky Draw Raffle, and Audio Streaming on http://localhost:8000.
 """
 import os
+import re
 import io
 import csv
 import json
@@ -19,12 +20,25 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 from config import (
-    BASE_DIR, SONGS_DIR, BRANDING_DIR, GENERATOR_DIR,
+    BASE_DIR, SONGS_DIR, BRANDING_DIR, GENERATOR_DIR, TICKETS_ARCHIVE_DIR,
     DATABASE_PATH, TICKETS_JSON_PATH, TOTAL_NUMBERS
 )
 import database
+import song_bank
 from modules.asset_manager import AssetManager
 from modules.ticket_engine import TicketEngine
+from main_app import (
+    normalize_batch_registry,
+    normalize_ticket_query,
+    evaluate_strip_patterns,
+    load_audio_config,
+    save_audio_config,
+    get_song_cue,
+    scan_audio_folder,
+    format_seconds_to_time,
+    parse_time_to_seconds,
+    extract_cell_id
+)
 
 logger = logging.getLogger("tambola.web")
 
@@ -46,15 +60,81 @@ asset_mgr = AssetManager()
 ticket_engine = TicketEngine()
 
 
+def extract_title_from_stem(stem: str) -> str:
+    """Extract clean song title without leading track numbers or prefixes."""
+    t = re.sub(r'^(?:track[_\s-]*)?0*([1-9]|[1-8][0-9]|90)[\s\._\-]+', '', stem, flags=re.IGNORECASE).strip()
+    return t if t else stem
+
+
+def resolve_song_meta(num: int) -> Dict[str, Any]:
+    """Resolves full metadata, English & Hindi titles, decade pillar, and audio file for a song 1-90."""
+    cfg = load_audio_config()
+    cues = cfg.get("song_cues", {})
+    cue = cues.get(str(num), {})
+    file_path = cue.get("file_path", "")
+    override_title = (cue.get("title") or "").strip()
+
+    db_song = database.get_song(num) or {}
+    db_title = (db_song.get("title") or "").strip()
+    db_artist = (db_song.get("artist") or "").strip()
+    db_year = str(db_song.get("year") or "").strip()
+
+    bank_entry = song_bank.get_song(num) or {}
+    bank_title = (bank_entry.get("title") or "").strip()
+
+    file_title = ""
+    if file_path:
+        stem = Path(file_path).stem
+        file_title = extract_title_from_stem(stem)
+
+    title = override_title or file_title or bank_title or db_title or f"Song #{num}"
+    hindi = db_title if any(ord(c) > 127 for c in db_title) else ""
+    english = file_title or bank_title or title
+
+    pillar_name = "Satyam" if num <= 29 else ("Shivam" if num <= 59 else "Sundaram")
+    pillar = f"{pillar_name} ({'1–29' if num <= 29 else ('30–59' if num <= 59 else '60–90')})"
+    col_idx = ((num - 1) // 10) + 1 if num <= 80 else 9
+
+    return {
+        "id": num,
+        "number": num,
+        "title": title,
+        "english": english,
+        "hindi": hindi,
+        "artist": db_artist,
+        "year": db_year,
+        "pillar": pillar,
+        "pillar_name": pillar_name,
+        "column": col_idx,
+        "start_time": cue.get("start_time", 0.0),
+        "duration": cue.get("duration", 0.0),
+        "has_audio": bool(file_path and Path(file_path).exists()),
+        "file_path": file_path
+    }
+
+
+@app.get("/api/songs")
+def get_all_songs_dict():
+    """Retrieve full 1-90 song dictionary with real titles, pillars, and cues."""
+    return {str(num): resolve_song_meta(num) for num in range(1, TOTAL_NUMBERS + 1)}
+
+
 @app.get("/api/state")
 def get_game_state():
     """Retrieve active session state, called numbers, and latest call."""
     session_id = database.get_or_create_active_session()
     called = database.get_called_numbers(session_id)
     history = database.get_called_history(session_id)
-    all_songs = {s["id"]: s for s in database.get_all_songs()}
+    all_songs = {str(num): resolve_song_meta(num) for num in range(1, TOTAL_NUMBERS + 1)}
 
-    last_call = history[0] if history else None
+    last_call = None
+    if history:
+        last_id = history[0]["song_id"]
+        last_call = {
+            "song_id": last_id,
+            "song": resolve_song_meta(last_id),
+            "called_at": history[0].get("called_at")
+        }
 
     return {
         "session_id": session_id,
@@ -65,6 +145,7 @@ def get_game_state():
         "last_call": last_call,
         "history": history[:25],
         "all_songs": all_songs,
+        "songs": all_songs
     }
 
 
@@ -80,7 +161,7 @@ def call_random_number():
 
     chosen = random.choice(uncalled)
     database.call_number(session_id, chosen)
-    song = database.get_song(chosen)
+    song = resolve_song_meta(chosen)
 
     return {
         "song_id": chosen,
@@ -102,7 +183,7 @@ def manual_call_number(song_id: int):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    song = database.get_song(song_id)
+    song = resolve_song_meta(song_id)
     return {"status": "success", "song_id": song_id, "song": song}
 
 
@@ -126,16 +207,19 @@ def reset_session():
 @app.get("/api/audio/{song_id}")
 def stream_audio(song_id: int):
     """Stream audio file for the requested song ID with Range request support."""
-    song = database.get_song(song_id)
-    if not song:
-        raise HTTPException(status_code=404, detail="Song not found")
-
-    audio_path = song.get("audio_path", "")
+    cue = get_song_cue(song_id)
+    audio_path = cue.get("file_path")
     p = Path(audio_path) if audio_path else None
-    
-    # Fallback to search in assets/songs/
+
     if not p or not p.exists():
-        for ext in [".mp3", ".wav", ".ogg"]:
+        song = database.get_song(song_id)
+        if song and song.get("audio_path"):
+            cand = Path(song["audio_path"])
+            if cand.exists():
+                p = cand
+
+    if not p or not p.exists():
+        for ext in [".wav", ".mp3", ".ogg", ".m4a", ".aac", ".flac"]:
             cand = SONGS_DIR / f"{song_id}{ext}"
             if cand.exists():
                 p = cand
@@ -144,8 +228,223 @@ def stream_audio(song_id: int):
     if not p or not p.exists():
         raise HTTPException(status_code=404, detail=f"Audio file for Song #{song_id} not found")
 
-    media_type = "audio/wav" if p.suffix.lower() == ".wav" else "audio/mpeg"
+    media_type = "audio/wav" if p.suffix.lower() == ".wav" else ("audio/mpeg" if p.suffix.lower() == ".mp3" else "application/octet-stream")
     return FileResponse(path=str(p), media_type=media_type, filename=p.name)
+
+
+@app.post("/api/audio/seek")
+async def audio_seek(request: Request):
+    """Acknowledge audio seek timestamp."""
+    try:
+        data = await request.json()
+        return {"status": "ok", "currentTime": data.get("currentTime", 0.0)}
+    except Exception:
+        return {"status": "ok"}
+
+
+
+@app.get("/api/audio-config")
+def get_audio_config():
+    """Retrieve persistent audio configuration."""
+    return load_audio_config()
+
+
+@app.post("/api/audio-config")
+async def update_audio_config(request: Request):
+    """Update audio folder path or song cues in audio_config.json."""
+    data = await request.json()
+    cfg = load_audio_config()
+    if "audio_folder_path" in data:
+        cfg["audio_folder_path"] = data["audio_folder_path"]
+    if "song_cues" in data:
+        cfg["song_cues"] = data["song_cues"]
+    save_audio_config(cfg)
+    return {"status": "success", "config": cfg}
+
+
+@app.post("/api/audio-config/rescan")
+def rescan_audio_folder():
+    """Rescan the active audio directory for tracks 1-90."""
+    cfg = load_audio_config()
+    folder = cfg.get("audio_folder_path") or str(SONGS_DIR.resolve())
+    matched = scan_audio_folder(folder) if Path(folder).is_dir() else {}
+    for num, fpath in matched.items():
+        num_str = str(num)
+        if num_str not in cfg["song_cues"]:
+            cfg["song_cues"][num_str] = {}
+        cfg["song_cues"][num_str]["file_path"] = fpath
+        try:
+            database.update_audio_path(num, fpath)
+        except Exception:
+            pass
+    save_audio_config(cfg)
+    return {"status": "success", "folder": folder, "matched_count": len(matched)}
+
+
+@app.post("/api/catalog/save-cue")
+async def save_song_cue(request: Request):
+    """Save start time and duration cue for a track."""
+    data = await request.json()
+    song_id = int(data.get("song_id"))
+    start_time = data.get("start_time", 0.0)
+    duration = data.get("duration", 0.0)
+    title = data.get("title")
+
+    cfg = load_audio_config()
+    s_key = str(song_id)
+    if s_key not in cfg["song_cues"]:
+        cfg["song_cues"][s_key] = {}
+
+    cfg["song_cues"][s_key]["start_time"] = parse_time_to_seconds(start_time)
+    cfg["song_cues"][s_key]["duration"] = parse_time_to_seconds(duration)
+    if title:
+        cfg["song_cues"][s_key]["title"] = title
+    if data.get("file_path"):
+        cfg["song_cues"][s_key]["file_path"] = data["file_path"]
+
+    save_audio_config(cfg)
+    return {"status": "success", "song_id": song_id, "cue": cfg["song_cues"][s_key]}
+
+
+@app.get("/api/archive-batch/{batch_name}")
+def get_archive_batch(batch_name: str):
+    """Retrieve normalized batch summary with total sheets and tickets."""
+    clean = batch_name.replace("_registry", "").replace(".json", "")
+    reg_file = TICKETS_ARCHIVE_DIR / f"{clean}_registry.json"
+    if not reg_file.exists():
+        candidates = list(TICKETS_ARCHIVE_DIR.glob(f"*{clean}*_registry.json"))
+        if candidates:
+            reg_file = candidates[0]
+        else:
+            raise HTTPException(status_code=404, detail=f"Archive batch '{batch_name}' not found")
+
+    with open(reg_file, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    normalized = normalize_batch_registry(data)
+    return {
+        "batch_name": normalized["batch_name"],
+        "total_sheets": normalized["total_sheets"],
+        "total_tickets": normalized["total_tickets"],
+        "ordered_sheet_nums": normalized["ordered_sheet_nums"],
+        "ordered_ticket_nums": normalized["ordered_ticket_nums"],
+    }
+
+
+@app.get("/api/verify-sheet/{batch_name}/{ticket_query}")
+def verify_sheet_endpoint(batch_name: str, ticket_query: str):
+    """Resolves player's 2-strip sheet for any ticket ID and evaluates live patterns & call orders."""
+    clean = batch_name.replace("_registry", "").replace(".json", "")
+    reg_file = TICKETS_ARCHIVE_DIR / f"{clean}_registry.json"
+    if not reg_file.exists():
+        candidates = list(TICKETS_ARCHIVE_DIR.glob(f"*{clean}*_registry.json"))
+        if candidates:
+            reg_file = candidates[0]
+        else:
+            raise HTTPException(status_code=404, detail=f"Archive batch '{batch_name}' not found")
+
+    with open(reg_file, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    normalized = normalize_batch_registry(data)
+    num = normalize_ticket_query(ticket_query)
+    if num is None:
+        raise HTTPException(status_code=400, detail="Invalid ticket query")
+
+    # Find sheet and focused ticket
+    sheet_num = None
+    focused_tid = None
+    if num in normalized["tickets_by_num"]:
+        t_obj = normalized["tickets_by_num"][num]
+        sheet_num = t_obj["sheet"]
+        focused_tid = t_obj["ticket_id"]
+    elif num in normalized["sheets"]:
+        sheet_num = num
+        sh = normalized["sheets"][num]
+        focused_tid = sh["top"]["ticket_id"] if sh.get("top") else f"{num:03d}"
+    else:
+        est = (num + 1) // 2 if num % 2 != 0 else num // 2
+        if est in normalized["sheets"]:
+            sheet_num = est
+            focused_tid = f"{num:03d}"
+        else:
+            raise HTTPException(status_code=404, detail=f"Ticket or sheet #{num} not found in batch '{clean}'")
+
+    sheet_data = normalized["sheets"].get(sheet_num)
+    if not sheet_data:
+        raise HTTPException(status_code=404, detail="Sheet data not found")
+
+    top_ticket = sheet_data.get("top")
+    bottom_ticket = sheet_data.get("bottom")
+
+    session_id = database.get_or_create_active_session()
+    called = database.get_called_numbers(session_id)
+    called_set = set(called)
+    call_orders = {song_id: idx + 1 for idx, song_id in enumerate(called)}
+    last_called = called[-1] if called else None
+
+    # Evaluate patterns
+    ev1 = evaluate_strip_patterns(top_ticket["grid"], called_set) if top_ticket else None
+    ev2 = evaluate_strip_patterns(bottom_ticket["grid"], called_set) if bottom_ticket else None
+
+    combined_hits = (ev1["total_hits"] if ev1 else 0) + (ev2["total_hits"] if ev2 else 0)
+    combined_total = (ev1["total_nums"] if ev1 else 0) + (ev2["total_nums"] if ev2 else 0)
+    sheet_house_ok = (combined_hits == combined_total and combined_total > 0)
+
+    # Format grids with song titles, call orders, and latest flags
+    def format_grid(grid):
+        formatted = []
+        for row in grid:
+            f_row = []
+            for cell in row:
+                cid = extract_cell_id(cell)
+                if cid > 0:
+                    is_hit = cid in called_set
+                    order = call_orders.get(cid, 0)
+                    meta = resolve_song_meta(cid)
+                    f_row.append({
+                        "id": cid,
+                        "title": meta["title"],
+                        "english": meta["english"],
+                        "hindi": meta["hindi"],
+                        "is_hit": is_hit,
+                        "order": order,
+                        "is_latest": (cid == last_called)
+                    })
+                else:
+                    f_row.append(None)
+            formatted.append(f_row)
+        return formatted
+
+    top_formatted = format_grid(top_ticket["grid"]) if top_ticket else None
+    bot_formatted = format_grid(bottom_ticket["grid"]) if bottom_ticket else None
+
+    return {
+        "batch_name": clean,
+        "sheet_num": sheet_num,
+        "focused_ticket_id": focused_tid,
+        "total_game_drawn": len(called),
+        "total_game_remaining": TOTAL_NUMBERS - len(called),
+        "last_called_song": last_called,
+        "top_ticket": {
+            "ticket_id": top_ticket["ticket_id"] if top_ticket else None,
+            "strip_pos": "Top Strip",
+            "paired_ticket_id": top_ticket.get("paired_ticket_id") if top_ticket else None,
+            "grid": top_formatted,
+            "eval": ev1
+        } if top_ticket else None,
+        "bottom_ticket": {
+            "ticket_id": bottom_ticket["ticket_id"] if bottom_ticket else None,
+            "strip_pos": "Bottom Strip",
+            "paired_ticket_id": bottom_ticket.get("paired_ticket_id") if bottom_ticket else None,
+            "grid": bot_formatted,
+            "eval": ev2
+        } if bottom_ticket else None,
+        "combined_hits": combined_hits,
+        "combined_total": combined_total,
+        "sheet_house_ok": sheet_house_ok,
+    }
+
 
 
 @app.get("/api/tickets")
@@ -631,12 +930,40 @@ def record_claim(
 
 @app.get("/api/catalog")
 def get_catalog():
-    """Get all 90 songs with audio file presence."""
-    songs = database.get_all_songs()
-    for s in songs:
-        p = s.get("audio_path")
-        s["has_audio"] = bool(p and Path(p).exists())
-    return songs
+    """Get all 90 songs with audio cues, pillar, and presence."""
+    cfg = load_audio_config()
+    session_id = database.get_or_create_active_session()
+    called_set = set(database.get_called_numbers(session_id))
+
+    results = []
+    for num in range(1, TOTAL_NUMBERS + 1):
+        cue = get_song_cue(num, cfg)
+        s_db = database.get_song(num) or {}
+        title = cue.get("title") or s_db.get("title") or song_bank.get_song_title(num)
+        artist = s_db.get("artist", "")
+        year = s_db.get("year", "")
+        f_path = cue.get("file_path") or s_db.get("audio_path", "")
+        has_audio = bool(f_path and Path(f_path).exists())
+
+        pillar = "Satyam" if num <= 29 else ("Shivam" if num <= 59 else "Sundaram")
+        col_idx = ((num - 1) // 10) + 1 if num <= 80 else 9
+
+        results.append({
+            "id": num,
+            "number": num,
+            "title": title,
+            "artist": artist,
+            "year": year,
+            "pillar": pillar,
+            "column": col_idx,
+            "start_time": cue.get("start_time", 0.0),
+            "start_time_fmt": format_seconds_to_time(cue.get("start_time", 0.0)),
+            "duration": cue.get("duration", 0.0),
+            "has_audio": has_audio,
+            "file_path": f_path,
+            "is_called": num in called_set
+        })
+    return results
 
 
 @app.post("/api/catalog/seed-default")

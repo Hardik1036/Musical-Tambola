@@ -1,25 +1,25 @@
 """
-Musical Housie (Tambola) - Master Desktop Application & Host Studio
-===================================================================
-A complete, production-grade, multi-screen offline desktop application
-featuring a solid off-white/light theme (#F4F7FC), solid white cards (#FFFFFF),
-crisp borders (#E2E8F4), and rich micro-interactions:
-  - Screen 1: Live Ball Roller & Caller Stage (Physics-based lotto ball chute & roll,
-              Hero calling deck, Pygame audio engine, master 10x9 calling matrix)
-  - Screen 2: 3D Particle Audio Sphere of Dots (Fibonacci lattice distribution,
-              continuous 3D rotation, real-time audio beat modulation & breathing)
-  - Screen 3: Lucky Draw & Slot Machine Roller (Mechanical rotating digit drums with
-              motion blur, configurable winners, tie-breaker categories, persistent audit log)
-  - Screen 4: Claim Verifier & Ticket Inspector (Batch registry auto-loader,
-              interactive 3x9 visual grid overlay, real-time auto-verdict engine)
-  - Screen 5: Ticket Generator & Template Studio (Print-ahead batch generator,
-              STRICT non-destructive collision protection, template picker & browser)
+Musical Housie (Tambola) — Master Desktop Suite & Motion Graphics Stage
+=======================================================================
+A complete, production-grade, 60-FPS multi-screen offline desktop application
+featuring a Solid Light & Pastel UI theme (#F4F7FC, #FFFFFF, #E2E8F4):
+  - Screen 1: 🎯 Live Ball Roller & Master Stage (3D Physics Ball Drop Chute,
+              Shockwave Ring, Audio Deck, 10x9 Master Calling Matrix)
+  - Screen 2: 🔮 3D Audio Dot-Sphere Visualizer (280-point 3D Fibonacci Particle
+              Lattice, continuous perspective rotation, audio-reactive pulse)
+  - Screen 3: 🎰 Mechanical Slot Lucky Draw (Dual-drum mechanical roller,
+              multi-winner selection, ttk.Treeview audit log)
+  - Screen 4: 🔍 Animated Claim Verifier (Batch registry auto-loader,
+              staggered 25ms scanline reveal, real-time automated verdict engine)
+  - Screen 5: 🎫 Non-Destructive Ticket Studio (2-strip A4 generator,
+              STRICT collision guard protecting pre-printed tickets)
 
-Zero cloud dependencies. Built with PyQt/PySide and Pygame.
+Zero cloud dependencies. Built with Python Tkinter, TTK, and Pygame.
 """
 
 import os
 import sys
+import re
 import json
 import math
 import time
@@ -27,2358 +27,2610 @@ import random
 import webbrowser
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Optional, List, Dict, Tuple, Any
 
-# Ensure project root is in sys.path
+import tkinter as tk
+from tkinter import ttk, messagebox, filedialog
+from PIL import Image, ImageTk
+
+# Base directory setup
 BASE_DIR = Path(__file__).resolve().parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
-# Qt Compatibility Layer
-from qt_compat import (
-    Qt, QTimer, pyqtSignal,
-    QFont, QColor, QIcon, QPainter, QPen, QBrush, QLinearGradient, QRadialGradient,
-    QPainterPath, QPixmap, QRect, QRectF, QPolygon,
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
-    QLabel, QPushButton, QSlider, QProgressBar, QFrame, QMessageBox, QScrollArea,
-    QCheckBox, QRadioButton, QButtonGroup, QSizePolicy, QSpinBox, QComboBox,
-    QLineEdit, QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QTabWidget, QStatusBar
-)
-
-# Core Engine Modules
+from config import TICKETS_ARCHIVE_DIR, BRANDING_DIR, SONGS_DIR
 import song_bank
-from config import TICKETS_ARCHIVE_DIR, ASSETS_DIR, BRANDING_DIR, SONGS_DIR
-from modules.audio_player import AudioPlayer
+import database
+import shutil
 from generator.generate_housie_tickets import (
     generate_housie_tickets,
     sanitize_batch_name,
     resolve_unique_batch_name
 )
 
+# Initialize Pygame audio mixer safely
+try:
+    import pygame
+    if not pygame.mixer.get_init():
+        pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=2048)
+    HAS_AUDIO = True
+except Exception as e:
+    HAS_AUDIO = False
+    print(f"Notice: Pygame audio mixer initialized in fallback mode: {e}")
+
 # ---------------------------------------------------------------------------
-# Design System & Color Palette Tokens (Off-White Solid Theme)
+# AUDIO CONFIGURATION & CUE MANAGEMENT (PRD Modules 1 & 2)
+# ---------------------------------------------------------------------------
+AUDIO_CONFIG_PATH = BASE_DIR / "audio_config.json"
+AUDIO_EXTENSIONS = (".mp3", ".wav", ".ogg", ".flac", ".m4a", ".aac")
+
+
+def parse_time_to_seconds(val: Any) -> float:
+    """
+    Converts 'MM:SS' (e.g. '01:15' -> 75.0), 'HH:MM:SS', raw numbers ('45' -> 45.0),
+    or strings with unit suffixes ('30s') into float seconds.
+    """
+    if val is None:
+        return 0.0
+    if isinstance(val, (int, float)):
+        return max(0.0, float(val))
+    s = str(val).strip()
+    if not s:
+        return 0.0
+    for suffix in ["seconds", "second", "secs", "sec", "s"]:
+        if s.lower().endswith(suffix):
+            s = s[:-len(suffix)].strip()
+            break
+    parts = s.split(":")
+    try:
+        if len(parts) == 1:
+            return max(0.0, float(parts[0]))
+        elif len(parts) == 2:
+            return max(0.0, int(parts[0]) * 60 + float(parts[1]))
+        elif len(parts) == 3:
+            return max(0.0, int(parts[0]) * 3600 + int(parts[1]) * 60 + float(parts[2]))
+    except Exception:
+        return 0.0
+    return 0.0
+
+
+def format_seconds_to_time(val: Any) -> str:
+    """Converts float seconds into human-friendly 'MM:SS' (or 'HH:MM:SS') timestamp."""
+    try:
+        sec = max(0.0, float(val))
+    except Exception:
+        return "00:00"
+    total_sec = int(round(sec))
+    h = total_sec // 3600
+    m = (total_sec % 3600) // 60
+    s = total_sec % 60
+    if h > 0:
+        return f"{h:02d}:{m:02d}:{s:02d}"
+    return f"{m:02d}:{s:02d}"
+
+
+def load_audio_config() -> Dict[str, Any]:
+    """Loads persistent audio configuration or initializes defaults."""
+    default_cfg: Dict[str, Any] = {
+        "audio_folder_path": str(SONGS_DIR.resolve()) if SONGS_DIR.exists() else str(BASE_DIR / "songs"),
+        "song_cues": {}
+    }
+    if not AUDIO_CONFIG_PATH.exists():
+        try:
+            with open(AUDIO_CONFIG_PATH, "w", encoding="utf-8") as f:
+                json.dump(default_cfg, f, indent=2)
+        except Exception:
+            pass
+        return default_cfg
+
+    try:
+        with open(AUDIO_CONFIG_PATH, "r", encoding="utf-8") as f:
+            cfg = json.load(f)
+        if not isinstance(cfg, dict):
+            return default_cfg
+        if "audio_folder_path" not in cfg:
+            cfg["audio_folder_path"] = default_cfg["audio_folder_path"]
+        if "song_cues" not in cfg or not isinstance(cfg["song_cues"], dict):
+            cfg["song_cues"] = {}
+        return cfg
+    except Exception as e:
+        print(f"Notice: Failed to read {AUDIO_CONFIG_PATH}: {e}")
+        return default_cfg
+
+
+def save_audio_config(cfg: Dict[str, Any]):
+    """Saves persistent audio configuration."""
+    try:
+        with open(AUDIO_CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, indent=2)
+    except Exception as e:
+        print(f"Error saving {AUDIO_CONFIG_PATH}: {e}")
+
+
+def match_song_number_from_filename(filename: str) -> Optional[int]:
+    """
+    Smartly matches song number (1-90) from filenames like:
+    '1.mp3', '01.mp3', '1 - Song.mp3', '01_Song.mp3', 'Track 01.mp3', 'Song - 07.mp3'.
+    """
+    stem = Path(filename).stem.strip()
+
+    # 1. Exact number: '1', '01', '90'
+    m = re.match(r"^0*([1-9]|[1-8][0-9]|90)$", stem)
+    if m:
+        return int(m.group(1))
+
+    # 2. Leading number with separator: '1 - Song', '01. Song', 'Track 01 - Song', 'Track_05'
+    m = re.match(r"^(?:track[_\s-]*)?0*([1-9]|[1-8][0-9]|90)[\s\._\-]", stem, re.IGNORECASE)
+    if m:
+        return int(m.group(1))
+
+    # 3. Trailing number with separator: 'Song - 01', 'Song_12'
+    m = re.search(r"[\s\._\-]0*([1-9]|[1-8][0-9]|90)$", stem, re.IGNORECASE)
+    if m:
+        return int(m.group(1))
+
+    # 4. Standalone number anywhere between non-digit boundaries (if exactly one 1-90 number is found)
+    nums = re.findall(r"(?<!\d)0*([1-9]|[1-8][0-9]|90)(?!\d)", stem)
+    if len(nums) == 1:
+        return int(nums[0])
+
+    return None
+
+
+def scan_audio_folder(folder_path: str) -> Dict[int, str]:
+    """
+    Scans a directory for audio files matching tracks 1 through 90.
+    Returns {number: absolute_file_path}.
+    """
+    matched: Dict[int, str] = {}
+    folder = Path(folder_path)
+    if not folder.is_dir():
+        return matched
+
+    try:
+        for entry in folder.iterdir():
+            if entry.is_file() and entry.suffix.lower() in AUDIO_EXTENSIONS:
+                num = match_song_number_from_filename(entry.name)
+                if num and 1 <= num <= 90 and num not in matched:
+                    matched[num] = str(entry.resolve())
+    except Exception as e:
+        print(f"Error scanning folder {folder_path}: {e}")
+
+    return matched
+
+
+def get_song_cue(number: int, cfg: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """
+    Retrieves resolved metadata, start timestamp, clip duration, and file path for a track.
+    Returns:
+      {
+        "title": str,
+        "file_path": Optional[str],
+        "start_time": float,
+        "duration": float
+      }
+    """
+    if cfg is None:
+        cfg = load_audio_config()
+
+    num_str = str(number)
+    cue_dict = cfg.get("song_cues", {}).get(num_str, {})
+
+    # Title
+    song_info = song_bank.get_song(number)
+    title = cue_dict.get("title") or (song_info.get("title") if song_info else f"Track #{number}")
+
+    # Start time & duration
+    start_time = parse_time_to_seconds(cue_dict.get("start_time", 0.0))
+    duration = parse_time_to_seconds(cue_dict.get("duration", 0.0))
+
+    # File path resolution
+    file_path = cue_dict.get("file_path")
+    if file_path and Path(file_path).exists():
+        resolved_path = str(Path(file_path).resolve())
+    else:
+        resolved_path = None
+        folder = cfg.get("audio_folder_path")
+        if folder and Path(folder).is_dir():
+            f_dir = Path(folder)
+            id_patterns = [str(number), f"{number:02d}", f"track{number}", f"track_{number}", f"track {number}"]
+            for pat in id_patterns:
+                for ext in AUDIO_EXTENSIONS:
+                    p = f_dir / f"{pat}{ext}"
+                    if p.exists():
+                        resolved_path = str(p.resolve())
+                        break
+                if resolved_path:
+                    break
+
+            if not resolved_path:
+                try:
+                    for entry in f_dir.iterdir():
+                        if entry.is_file() and entry.suffix.lower() in AUDIO_EXTENSIONS:
+                            if match_song_number_from_filename(entry.name) == number:
+                                resolved_path = str(entry.resolve())
+                                break
+                except Exception:
+                    pass
+
+        if not resolved_path:
+            resolved_path = song_bank.find_audio_file(number)
+
+    return {
+        "title": title,
+        "file_path": resolved_path,
+        "start_time": max(0.0, start_time),
+        "duration": max(0.0, duration)
+    }
+
+
+def import_catalog_file(filepath: str) -> Tuple[int, List[str]]:
+    """
+    Imports song catalog and start cue metadata from a .csv or .xlsx file.
+    Expected columns:
+      - Serial / No / Index (1-90)
+      - Song Name / Title (optional)
+      - Start Time / Cue (e.g., '01:15' or 75)
+      - Duration / Stop (optional, seconds)
+    Updates audio_config.json and returns (updated_count, error_messages).
+    """
+    path = Path(filepath)
+    ext = path.suffix.lower()
+    errors: List[str] = []
+    rows: List[Dict[str, Any]] = []
+
+    if ext == ".csv":
+        import csv
+        for enc in ["utf-8-sig", "utf-8", "cp1252", "latin-1"]:
+            try:
+                with open(path, mode="r", encoding=enc) as f:
+                    reader = csv.DictReader(f)
+                    for r in reader:
+                        rows.append(r)
+                break
+            except Exception:
+                continue
+    elif ext in (".xlsx", ".xls"):
+        loaded = False
+        try:
+            import openpyxl
+            wb = openpyxl.load_workbook(path, data_only=True)
+            ws = wb.active
+            header_row = next(ws.iter_rows(max_row=1, values_only=True), [])
+            headers = [str(h).strip() if h is not None else "" for h in header_row]
+            for row_vals in ws.iter_rows(min_row=2, values_only=True):
+                r_dict = {}
+                for h, val in zip(headers, row_vals):
+                    if h:
+                        r_dict[h] = val
+                if any(v is not None for v in r_dict.values()):
+                    rows.append(r_dict)
+            loaded = True
+        except Exception as e_openpyxl:
+            try:
+                import pandas as pd
+                df = pd.read_excel(path)
+                rows = df.to_dict(orient="records")
+                loaded = True
+            except Exception as e_pd:
+                errors.append(f"Failed to load Excel workbook: {e_openpyxl}; pandas: {e_pd}")
+    else:
+        errors.append(f"Unsupported file type: {ext}. Please upload a .csv or .xlsx file.")
+        return 0, errors
+
+    if not rows and not errors:
+        errors.append("File is empty or contains no readable rows.")
+        return 0, errors
+
+    cfg = load_audio_config()
+    updated_count = 0
+
+    col_num_keys = ["no", "no.", "number", "index", "id", "serial", "track", "track #", "track no", "song no", "song number"]
+    col_title_keys = ["song name", "song", "title", "track name", "name", "song title"]
+    col_start_keys = ["start time", "start", "start cue", "cue", "start_time", "start_cue", "from", "timestamp", "start time (mm:ss)"]
+    col_dur_keys = ["duration", "length", "duration (sec)", "duration(sec)", "stop", "clip duration", "stop time", "stop_time", "duration (s)"]
+
+    for row in rows:
+        num_val = None
+        title_val = None
+        start_val = None
+        dur_val = None
+
+        for k, v in row.items():
+            if v is None:
+                continue
+            clean_k = str(k).strip().lower()
+            if num_val is None and clean_k in col_num_keys:
+                num_val = v
+            elif title_val is None and clean_k in col_title_keys:
+                title_val = str(v).strip()
+            elif start_val is None and clean_k in col_start_keys:
+                start_val = v
+            elif dur_val is None and clean_k in col_dur_keys:
+                dur_val = v
+
+        if num_val is None and row:
+            first_val = list(row.values())[0]
+            try:
+                iv = int(float(first_val))
+                if 1 <= iv <= 90:
+                    num_val = iv
+            except Exception:
+                pass
+
+        if num_val is None:
+            continue
+
+        try:
+            num = int(float(num_val))
+        except Exception:
+            continue
+
+        if not (1 <= num <= 90):
+            continue
+
+        num_str = str(num)
+        if num_str not in cfg["song_cues"]:
+            cfg["song_cues"][num_str] = {}
+
+        cue = cfg["song_cues"][num_str]
+        if title_val:
+            cue["title"] = str(title_val)
+        if start_val is not None:
+            cue["start_time"] = parse_time_to_seconds(start_val)
+        if dur_val is not None:
+            cue["duration"] = parse_time_to_seconds(dur_val)
+
+        updated_count += 1
+
+    if updated_count > 0:
+        save_audio_config(cfg)
+
+    return updated_count, errors
+
+
+# ---------------------------------------------------------------------------
+# DESIGN SYSTEM: Solid Light & High-Contrast Pastel Accents
 # ---------------------------------------------------------------------------
 PALETTE = {
-    "bg_main": "#F4F7FC",          # Solid off-white main background
-    "bg_card": "#FFFFFF",          # Pure white container cards
-    "bg_card_alt": "#F8FAFD",      # Light tinted card
-    "border": "#E2E8F4",           # Crisp border
-    "border_light": "#EDF2F7",     # Ultra-subtle border
-    "border_focus": "#4F46E5",     # Soft indigo border highlight
+    "bg_body": "#F4F7FC",          # Solid Crisp Off-White Canvas
+    "bg_card": "#FFFFFF",          # Elevated Pure White Card
+    "bg_card_alt": "#F8FAFC",      # Subtle light card
+    "border": "#E2E8F4",           # Crisp Structural Border
+    "border_light": "#EDF2F7",     # Subtle inner border
 
-    "indigo": "#4F46E5",           # Soft Indigo (Primary action)
-    "indigo_hover": "#4338CA",
-    "indigo_light": "#EEF2FF",
-    "indigo_dark": "#3730A3",
+    "primary": "#4F46E5",          # Electric / Soft Indigo
+    "primary_hover": "#4338CA",
+    "primary_light": "#EEF2FF",    # Light Indigo Pill
 
-    "emerald": "#059669",          # Emerald (Called / Verified / Success)
-    "emerald_hover": "#047857",
-    "emerald_light": "#ECFDF5",
+    "emerald": "#059669",          # Vivid Emerald (Verified / Success)
+    "emerald_light": "#ECFDF5",    # Mint Highlight
     "emerald_dark": "#065F46",
 
-    "coral": "#F43F5E",            # Light Coral (Pending / Warning / Alert)
+    "coral": "#F43F5E",            # Coral Rose (Active Ball / Call)
     "coral_hover": "#E11D48",
     "coral_light": "#FFF1F2",
     "coral_dark": "#9F1239",
 
-    "amber": "#D97706",            # Amber / Gold (Active Track / Highlight)
-    "amber_hover": "#B45309",
-    "amber_light": "#FFFBEB",
+    "amber": "#D97706",            # Warm Amber / Gold
+    "amber_light": "#FEF3C7",
     "amber_dark": "#78350F",
 
-    "text_primary": "#0F172A",     # Dark Slate primary text
-    "text_secondary": "#475569",   # Medium Slate secondary text
-    "text_muted": "#94A3B8",       # Muted slate text
+    "text_main": "#0F172A",        # Dark Slate Heading
+    "text_muted": "#64748B",       # Medium Slate Subtext
+    "text_dim": "#94A3B8",         # Dim Slate Muted
     "text_white": "#FFFFFF",
 
-    "cell_blank": "#F1F5F9",       # Blank Tambola slot gray
-    "cell_blank_border": "#E2E8F0"
+    "cell_blank": "#F1F5F9",       # Blank Tambola Slot
+    "cell_blank_border": "#CBD5E1"
 }
 
-GLOBAL_STYLESHEET = f"""
-QMainWindow, QWidget#root_container {{
-    background-color: {PALETTE['bg_main']};
-    color: {PALETTE['text_primary']};
-    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Inter', Roboto, Arial, sans-serif;
-}}
-
-/* Top Navigation Bar / Tab Widget */
-QTabWidget::pane {{
-    border: none;
-    background-color: {PALETTE['bg_main']};
-}}
-
-QTabBar::tab {{
-    background-color: {PALETTE['bg_card']};
-    color: {PALETTE['text_secondary']};
-    font-weight: 600;
-    font-size: 13px;
-    padding: 11px 20px;
-    margin-right: 6px;
-    margin-top: 6px;
-    border: 1px solid {PALETTE['border']};
-    border-bottom: none;
-    border-top-left-radius: 10px;
-    border-top-right-radius: 10px;
-    min-width: 140px;
-}}
-
-QTabBar::tab:selected {{
-    background-color: {PALETTE['indigo']};
-    color: {PALETTE['text_white']};
-    border-color: {PALETTE['indigo']};
-}}
-
-QTabBar::tab:hover:!selected {{
-    background-color: {PALETTE['indigo_light']};
-    color: {PALETTE['indigo']};
-}}
-
-/* Cards & Frames */
-QFrame.card-panel {{
-    background-color: {PALETTE['bg_card']};
-    border: 1px solid {PALETTE['border']};
-    border-radius: 12px;
-}}
-
-QFrame.card-subtle {{
-    background-color: {PALETTE['bg_card_alt']};
-    border: 1px solid {PALETTE['border_light']};
-    border-radius: 10px;
-}}
-
-/* Standard Buttons */
-QPushButton {{
-    background-color: {PALETTE['bg_card']};
-    color: {PALETTE['text_primary']};
-    border: 1px solid {PALETTE['border']};
-    border-radius: 8px;
-    padding: 8px 16px;
-    font-weight: 600;
-    font-size: 13px;
-}}
-
-QPushButton:hover {{
-    background-color: {PALETTE['bg_card_alt']};
-    border-color: {PALETTE['indigo']};
-    color: {PALETTE['indigo']};
-}}
-
-QPushButton:pressed {{
-    background-color: {PALETTE['indigo_light']};
-}}
-
-QPushButton.btn-primary {{
-    background-color: {PALETTE['indigo']};
-    color: {PALETTE['text_white']};
-    border: 1px solid {PALETTE['indigo']};
-}}
-
-QPushButton.btn-primary:hover {{
-    background-color: {PALETTE['indigo_hover']};
-    border-color: {PALETTE['indigo_hover']};
-    color: {PALETTE['text_white']};
-}}
-
-QPushButton.btn-emerald {{
-    background-color: {PALETTE['emerald']};
-    color: {PALETTE['text_white']};
-    border: 1px solid {PALETTE['emerald']};
-}}
-
-QPushButton.btn-emerald:hover {{
-    background-color: {PALETTE['emerald_hover']};
-    border-color: {PALETTE['emerald_hover']};
-    color: {PALETTE['text_white']};
-}}
-
-QPushButton.btn-amber {{
-    background-color: {PALETTE['amber']};
-    color: {PALETTE['text_white']};
-    border: 1px solid {PALETTE['amber']};
-}}
-
-QPushButton.btn-amber:hover {{
-    background-color: {PALETTE['amber_hover']};
-    border-color: {PALETTE['amber_hover']};
-    color: {PALETTE['text_white']};
-}}
-
-QPushButton.btn-coral {{
-    background-color: {PALETTE['coral']};
-    color: {PALETTE['text_white']};
-    border: 1px solid {PALETTE['coral']};
-}}
-
-QPushButton.btn-coral:hover {{
-    background-color: {PALETTE['coral_hover']};
-    border-color: {PALETTE['coral_hover']};
-    color: {PALETTE['text_white']};
-}}
-
-/* Inputs & Combos */
-QLineEdit, QSpinBox, QComboBox {{
-    background-color: {PALETTE['bg_card']};
-    color: {PALETTE['text_primary']};
-    border: 1px solid {PALETTE['border']};
-    border-radius: 8px;
-    padding: 7px 12px;
-    font-size: 13px;
-}}
-
-QLineEdit:focus, QSpinBox:focus, QComboBox:focus {{
-    border: 1.5px solid {PALETTE['indigo']};
-    background-color: #FFFFFF;
-}}
-
-QComboBox::drop-down {{
-    border: none;
-    padding-right: 8px;
-}}
-
-/* Sliders */
-QSlider::groove:horizontal {{
-    height: 6px;
-    background: {PALETTE['border']};
-    border-radius: 3px;
-}}
-
-QSlider::sub-page:horizontal {{
-    background: {PALETTE['indigo']};
-    border-radius: 3px;
-}}
-
-QSlider::handle:horizontal {{
-    background: {PALETTE['indigo']};
-    border: 2px solid #FFFFFF;
-    width: 16px;
-    margin-top: -5px;
-    margin-bottom: -5px;
-    border-radius: 8px;
-}}
-
-QSlider::handle:horizontal:hover {{
-    background: {PALETTE['indigo_hover']};
-}}
-
-/* Tables */
-QTableWidget {{
-    background-color: {PALETTE['bg_card']};
-    border: 1px solid {PALETTE['border']};
-    border-radius: 8px;
-    gridline-color: {PALETTE['border_light']};
-    font-size: 12px;
-}}
-
-QHeaderView::section {{
-    background-color: {PALETTE['bg_card_alt']};
-    color: {PALETTE['text_secondary']};
-    font-weight: 700;
-    border: none;
-    border-bottom: 1px solid {PALETTE['border']};
-    padding: 6px 10px;
-}}
-
-QScrollBar:vertical {{
-    border: none;
-    background: {PALETTE['bg_main']};
-    width: 8px;
-    border-radius: 4px;
-}}
-
-QScrollBar::handle:vertical {{
-    background: {PALETTE['border']};
-    min-height: 20px;
-    border-radius: 4px;
-}}
-
-QScrollBar::handle:vertical:hover {{
-    background: {PALETTE['text_muted']};
-}}
-"""
-
 
 # ---------------------------------------------------------------------------
-# WIDGET 1: Interactive Physics-Based Lotto Ball Drop & Chute Roller
+# SCREEN 1: Live Ball Roller & Master Stage
 # ---------------------------------------------------------------------------
-class LottoBallChuteWidget(QWidget):
+class LiveStageScreen(tk.Frame):
     """
-    Simulates a high-fidelity lotto ball dropping through an acrylic chute,
-    bouncing with physical damping, and rolling 360° across a deceleration track
-    into the hero cradle socket before revealing the drawn number.
+    Screen 1: Live Ball Roller & Master Calling Stage
+    - Left Panel: 3D Physics Ball Drop Chute on Canvas with shockwave ring,
+      bold hero details, Pygame audio deck, session chips, and quick transition.
+    - Right Panel: Master 10x9 Calling Matrix with Satyam, Shivam, Sundaram pillars.
     """
-    ball_settled = pyqtSignal(int)
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setMinimumSize(280, 220)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.setFixedHeight(230)
-
-        # Simulation state
-        self.current_number: Optional[int] = None
-        self.is_animating = False
-        self.phase = "idle"  # "idle", "drop", "bounce", "roll", "settled"
-
-        # Ball physics coordinates
-        self.ball_radius = 38.0
-        self.ball_x = 0.0
-        self.ball_y = 0.0
-        self.vel_x = 0.0
-        self.vel_y = 0.0
-        self.ball_angle = 0.0
-        self.bounce_count = 0
-
-        # Visual pop & pulse on settle
-        self.settle_scale = 1.0
-        self.settle_anim_tick = 0
-        self.pulse_ring = 0.0
-
-        # Animation timer (60 FPS)
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self._step_physics)
-
-    def trigger_drop(self, number: int):
-        """Initiate physical lotto ball drop and roll for the drawn number."""
-        self.current_number = number
-        self.is_animating = True
-        self.phase = "drop"
-        self.bounce_count = 0
-        self.settle_scale = 1.0
-        self.settle_anim_tick = 0
-        self.pulse_ring = 0.0
-
-        w = max(280, self.width())
-        # Chute entry point: top-left area
-        self.ball_x = 55.0
-        self.ball_y = -self.ball_radius
-        self.vel_x = 1.2
-        self.vel_y = 3.5
-        self.ball_angle = 0.0
-
-        self.timer.start(16)
-        self.update()
-
-    def reset(self):
-        """Clear current ball and return to idle ready state."""
-        self.timer.stop()
-        self.is_animating = False
-        self.phase = "idle"
-        self.current_number = None
-        self.ball_angle = 0.0
-        self.update()
-
-    def _step_physics(self):
-        w = float(self.width())
-        h = float(self.height())
-        ground_y = h - 55.0
-        cradle_x = w / 2.0
-
-        if self.phase == "drop":
-            # Gravity acceleration down chute
-            self.vel_y += 0.85
-            self.ball_y += self.vel_y
-            self.ball_x += self.vel_x
-            self.ball_angle += 0.08
-
-            # Hit the curved chute bottom / bounce plate
-            if self.ball_y >= ground_y - self.ball_radius:
-                self.ball_y = ground_y - self.ball_radius
-                self.vel_y = -self.vel_y * 0.42
-                self.bounce_count += 1
-                self.phase = "bounce"
-                # Impart strong forward roll velocity
-                self.vel_x = 7.5
-
-        elif self.phase == "bounce":
-            self.vel_y += 0.85
-            self.ball_y += self.vel_y
-            self.ball_x += self.vel_x
-            self.ball_angle += (self.vel_x / self.ball_radius) * 1.5
-
-            if self.ball_y >= ground_y - self.ball_radius:
-                self.ball_y = ground_y - self.ball_radius
-                if abs(self.vel_y) < 1.5 or self.bounce_count >= 2:
-                    self.vel_y = 0.0
-                    self.phase = "roll"
-                else:
-                    self.vel_y = -self.vel_y * 0.35
-                    self.bounce_count += 1
-
-        elif self.phase == "roll":
-            # Rolling across horizontal tray with deceleration
-            self.ball_x += self.vel_x
-            self.ball_angle += (self.vel_x / self.ball_radius)
-            self.vel_x *= 0.955
-
-            # Transition toward center cradle
-            dist_to_cradle = cradle_x - self.ball_x
-            if self.ball_x < cradle_x and dist_to_cradle > 0:
-                # Keep rolling toward cradle
-                if self.vel_x < 1.0:
-                    self.vel_x = 1.0
-            else:
-                # Settling into cradle
-                if abs(self.vel_x) < 0.6:
-                    self.ball_x = cradle_x
-                    self.vel_x = 0.0
-                    self.phase = "settled"
-                    self.settle_scale = 1.25
-                    if self.current_number is not None:
-                        self.ball_settled.emit(self.current_number)
-
-        elif self.phase == "settled":
-            # Scale pop and radial aura breathing
-            self.settle_anim_tick += 1
-            if self.settle_scale > 1.0:
-                self.settle_scale = max(1.0, self.settle_scale - 0.02)
-            self.pulse_ring = (self.pulse_ring + 0.08) % (math.pi * 2)
-            if self.settle_anim_tick > 45:
-                # Stop physics timer once fully settled
-                self.is_animating = False
-                self.timer.stop()
-
-        self.update()
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-
-        w = float(self.width())
-        h = float(self.height())
-        ground_y = h - 55.0
-        cradle_x = w / 2.0
-
-        # 1. Background Track & Acrylic Chute Infrastructure
-        # Chute Tube (Top Left)
-        chute_path = QPainterPath()
-        chute_path.moveTo(35.0, 10.0)
-        chute_path.lineTo(75.0, 10.0)
-        chute_path.lineTo(75.0, ground_y - 30.0)
-        chute_path.quadTo(75.0, ground_y, 115.0, ground_y)
-        chute_path.lineTo(w - 30.0, ground_y)
-        chute_path.lineTo(w - 30.0, ground_y + 12.0)
-        chute_path.lineTo(110.0, ground_y + 12.0)
-        chute_path.quadTo(55.0, ground_y + 12.0, 55.0, ground_y - 25.0)
-        chute_path.lineTo(35.0, 10.0)
-
-        # Draw acrylic chute styling
-        chute_grad = QLinearGradient(35.0, 10.0, 95.0, ground_y)
-        chute_grad.setColorAt(0.0, QColor(255, 255, 255, 180))
-        chute_grad.setColorAt(0.5, QColor(226, 232, 244, 140))
-        chute_grad.setColorAt(1.0, QColor(241, 245, 249, 100))
-        painter.setBrush(QBrush(chute_grad))
-        painter.setPen(QPen(QColor(PALETTE["border"]), 1.8))
-        painter.drawPath(chute_path)
-
-        # Chute funnel mouth at top
-        painter.setBrush(QBrush(QColor(PALETTE["indigo_light"])))
-        painter.setPen(QPen(QColor(PALETTE["indigo"]), 1.5))
-        painter.drawRoundedRect(QRectF(30.0, 6.0, 50.0, 12.0), 4.0, 4.0)
-
-        # Horizontal Rolling Runway Rails
-        painter.setPen(QPen(QColor(PALETTE["border"]), 3.0))
-        painter.drawLine(int(85.0), int(ground_y + 4.0), int(w - 35.0), int(ground_y + 4.0))
-
-        # Center Hero Cradle Pedestal
-        cradle_w = 90.0
-        cradle_rect = QRectF(cradle_x - cradle_w / 2.0, ground_y - 4.0, cradle_w, 24.0)
-        cradle_grad = QLinearGradient(0, ground_y, 0, ground_y + 24.0)
-        cradle_grad.setColorAt(0.0, QColor(PALETTE["bg_card"]))
-        cradle_grad.setColorAt(1.0, QColor(PALETTE["bg_card_alt"]))
-        painter.setBrush(QBrush(cradle_grad))
-        painter.setPen(QPen(QColor(PALETTE["border"]), 1.5))
-        painter.drawRoundedRect(cradle_rect, 8.0, 8.0)
-
-        # Cradle Notch
-        painter.setBrush(QBrush(QColor(PALETTE["border_light"])))
-        painter.drawEllipse(QRectF(cradle_x - 30.0, ground_y - 2.0, 60.0, 10.0))
-
-        # 2. Render Lotto Ball (Animated or Ready State)
-        ball_r = self.ball_radius * self.settle_scale
-        bx = self.ball_x if self.is_animating or self.phase == "settled" else cradle_x
-        by = self.ball_y if self.is_animating or self.phase == "settled" else (ground_y - self.ball_radius)
-
-        # Cast Shadow beneath ball
-        shadow_w = ball_r * 1.6
-        shadow_h = 10.0 * (self.settle_scale if self.phase == "settled" else 0.8)
-        shadow_y = ground_y - 2.0
-        shadow_grad = QRadialGradient(bx, shadow_y, shadow_w / 2.0)
-        shadow_grad.setColorAt(0.0, QColor(15, 23, 42, 70))
-        shadow_grad.setColorAt(1.0, QColor(15, 23, 42, 0))
-        painter.setBrush(QBrush(shadow_grad))
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.drawEllipse(QRectF(bx - shadow_w / 2.0, shadow_y - shadow_h / 2.0, shadow_w, shadow_h))
-
-        # Pulsing Ring around ball when settled
-        if self.phase == "settled" and self.current_number is not None:
-            ring_extra = 8.0 + math.sin(self.pulse_ring) * 4.0
-            ring_r = ball_r + ring_extra
-            ring_pen = QPen(QColor(PALETTE["amber"]), 2.2)
-            ring_pen.setStyle(Qt.PenStyle.DashLine)
-            painter.setPen(ring_pen)
-            painter.setBrush(Qt.BrushStyle.NoBrush)
-            painter.drawEllipse(QRectF(bx - ring_r, by - ring_r, ring_r * 2.0, ring_r * 2.0))
-
-        # 3D Shaded Lotto Ball Sphere
-        ball_grad = QRadialGradient(bx - ball_r * 0.35, by - ball_r * 0.35, ball_r * 1.4)
-        if self.current_number is not None:
-            # Vibrant 3D Amber / Gold Lotto Ball
-            ball_grad.setColorAt(0.0, QColor("#FFFBEB"))
-            ball_grad.setColorAt(0.25, QColor("#FDE68A"))
-            ball_grad.setColorAt(0.65, QColor(PALETTE["amber"]))
-            ball_grad.setColorAt(1.0, QColor(PALETTE["amber_dark"]))
-            border_col = QColor(PALETTE["amber_dark"])
-        else:
-            # Idle Clean White / Silver Ball
-            ball_grad.setColorAt(0.0, QColor("#FFFFFF"))
-            ball_grad.setColorAt(0.5, QColor("#F1F5F9"))
-            ball_grad.setColorAt(1.0, QColor(PALETTE["border"]))
-            border_col = QColor(PALETTE["border"])
-
-        painter.setBrush(QBrush(ball_grad))
-        painter.setPen(QPen(border_col, 2.0))
-        painter.drawEllipse(QRectF(bx - ball_r, by - ball_r, ball_r * 2.0, ball_r * 2.0))
-
-        # Inner Decorative Lotto Ring & Specular Highlight
-        painter.save()
-        painter.translate(bx, by)
-        if self.is_animating and self.phase in ("drop", "bounce", "roll"):
-            painter.rotate(math.degrees(self.ball_angle))
-
-        # Inner circular number disc
-        disc_r = ball_r * 0.65
-        painter.setBrush(QBrush(QColor(255, 255, 255, 235)))
-        painter.setPen(QPen(QColor(border_col), 1.2))
-        painter.drawEllipse(QRectF(-disc_r, -disc_r, disc_r * 2.0, disc_r * 2.0))
-
-        # Number or Ready Label
-        if self.current_number is not None and (self.phase == "settled" or not self.is_animating):
-            painter.setPen(QColor(PALETTE["amber_dark"]))
-            painter.setFont(QFont("Segoe UI", int(24 * self.settle_scale), QFont.Weight.Bold))
-            num_text = f"#{self.current_number:02d}"
-            painter.drawText(QRectF(-disc_r, -disc_r, disc_r * 2.0, disc_r * 2.0),
-                             Qt.AlignmentFlag.AlignCenter, num_text)
-        elif self.current_number is not None and self.is_animating:
-            # Motion spinning lines while rolling
-            painter.setPen(QPen(QColor(PALETTE["amber_dark"]), 3.0))
-            painter.drawLine(int(-disc_r * 0.7), 0, int(disc_r * 0.7), 0)
-            painter.drawLine(0, int(-disc_r * 0.7), 0, int(disc_r * 0.7))
-        else:
-            painter.setPen(QColor(PALETTE["text_muted"]))
-            painter.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
-            painter.drawText(QRectF(-disc_r, -disc_r, disc_r * 2.0, disc_r * 2.0),
-                             Qt.AlignmentFlag.AlignCenter, "READY")
-
-        painter.restore()
-
-        # Specular light gleam on ball crown
-        gleam_w = ball_r * 0.5
-        gleam_h = ball_r * 0.25
-        painter.setBrush(QBrush(QColor(255, 255, 255, 160)))
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.drawEllipse(QRectF(bx - ball_r * 0.45, by - ball_r * 0.65, gleam_w, gleam_h))
-
-
-# ---------------------------------------------------------------------------
-# WIDGET 2: 3D Particle Audio Sphere Visualizer Canvas (Fibonacci Lattice)
-# ---------------------------------------------------------------------------
-class ParticleAudioSphereWidget(QWidget):
-    """
-    Renders a continuous 3D rotating particle sphere using a Fibonacci lattice
-    distribution (~360 points) with depth shading, perspective projection,
-    and real-time audio beat modulation that expands and breathes with sound.
-    """
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setMinimumSize(400, 360)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-
-        # 3D Lattice Constants
-        self.num_points = 360
-        self.base_points: List[Tuple[float, float, float]] = []
-        self._generate_fibonacci_sphere()
-
-        # Dynamic Visualizer Parameters
-        self.base_radius = 160.0
-        self.dynamic_radius = 160.0
-        self.yaw = 0.0
-        self.pitch = 0.0
-        self.yaw_speed = 0.012
-        self.pitch_speed = 0.007
-
-        # Beat Modulation State
-        self.modulate_beat = True
-        self.is_audio_playing = False
-        self.beat_phase = 0.0
-        self.beat_energy = 0.0
-        self.harmonic_time = 0.0
-
-        # Animation Loop (60 FPS)
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self._step_frame)
-        self.timer.start(16)
-
-    def _generate_fibonacci_sphere(self):
-        """Precalculate spherical coordinates using the golden ratio spiral."""
-        self.base_points.clear()
-        phi_golden = math.pi * (3.0 - math.sqrt(5.0))  # ~2.39996 rad
-
-        for i in range(self.num_points):
-            y = 1.0 - (float(i) / float(self.num_points - 1)) * 2.0  # +1 to -1
-            r = math.sqrt(max(0.0, 1.0 - y * y))
-            theta = phi_golden * float(i)
-            x = math.cos(theta) * r
-            z = math.sin(theta) * r
-            self.base_points.append((x, y, z))
-
-    def set_audio_playing(self, playing: bool):
-        """Link sphere breathing rhythm to audio playback engine state."""
-        self.is_audio_playing = playing
-
-    def set_beat_modulation(self, enabled: bool):
-        self.modulate_beat = enabled
-
-    def set_rotation_speed(self, speed_factor: float):
-        self.yaw_speed = 0.012 * speed_factor
-        self.pitch_speed = 0.007 * speed_factor
-
-    def set_sphere_scale(self, scale_px: float):
-        self.base_radius = scale_px
-
-    def _step_frame(self):
-        # Update 3D rotation angles
-        self.yaw = (self.yaw + self.yaw_speed) % (math.pi * 2)
-        self.pitch = (self.pitch + self.pitch_speed) % (math.pi * 2)
-        self.harmonic_time += 0.04
-
-        # Beat modulation physics
-        if self.modulate_beat:
-            # If audio is playing, pulse with bass-driven breathing
-            if self.is_audio_playing:
-                self.beat_phase = (self.beat_phase + 0.12) % (math.pi * 2)
-                bass_pulse = math.sin(self.beat_phase) ** 4
-                harmonic = math.sin(self.harmonic_time * 2.5) * 0.15
-                self.beat_energy = bass_pulse * 0.28 + harmonic
-            else:
-                # Gentle ambient breathing when idle
-                self.beat_energy = math.sin(self.harmonic_time * 1.2) * 0.08
-
-            self.dynamic_radius = self.base_radius * (1.0 + self.beat_energy)
-        else:
-            self.dynamic_radius = self.base_radius
-
-        self.update()
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-        cx = float(self.width()) / 2.0
-        cy = float(self.height()) / 2.0
-        camera_dist = 420.0
-        fov = 380.0
-
-        # Precompute rotation trigonometry
-        cos_y, sin_y = math.cos(self.yaw), math.sin(self.yaw)
-        cos_p, sin_p = math.cos(self.pitch), math.sin(self.pitch)
-
-        # Transform and project 3D points
-        projected = []
-        for idx, (bx, by, bz) in enumerate(self.base_points):
-            # Dynamic ripple per point
-            ripple = 0.0
-            if self.modulate_beat and self.is_audio_playing:
-                ripple = math.sin(self.harmonic_time * 3.0 + float(idx) * 0.1) * 6.0
-
-            r_point = self.dynamic_radius + ripple
-
-            # 1. Yaw rotation (around Y axis)
-            x1 = bx * cos_y + bz * sin_y
-            y1 = by
-            z1 = -bx * sin_y + bz * cos_y
-
-            # 2. Pitch rotation (around X axis)
-            x2 = x1
-            y2 = y1 * cos_p - z1 * sin_p
-            z2 = y1 * sin_p + z1 * cos_p
-
-            # 3. Perspective projection
-            world_z = z2 * r_point
-            proj_scale = fov / (camera_dist + world_z)
-            screen_x = cx + (x2 * r_point) * proj_scale
-            screen_y = cy + (y2 * r_point) * proj_scale
-
-            # Depth normalized: -1.0 (furthest) to +1.0 (closest)
-            depth_norm = z2
-            projected.append((depth_norm, screen_x, screen_y, idx))
-
-        # Sort points back-to-front for proper depth buffering
-        projected.sort(key=lambda p: p[0])
-
-        # Draw subtle foreground constellation web between close front particles
-        painter.setPen(QPen(QColor(79, 70, 229, 35), 0.8))
-        front_points = [p for p in projected if p[0] > 0.35]
-        for i in range(0, len(front_points), 3):
-            p1 = front_points[i]
-            for j in range(i + 1, min(i + 4, len(front_points))):
-                p2 = front_points[j]
-                dx = p1[1] - p2[1]
-                dy = p1[2] - p2[2]
-                if dx * dx + dy * dy < 1600.0:  # Distance < 40px
-                    painter.drawLine(int(p1[1]), int(p1[2]), int(p2[1]), int(p2[2]))
-
-        # Render 3D Dots with depth-scaled size and alpha shading
-        for depth_norm, sx, sy, idx in projected:
-            # Map depth (-1 to 1) to radius (1.4px to 5.2px) and opacity (0.2 to 1.0)
-            t = (depth_norm + 1.0) / 2.0  # 0.0 to 1.0
-            dot_r = 1.4 + t * 3.8
-            alpha = int(50 + t * 205)
-
-            # Chromatic distribution across latitude and depth
-            if t > 0.75:
-                # Golden / Amber highlight for closest particles
-                col = QColor(PALETTE["amber"])
-                col.setAlpha(alpha)
-            elif t > 0.4:
-                # Soft Indigo primary body
-                col = QColor(PALETTE["indigo"])
-                col.setAlpha(alpha)
-            else:
-                # Emerald / Teal background particles
-                col = QColor(PALETTE["emerald"])
-                col.setAlpha(alpha)
-
-            painter.setBrush(QBrush(col))
-            painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawEllipse(QRectF(sx - dot_r, sy - dot_r, dot_r * 2.0, dot_r * 2.0))
-
-
-# ---------------------------------------------------------------------------
-# WIDGET 3: Mechanical Slot Machine Drum Reel (Lucky Draw)
-# ---------------------------------------------------------------------------
-class SlotMachineDrumWidget(QWidget):
-    """
-    Renders animated mechanical slot-machine digit drums with 3D cylindrical
-    bevels, motion blur during rapid spinning, and sequential locked clicks.
-    """
-    draw_finished = pyqtSignal(list)
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setMinimumSize(320, 150)
-        self.setFixedHeight(160)
-
-        self.num_drums = 3
-        self.drum_values = [0, 0, 0]
-        self.drum_offsets = [0.0, 0.0, 0.0]
-        self.drum_speeds = [0.0, 0.0, 0.0]
-        self.drum_targets = [0, 0, 0]
-        self.drum_locked = [True, True, True]
-
-        self.is_spinning = False
-        self.spin_ticks = 0
-
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self._step_spin)
-
-    def spin_to_number(self, target_num: int):
-        """Spin mechanical drums and sequentially stop on target number (0-999)."""
-        self.target_num = target_num
-        digits = [
-            (target_num // 100) % 10,
-            (target_num // 10) % 10,
-            target_num % 10
-        ]
-        self.drum_targets = digits
-        self.drum_locked = [False, False, False]
-        self.drum_speeds = [18.0, 22.0, 26.0]
-        self.is_spinning = True
-        self.spin_ticks = 0
-
-        self.timer.start(16)
-        self.update()
-
-    def _step_spin(self):
-        self.spin_ticks += 1
-        all_locked = True
-
-        for i in range(self.num_drums):
-            if not self.drum_locked[i]:
-                all_locked = False
-                self.drum_offsets[i] = (self.drum_offsets[i] + self.drum_speeds[i]) % 100.0
-
-                # Sequential stopping milestones (Drum 1 at ~45 ticks, Drum 2 at ~75, Drum 3 at ~105)
-                stop_tick = 45 + i * 30
-                if self.spin_ticks >= stop_tick:
-                    # Decelerate smoothly
-                    self.drum_speeds[i] *= 0.88
-                    if self.drum_speeds[i] < 1.0:
-                        self.drum_offsets[i] = float(self.drum_targets[i] * 10.0)
-                        self.drum_values[i] = self.drum_targets[i]
-                        self.drum_locked[i] = True
-
-        self.update()
-
-        if all_locked and self.is_spinning:
-            self.is_spinning = False
-            self.timer.stop()
-            self.draw_finished.emit(self.drum_values)
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-        w = float(self.width())
-        h = float(self.height())
-
-        # Outer Metallic Chrome Chassis
-        chassis_rect = QRectF(10.0, 10.0, w - 20.0, h - 20.0)
-        chassis_grad = QLinearGradient(0, 10.0, 0, h - 10.0)
-        chassis_grad.setColorAt(0.0, QColor("#E2E8F0"))
-        chassis_grad.setColorAt(0.5, QColor("#FFFFFF"))
-        chassis_grad.setColorAt(1.0, QColor("#CBD5E1"))
-        painter.setBrush(QBrush(chassis_grad))
-        painter.setPen(QPen(QColor(PALETTE["border"]), 2.0))
-        painter.drawRoundedRect(chassis_rect, 14.0, 14.0)
-
-        # Inner Drum Display Window
-        window_rect = QRectF(24.0, 24.0, w - 48.0, h - 48.0)
-        painter.setBrush(QBrush(QColor(PALETTE["bg_main"])))
-        painter.setPen(QPen(QColor(PALETTE["border"]), 1.5))
-        painter.drawRoundedRect(window_rect, 8.0, 8.0)
-
-        drum_spacing = 16.0
-        total_drum_w = window_rect.width() - (drum_spacing * (self.num_drums + 1))
-        drum_w = total_drum_w / float(self.num_drums)
-        drum_h = window_rect.height() - 16.0
-        drum_top = window_rect.top() + 8.0
-
-        for i in range(self.num_drums):
-            dx = window_rect.left() + drum_spacing + i * (drum_w + drum_spacing)
-            drect = QRectF(dx, drum_top, drum_w, drum_h)
-
-            # Drum Background Card
-            painter.setBrush(QBrush(QColor(PALETTE["bg_card"])))
-            painter.setPen(QPen(QColor(PALETTE["border"]), 1.5))
-            painter.drawRoundedRect(drect, 8.0, 8.0)
-
-            # Top & Bottom Cylindrical Curvature Shadows
-            top_shadow = QLinearGradient(0, drect.top(), 0, drect.top() + 24.0)
-            top_shadow.setColorAt(0.0, QColor(15, 23, 42, 45))
-            top_shadow.setColorAt(1.0, QColor(15, 23, 42, 0))
-            painter.fillRect(QRectF(dx, drect.top(), drum_w, 24.0), QBrush(top_shadow))
-
-            bot_shadow = QLinearGradient(0, drect.bottom() - 24.0, 0, drect.bottom())
-            bot_shadow.setColorAt(0.0, QColor(15, 23, 42, 0))
-            bot_shadow.setColorAt(1.0, QColor(15, 23, 42, 45))
-            painter.fillRect(QRectF(dx, drect.bottom() - 24.0, drum_w, 24.0), QBrush(bot_shadow))
-
-            # Digit Rendering
-            center_y = drect.center().y()
-            if self.drum_locked[i]:
-                # Locked Clean Digit
-                painter.setPen(QColor(PALETTE["indigo"] if not self.is_spinning else PALETTE["text_primary"]))
-                painter.setFont(QFont("Segoe UI", 36, QFont.Weight.Bold))
-                painter.drawText(drect, Qt.AlignmentFlag.AlignCenter, str(self.drum_values[i]))
-            else:
-                # Rapid Motion Blur Scrolling Digits
-                offset = self.drum_offsets[i]
-                current_digit = int(offset / 10.0) % 10
-                next_digit = (current_digit + 1) % 10
-                fraction = (offset % 10.0) / 10.0
-
-                painter.setFont(QFont("Segoe UI", 34, QFont.Weight.Bold))
-                painter.setPen(QColor(PALETTE["text_secondary"]))
-
-                # Draw current rolling digit
-                y1 = center_y - (fraction * drum_h * 0.7)
-                painter.drawText(QRectF(dx, y1 - 25.0, drum_w, 50.0),
-                                 Qt.AlignmentFlag.AlignCenter, str(current_digit))
-
-                # Draw incoming rolling digit
-                y2 = y1 + (drum_h * 0.7)
-                painter.drawText(QRectF(dx, y2 - 25.0, drum_w, 50.0),
-                                 Qt.AlignmentFlag.AlignCenter, str(next_digit))
-
-                # Motion blur speed streaks
-                painter.setPen(QPen(QColor(PALETTE["border"]), 1.0))
-                painter.drawLine(int(dx + 6.0), int(center_y - 12.0), int(dx + drum_w - 6.0), int(center_y - 12.0))
-                painter.drawLine(int(dx + 6.0), int(center_y + 12.0), int(dx + drum_w - 6.0), int(center_y + 12.0))
-
-            # Center Alignment Glass Reticle Indicator
-            reticle_pen = QPen(QColor(PALETTE["amber"]), 1.5)
-            reticle_pen.setStyle(Qt.PenStyle.DotLine)
-            painter.setPen(reticle_pen)
-            painter.drawLine(int(dx), int(center_y), int(dx + drum_w), int(center_y))
-
-
-# ---------------------------------------------------------------------------
-# SCREEN 1: Live Ball Roller & Caller Stage
-# ---------------------------------------------------------------------------
-class LiveCallerStageScreen(QWidget):
-    """
-    Master interactive calling stage featuring:
-      - Left Deck: LottoBallChuteWidget physics drop, dynamic hero track details,
-        audio player controller with volume slider, session tracking counter,
-        and quick jump button to the 3D particle sphere visualizer.
-      - Right Matrix: Master 10x9 Calling Board categorized across Satyam,
-        Shivam, and Sundaram pillars with reactive color badges.
-    """
-    number_called = pyqtSignal(int)
-    game_reset = pyqtSignal()
-    open_dot_sphere_requested = pyqtSignal()
-
-    def __init__(self, audio_player: AudioPlayer, parent=None):
-        super().__init__(parent)
-        self.audio_player = audio_player
-
-        # Session calling state (persists until explicit confirmation reset)
+    def __init__(self, master, app_controller):
+        super().__init__(master, bg=PALETTE["bg_body"])
+        self.app = app_controller
+
+        # Calling state
         self.called_numbers: List[int] = []
         self.current_number: Optional[int] = None
 
-        # Matrix button lookup {1: QPushButton}
-        self.matrix_buttons: Dict[int, QPushButton] = {}
+        # Chute Animation State (60 FPS)
+        self.is_animating = False
+        self.ball_x = 75.0
+        self.ball_y = -60.0
+        self.vel_x = 0.0
+        self.vel_y = 0.0
+        self.ball_radius = 36.0
+        self.target_number: Optional[int] = None
+        self.display_number = "--"
+        self.bounce_count = 0
+        self.shockwave_radius = 0.0
+        self.shockwave_alpha = 0.0
+        self.scale_pop = 1.0
+
+        # Matrix button lookup {number: tk.Button}
+        self.matrix_buttons: Dict[int, tk.Button] = {}
+
+        # Audio controller reference
+        self.is_paused = False
+        self.auto_switch_var = tk.BooleanVar(value=False)
+        self._stop_timer: Optional[str] = None
 
         self._init_ui()
-        self._setup_player_timer()
 
     def _init_ui(self):
-        main_layout = QHBoxLayout(self)
-        main_layout.setContentsMargins(16, 14, 16, 14)
-        main_layout.setSpacing(16)
+        # 2-Column Split Layout
+        left_container = tk.Frame(self, bg=PALETTE["bg_body"], width=460)
+        left_container.pack(side="left", fill="y", padx=(20, 10), pady=16)
+        left_container.pack_propagate(False)
 
-        # ===================================================================
-        # LEFT PANEL: Hero Deck & Audio Engine
-        # ===================================================================
-        left_panel = QFrame()
-        left_panel.setProperty("class", "card-panel")
-        left_panel.setFixedWidth(460)
-        left_layout = QVBoxLayout(left_panel)
-        left_layout.setContentsMargins(18, 16, 18, 16)
-        left_layout.setSpacing(12)
+        right_container = tk.Frame(self, bg=PALETTE["bg_body"])
+        right_container.pack(side="right", fill="both", expand=True, padx=(10, 20), pady=16)
 
-        # 1. Physics Lotto Ball Chute Widget
-        self.chute_widget = LottoBallChuteWidget(self)
-        self.chute_widget.ball_settled.connect(self._on_ball_settled)
-        left_layout.addWidget(self.chute_widget)
+        # -------------------------------------------------------------
+        # LEFT PANEL: Ball Chute Canvas & Hero Calling Deck
+        # -------------------------------------------------------------
+        # 1. 3D Physics Ball Drop Chute Canvas
+        self.canvas_chute = tk.Canvas(
+            left_container, width=440, height=230,
+            bg=PALETTE["bg_card_alt"], highlightthickness=1,
+            highlightbackground=PALETTE["border"]
+        )
+        self.canvas_chute.pack(fill="x", pady=(0, 10))
+        self._draw_static_chute()
 
         # 2. Main Call Action Button (Primary CTA)
-        self.btn_draw = QPushButton("🎲 ROLL & DROP NEXT NUMBER")
-        self.btn_draw.setProperty("class", "btn-primary")
-        self.btn_draw.setFixedHeight(48)
-        self.btn_draw.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
-        self.btn_draw.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_draw.clicked.connect(self.draw_next_track)
-        left_layout.addWidget(self.btn_draw)
+        self.btn_draw = tk.Button(
+            left_container, text="🎲 DRAW & ROLL NEXT TRACK",
+            font=("Segoe UI", 12, "bold"),
+            bg=PALETTE["primary"], fg=PALETTE["text_white"],
+            activebackground=PALETTE["primary_hover"], activeforeground=PALETTE["text_white"],
+            relief="flat", cursor="hand2", height=2,
+            command=self.draw_next_track
+        )
+        self.btn_draw.pack(fill="x", pady=(0, 10))
 
         # 3. Dynamic Hero Track Details Card
-        hero_card = QFrame()
-        hero_card.setProperty("class", "card-subtle")
-        hero_card_layout = QVBoxLayout(hero_card)
-        hero_card_layout.setContentsMargins(14, 12, 14, 12)
-        hero_card_layout.setSpacing(4)
+        self.card_hero = tk.Frame(left_container, bg=PALETTE["bg_card"], bd=1, relief="solid")
+        self.card_hero.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
+        self.card_hero.pack(fill="x", pady=(0, 10))
 
-        self.lbl_hero_pillar = QLabel("READY TO COMMENCE GAME")
-        self.lbl_hero_pillar.setStyleSheet(f"color: {PALETTE['indigo']}; font-size: 11px; font-weight: 700; letter-spacing: 1px;")
-        hero_card_layout.addWidget(self.lbl_hero_pillar)
+        hero_inner = tk.Frame(self.card_hero, bg=PALETTE["bg_card"], padx=14, pady=10)
+        hero_inner.pack(fill="x")
 
-        self.lbl_hero_title = QLabel("Press 'Roll & Drop' or Spacebar")
-        self.lbl_hero_title.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
-        self.lbl_hero_title.setStyleSheet(f"color: {PALETTE['text_primary']};")
-        self.lbl_hero_title.setWordWrap(True)
-        hero_card_layout.addWidget(self.lbl_hero_title)
+        self.lbl_hero_pillar = tk.Label(
+            hero_inner, text="READY TO COMMENCE GAME",
+            font=("Segoe UI", 10, "bold"), fg=PALETTE["primary"], bg=PALETTE["bg_card"]
+        )
+        self.lbl_hero_pillar.pack(anchor="w")
 
-        self.lbl_hero_subtitle = QLabel("90 Evergreen Indian Songs • Full Decade Mapping")
-        self.lbl_hero_subtitle.setStyleSheet(f"color: {PALETTE['text_secondary']}; font-size: 12px;")
-        self.lbl_hero_subtitle.setWordWrap(True)
-        hero_card_layout.addWidget(self.lbl_hero_subtitle)
-        left_layout.addWidget(hero_card)
+        self.lbl_hero_title = tk.Label(
+            hero_inner, text="Press 'Draw Next Track' or Spacebar",
+            font=("Segoe UI", 14, "bold"), fg=PALETTE["text_main"], bg=PALETTE["bg_card"],
+            wraplength=400, justify="left"
+        )
+        self.lbl_hero_title.pack(anchor="w", pady=(2, 2))
 
-        # 4. Pygame Audio Player Deck
-        audio_box = QFrame()
-        audio_box.setProperty("class", "card-subtle")
-        audio_layout = QVBoxLayout(audio_box)
-        audio_layout.setContentsMargins(14, 10, 14, 10)
-        audio_layout.setSpacing(8)
+        self.lbl_hero_sub = tk.Label(
+            hero_inner, text="90 Evergreen Indian Songs • Full Decade Mapping",
+            font=("Segoe UI", 10), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"],
+            wraplength=400, justify="left"
+        )
+        self.lbl_hero_sub.pack(anchor="w")
 
-        # Audio status row
-        audio_top = QHBoxLayout()
-        self.lbl_audio_status = QLabel("Audio: Ready")
-        self.lbl_audio_status.setStyleSheet(f"color: {PALETTE['text_secondary']}; font-size: 11px; font-weight: 600;")
-        audio_top.addWidget(self.lbl_audio_status)
-        audio_top.addStretch()
+        # 4. Audio Playback Control Deck
+        self.card_audio = tk.Frame(left_container, bg=PALETTE["bg_card"], bd=1, relief="solid")
+        self.card_audio.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
+        self.card_audio.pack(fill="x", pady=(0, 10))
 
-        self.lbl_audio_time = QLabel("0:00 / 0:00")
-        self.lbl_audio_time.setStyleSheet(f"color: {PALETTE['text_muted']}; font-size: 11px;")
-        audio_top.addWidget(self.lbl_audio_time)
-        audio_layout.addLayout(audio_top)
+        audio_inner = tk.Frame(self.card_audio, bg=PALETTE["bg_card"], padx=14, pady=8)
+        audio_inner.pack(fill="x")
 
-        # Seek position scrubber
-        self.slider_seek = QSlider(Qt.Orientation.Horizontal)
-        self.slider_seek.setRange(0, 1000)
-        self.slider_seek.setValue(0)
-        self.slider_seek.sliderMoved.connect(self._on_seek_moved)
-        audio_layout.addWidget(self.slider_seek)
+        audio_top = tk.Frame(audio_inner, bg=PALETTE["bg_card"])
+        audio_top.pack(fill="x", pady=(0, 6))
 
-        # Controls & Volume Row
-        ctrl_row = QHBoxLayout()
-        ctrl_row.setSpacing(8)
+        self.lbl_audio_status = tk.Label(
+            audio_top, text="Audio: Ready",
+            font=("Segoe UI", 10, "bold"), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"]
+        )
+        self.lbl_audio_status.pack(side="left")
 
-        self.btn_play_pause = QPushButton("⏸ Pause")
-        self.btn_play_pause.setFixedHeight(32)
-        self.btn_play_pause.clicked.connect(self._toggle_play_pause)
-        ctrl_row.addWidget(self.btn_play_pause)
+        # Control buttons row
+        ctrl_row = tk.Frame(audio_inner, bg=PALETTE["bg_card"])
+        ctrl_row.pack(fill="x")
 
-        self.btn_replay = QPushButton("↺ Replay")
-        self.btn_replay.setFixedHeight(32)
-        self.btn_replay.clicked.connect(self._replay_current_song)
-        ctrl_row.addWidget(self.btn_replay)
+        self.btn_replay = tk.Button(
+            ctrl_row, text="↺ Replay", font=("Segoe UI", 9, "bold"),
+            bg=PALETTE["bg_card_alt"], fg=PALETTE["text_main"], relief="groove",
+            cursor="hand2", padx=8, pady=3, command=self.replay_current_song
+        )
+        self.btn_replay.pack(side="left", padx=(0, 6))
 
-        self.btn_stop = QPushButton("⏹ Stop")
-        self.btn_stop.setFixedHeight(32)
-        self.btn_stop.clicked.connect(self._stop_audio)
-        ctrl_row.addWidget(self.btn_stop)
+        self.btn_pause = tk.Button(
+            ctrl_row, text="⏸ Pause", font=("Segoe UI", 9, "bold"),
+            bg=PALETTE["bg_card_alt"], fg=PALETTE["text_main"], relief="groove",
+            cursor="hand2", padx=8, pady=3, command=self.toggle_pause
+        )
+        self.btn_pause.pack(side="left", padx=(0, 6))
 
-        ctrl_row.addSpacing(10)
-        ctrl_row.addWidget(QLabel("Vol:"))
-        self.slider_vol = QSlider(Qt.Orientation.Horizontal)
-        self.slider_vol.setRange(0, 100)
-        self.slider_vol.setValue(80)
-        self.slider_vol.setFixedWidth(80)
-        self.slider_vol.valueChanged.connect(self._on_volume_changed)
-        ctrl_row.addWidget(self.slider_vol)
+        self.btn_stop = tk.Button(
+            ctrl_row, text="⏹ Stop", font=("Segoe UI", 9, "bold"),
+            bg=PALETTE["bg_card_alt"], fg=PALETTE["coral"], relief="groove",
+            cursor="hand2", padx=8, pady=3, command=self.stop_audio
+        )
+        self.btn_stop.pack(side="left", padx=(0, 12))
 
-        audio_layout.addLayout(ctrl_row)
-        left_layout.addWidget(audio_box)
+        # Volume scale
+        tk.Label(ctrl_row, text="Vol:", font=("Segoe UI", 9), bg=PALETTE["bg_card"], fg=PALETTE["text_muted"]).pack(side="left")
+        self.scale_vol = tk.Scale(
+            ctrl_row, from_=0, to=100, orient="horizontal", length=80,
+            showvalue=0, bg=PALETTE["bg_card"], highlightthickness=0,
+            command=self._on_volume_change
+        )
+        self.scale_vol.set(80)
+        self.scale_vol.pack(side="left", padx=(4, 0))
 
         # 5. Session Counter & Last 5 Drawn Chips
-        session_box = QFrame()
-        session_box.setProperty("class", "card-subtle")
-        session_layout = QVBoxLayout(session_box)
-        session_layout.setContentsMargins(12, 8, 12, 8)
-        session_layout.setSpacing(6)
+        session_box = tk.Frame(left_container, bg=PALETTE["bg_card"], bd=1, relief="solid")
+        session_box.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
+        session_box.pack(fill="x", pady=(0, 10))
 
-        self.lbl_session_count = QLabel("Drawn: 0 / 90  •  Remaining: 90")
-        self.lbl_session_count.setStyleSheet(f"color: {PALETTE['text_primary']}; font-weight: 700; font-size: 12px;")
-        session_layout.addWidget(self.lbl_session_count)
+        s_inner = tk.Frame(session_box, bg=PALETTE["bg_card"], padx=12, pady=8)
+        s_inner.pack(fill="x")
 
-        self.chips_row = QHBoxLayout()
-        self.chips_row.setSpacing(6)
-        self.chip_labels: List[QLabel] = []
-        for i in range(5):
-            lbl_chip = QLabel("—")
-            lbl_chip.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            lbl_chip.setStyleSheet(f"background: {PALETTE['bg_card']}; border: 1px solid {PALETTE['border']}; border-radius: 6px; font-weight: 700; color: {PALETTE['text_muted']}; padding: 3px 6px; font-size: 11px;")
-            self.chip_labels.append(lbl_chip)
-            self.chips_row.addWidget(lbl_chip)
-        session_layout.addLayout(self.chips_row)
-        left_layout.addWidget(session_box)
+        self.lbl_session_count = tk.Label(
+            s_inner, text="Drawn: 0 / 90  •  Remaining: 90",
+            font=("Segoe UI", 10, "bold"), fg=PALETTE["text_main"], bg=PALETTE["bg_card"]
+        )
+        self.lbl_session_count.pack(anchor="w", pady=(0, 4))
 
-        # 6. Quick Action Button -> Screen 2 Visualizer
-        btn_view_sphere = QPushButton("🔮 View Live Audio Dot-Sphere →")
-        btn_view_sphere.setFixedHeight(36)
-        btn_view_sphere.setStyleSheet(f"background: {PALETTE['indigo_light']}; color: {PALETTE['indigo']}; border: 1.5px solid {PALETTE['indigo']}; font-weight: 700;")
-        btn_view_sphere.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_view_sphere.clicked.connect(self.open_dot_sphere_requested.emit)
-        left_layout.addWidget(btn_view_sphere)
+        self.chips_frame = tk.Frame(s_inner, bg=PALETTE["bg_card"])
+        self.chips_frame.pack(fill="x")
+        self.chip_labels: List[tk.Label] = []
+        for _ in range(5):
+            lbl = tk.Label(
+                self.chips_frame, text="—", font=("Segoe UI", 9, "bold"),
+                bg=PALETTE["bg_card_alt"], fg=PALETTE["text_dim"],
+                relief="solid", bd=1, padx=8, pady=2
+            )
+            lbl.pack(side="left", padx=(0, 6))
+            self.chip_labels.append(lbl)
 
-        main_layout.addWidget(left_panel)
+        # 6. Quick Action to Screen 2 & Auto-Switch Checkbox
+        btn_sphere = tk.Button(
+            left_container, text="🔮 Open Audio Dot-Sphere →",
+            font=("Segoe UI", 10, "bold"),
+            bg=PALETTE["primary_light"], fg=PALETTE["primary"],
+            activebackground=PALETTE["primary"], activeforeground=PALETTE["text_white"],
+            relief="flat", cursor="hand2", pady=6,
+            command=lambda: self.app.switch_tab(1)
+        )
+        btn_sphere.pack(fill="x", pady=(0, 6))
 
-        # ===================================================================
-        # RIGHT PANEL: Master 10x9 Calling Board (3 Pillars)
-        # ===================================================================
-        right_panel = QFrame()
-        right_panel.setProperty("class", "card-panel")
-        right_layout = QVBoxLayout(right_panel)
-        right_layout.setContentsMargins(18, 16, 18, 16)
-        right_layout.setSpacing(10)
+        chk_auto = tk.Checkbutton(
+            left_container, text="Auto-switch to sphere visualizer 1.5s after call",
+            variable=self.auto_switch_var, font=("Segoe UI", 9),
+            bg=PALETTE["bg_body"], fg=PALETTE["text_muted"], activebackground=PALETTE["bg_body"]
+        )
+        chk_auto.pack(anchor="w")
 
-        # Header with Pillar Labels
-        top_matrix_bar = QHBoxLayout()
-        lbl_matrix_title = QLabel("MASTER CALLING BOARD (1–90)")
-        lbl_matrix_title.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
-        lbl_matrix_title.setStyleSheet(f"color: {PALETTE['text_primary']};")
-        top_matrix_bar.addWidget(lbl_matrix_title)
-        top_matrix_bar.addStretch()
+        # -------------------------------------------------------------
+        # RIGHT PANEL: Master 10x9 Calling Matrix
+        # -------------------------------------------------------------
+        card_matrix = tk.Frame(right_container, bg=PALETTE["bg_card"], bd=1, relief="solid")
+        card_matrix.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
+        card_matrix.pack(fill="both", expand=True)
 
-        # Pillar Legend Pills
-        pillar_satyam = QLabel("Satyam (1–29)")
-        pillar_satyam.setStyleSheet(f"background: {PALETTE['indigo_light']}; color: {PALETTE['indigo']}; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;")
-        top_matrix_bar.addWidget(pillar_satyam)
+        m_header = tk.Frame(card_matrix, bg=PALETTE["bg_card"], padx=18, pady=12)
+        m_header.pack(fill="x")
 
-        pillar_shivam = QLabel("Shivam (30–59)")
-        pillar_shivam.setStyleSheet(f"background: {PALETTE['amber_light']}; color: {PALETTE['amber_dark']}; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;")
-        top_matrix_bar.addWidget(pillar_shivam)
+        lbl_m_title = tk.Label(
+            m_header, text="MASTER CALLING BOARD (1–90)",
+            font=("Segoe UI", 12, "bold"), fg=PALETTE["text_main"], bg=PALETTE["bg_card"]
+        )
+        lbl_m_title.pack(side="left")
 
-        pillar_sundaram = QLabel("Sundaram (60–90)")
-        pillar_sundaram.setStyleSheet(f"background: {PALETTE['emerald_light']}; color: {PALETTE['emerald_dark']}; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;")
-        top_matrix_bar.addWidget(pillar_sundaram)
+        # Legend Pills
+        legend_frame = tk.Frame(m_header, bg=PALETTE["bg_card"])
+        legend_frame.pack(side="right")
 
-        right_layout.addLayout(top_matrix_bar)
+        tk.Label(
+            legend_frame, text="Satyam (1–29)", font=("Segoe UI", 9, "bold"),
+            bg=PALETTE["primary_light"], fg=PALETTE["primary"], padx=8, pady=2
+        ).pack(side="left", padx=4)
 
-        # 10x9 Interactive Matrix Grid
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
-        scroll_area.setStyleSheet("background: transparent;")
+        tk.Label(
+            legend_frame, text="Shivam (30–59)", font=("Segoe UI", 9, "bold"),
+            bg=PALETTE["amber_light"], fg=PALETTE["amber_dark"], padx=8, pady=2
+        ).pack(side="left", padx=4)
 
-        matrix_widget = QWidget()
-        matrix_grid = QGridLayout(matrix_widget)
-        matrix_grid.setContentsMargins(0, 0, 0, 0)
-        matrix_grid.setSpacing(6)
+        tk.Label(
+            legend_frame, text="Sundaram (60–90)", font=("Segoe UI", 9, "bold"),
+            bg=PALETTE["emerald_light"], fg=PALETTE["emerald_dark"], padx=8, pady=2
+        ).pack(side="left", padx=4)
 
-        # Column Header Labels (0-8)
+        # Matrix Grid Scrollable Frame
+        grid_container = tk.Frame(card_matrix, bg=PALETTE["bg_card"], padx=14, pady=8)
+        grid_container.pack(fill="both", expand=True)
+
+        col_ranges = song_bank.COLUMN_RANGES
         col_headers = ["1–9", "10–19", "20–29", "30–39", "40–49", "50–59", "60–69", "70–79", "80–90"]
-        for c_idx, head_text in enumerate(col_headers):
-            lbl_head = QLabel(head_text)
-            lbl_head.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            lbl_head.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
-            lbl_head.setStyleSheet(f"color: {PALETTE['text_secondary']}; background: {PALETTE['bg_card_alt']}; border-radius: 4px; padding: 4px 0;")
-            matrix_grid.addWidget(lbl_head, 0, c_idx)
 
-        # 90 Cells mapped across columns
-        # Col 0 has 9 numbers (1-9), Col 8 has 11 numbers (80-90), others have 10 numbers
-        for c_idx, (start_n, end_n) in enumerate(song_bank.COLUMN_RANGES):
-            r_idx = 1
+        for c_idx, title in enumerate(col_headers):
+            lbl_ch = tk.Label(
+                grid_container, text=title, font=("Segoe UI", 9, "bold"),
+                bg=PALETTE["bg_card_alt"], fg=PALETTE["text_muted"],
+                relief="flat", padx=4, pady=4
+            )
+            lbl_ch.grid(row=0, column=c_idx, sticky="nsew", padx=3, pady=(0, 4))
+
+        for c_idx, (start_n, end_n) in enumerate(col_ranges):
+            grid_container.grid_columnconfigure(c_idx, weight=1)
+            row_idx = 1
             for n in range(start_n, end_n + 1):
-                btn = QPushButton(f"{n:02d}")
-                btn.setFixedSize(54, 42)
-                btn.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
-                btn.setCursor(Qt.CursorShape.PointingHandCursor)
-                btn.setToolTip(f"Track #{n}: {song_bank.get_song_title(n)}")
-                btn.clicked.connect(lambda checked, num=n: self.manual_call_number(num))
-
-                # Default Uncalled Style
-                self._apply_cell_style(btn, "uncalled")
+                btn = tk.Button(
+                    grid_container, text=f"{n:02d}",
+                    font=("Segoe UI", 10, "bold"),
+                    bg=PALETTE["bg_card_alt"], fg=PALETTE["text_dim"],
+                    relief="solid", bd=1, cursor="hand2",
+                    command=lambda num=n: self.manual_call_number(num)
+                )
+                btn.grid(row=row_idx, column=c_idx, sticky="nsew", padx=3, pady=3)
                 self.matrix_buttons[n] = btn
-                matrix_grid.addWidget(btn, r_idx, c_idx)
-                r_idx += 1
+                row_idx += 1
 
-        scroll_area.setWidget(matrix_widget)
-        right_layout.addWidget(scroll_area, 1)
+        for r in range(12):
+            grid_container.grid_rowconfigure(r, weight=1)
 
-        main_layout.addWidget(right_panel, 1)
+    # -------------------------------------------------------------
+    # Chute Physics Animation Loop (60 FPS via Canvas after(16))
+    # -------------------------------------------------------------
+    def _draw_static_chute(self):
+        """Draw acrylic chute structure and center cradle on Canvas."""
+        self.canvas_chute.delete("all")
+        w, h = 440, 230
+        ground_y = 155
 
-    def _setup_player_timer(self):
-        """Timer to update seek position and time display smoothly."""
-        self.poll_timer = QTimer(self)
-        self.poll_timer.timeout.connect(self._sync_player_status)
-        self.poll_timer.start(250)
+        # Curved acrylic chute guide rails (from top-left down to runway)
+        self.canvas_chute.create_line(45, 10, 85, 10, fill=PALETTE["border"], width=3)
+        self.canvas_chute.create_line(45, 10, 45, ground_y - 30, fill=PALETTE["border"], width=2)
+        self.canvas_chute.create_line(85, 10, 85, ground_y - 30, fill=PALETTE["border"], width=2)
+        self.canvas_chute.create_arc(45, ground_y - 60, 125, ground_y + 10, start=180, extent=90, style="arc", outline=PALETTE["border"], width=3)
+
+        # Horizontal rolling runway
+        self.canvas_chute.create_line(85, ground_y + 5, w - 40, ground_y + 5, fill=PALETTE["border"], width=3)
+
+        # Center Hero Cradle Socket
+        cx = 220
+        self.canvas_chute.create_rectangle(cx - 50, ground_y, cx + 50, ground_y + 20, fill=PALETTE["bg_card"], outline=PALETTE["border"], width=2)
+        self.canvas_chute.create_oval(cx - 30, ground_y - 4, cx + 30, ground_y + 6, fill=PALETTE["border_light"], outline=PALETTE["border"])
+
+        # Initial resting ball if no draw has occurred
+        self._render_lotto_ball(cx, ground_y - self.ball_radius, self.display_number, is_active=(self.current_number is not None))
+
+    def _render_lotto_ball(self, x: float, y: float, label: str, is_active: bool = False):
+        """Renders 3D-shaded lottery ball with specular highlight, inner disc and text."""
+        r = self.ball_radius * self.scale_pop
+        ground_y = 155
+
+        # Ground Drop Shadow
+        shadow_w = r * 1.5
+        shadow_h = 10.0
+        self.canvas_chute.create_oval(x - shadow_w / 2, ground_y - 2, x + shadow_w / 2, ground_y + shadow_h, fill="#E2E8F0", outline="")
+
+        # Shockwave Ring (when landing)
+        if self.shockwave_radius > 0:
+            sw_r = self.shockwave_radius
+            self.canvas_chute.create_oval(
+                x - sw_r, y - sw_r, x + sw_r, y + sw_r,
+                outline=PALETTE["coral"], width=2
+            )
+
+        # Outer Ball Sphere (Coral Rose #F43F5E or Neutral)
+        base_color = PALETTE["coral"] if is_active else PALETTE["bg_card"]
+        outline_col = PALETTE["coral_dark"] if is_active else PALETTE["border"]
+        self.canvas_chute.create_oval(x - r, y - r, x + r, y + r, fill=base_color, outline=outline_col, width=2)
+
+        # 3D Depth Crescent Arc
+        if is_active:
+            self.canvas_chute.create_arc(x - r, y - r, x + r, y + r, start=210, extent=120, fill=PALETTE["coral_hover"], outline="")
+
+        # Inner White Number Disc
+        disc_r = r * 0.62
+        self.canvas_chute.create_oval(x - disc_r, y - disc_r, x + disc_r, y + disc_r, fill="#FFFFFF", outline=outline_col, width=1)
+
+        # Specular Highlight Gleam (top-left)
+        gl_w = r * 0.4
+        gl_h = r * 0.22
+        self.canvas_chute.create_oval(x - r * 0.45, y - r * 0.65, x - r * 0.45 + gl_w, y - r * 0.65 + gl_h, fill="#FFE4E6", outline="")
+
+        # Number Label
+        text_col = PALETTE["coral_dark"] if is_active else PALETTE["text_dim"]
+        self.canvas_chute.create_text(
+            x, y, text=label,
+            font=("Segoe UI", int(14 * self.scale_pop), "bold"),
+            fill=text_col
+        )
 
     def draw_next_track(self):
-        """Draw next random uncalled number from 1 to 90 with physics roll."""
-        if self.chute_widget.is_animating:
+        """Host clicks 'Draw Next Track' or presses Spacebar."""
+        if self.is_animating:
             return
 
         available = [n for n in range(1, 91) if n not in self.called_numbers]
         if not available:
-            QMessageBox.information(self, "Game Finished", "All 90 numbers have been called!")
+            messagebox.showinfo("Game Complete", "All 90 numbers have been called!")
             return
 
-        next_num = random.choice(available)
-        self.current_number = next_num
+        self.target_number = random.choice(available)
+        self.current_number = self.target_number
 
-        # Trigger physics drop & roll in chute widget
-        self.chute_widget.trigger_drop(next_num)
+        # Start 60-FPS physics animation: spawn at top chute
+        self.is_animating = True
+        self.ball_x = 65.0
+        self.ball_y = -60.0
+        self.vel_x = 1.0
+        self.vel_y = 3.0
+        self.bounce_count = 0
+        self.shockwave_radius = 0.0
+        self.scale_pop = 1.0
 
-    def _on_ball_settled(self, number: int):
-        """Called once the lotto ball has rolled and settled in the hero cradle."""
+        self._step_physics()
+
+    def _step_physics(self):
+        """Simulate gravity ($y = y_0 + 0.5 g t^2$), elastic bounce, and rolling spin."""
+        ground_y = 155 - self.ball_radius
+        cradle_x = 220.0
+
+        # Phase 1: Dropping down chute
+        if self.bounce_count < 2:
+            self.vel_y += 1.15  # Gravity acceleration
+            self.ball_y += self.vel_y
+            self.ball_x += self.vel_x
+
+            # Rapid rotational spin: cycle numbers while rolling
+            self.display_number = f"{random.randint(1, 90):02d}"
+
+            # Hit ground / bounce plate
+            if self.ball_y >= ground_y:
+                self.ball_y = ground_y
+                self.vel_y = -self.vel_y * 0.45  # Elastic damping
+                self.vel_x = 7.5  # Forward roll impetus
+                self.bounce_count += 1
+                self.shockwave_radius = self.ball_radius * 1.1
+
+        # Phase 2: Horizontal Rolling into Center Cradle
+        else:
+            self.ball_x += self.vel_x
+            self.vel_x *= 0.955  # Rolling friction deceleration
+            self.display_number = f"{random.randint(1, 90):02d}"
+
+            # Expand shockwave ring
+            if self.shockwave_radius > 0:
+                self.shockwave_radius += 3.5
+                if self.shockwave_radius > 90.0:
+                    self.shockwave_radius = 0.0
+
+            # Arrived at center cradle
+            if self.ball_x >= cradle_x or abs(self.vel_x) < 0.6:
+                self.ball_x = cradle_x
+                self.vel_x = 0.0
+                self.is_animating = False
+                self.display_number = f"#{self.target_number:02d}"
+                self.scale_pop = 1.25  # Pop reveal
+
+                # Finalize call
+                self._on_ball_landed(self.target_number)
+                self._draw_static_chute()
+                self._animate_scale_settle()
+                return
+
+        # Redraw frame
+        self._draw_static_chute()
+        self._render_lotto_ball(self.ball_x, self.ball_y, self.display_number, is_active=True)
+        self.after(16, self._step_physics)
+
+    def _animate_scale_settle(self):
+        """Spring back scale pop from 1.25 to 1.0."""
+        if self.scale_pop > 1.0:
+            self.scale_pop -= 0.03
+            self._draw_static_chute()
+            self.after(16, self._animate_scale_settle)
+        else:
+            self.scale_pop = 1.0
+
+    def _on_ball_landed(self, number: int):
+        """Called once the ball settles in the center cradle."""
         if number not in self.called_numbers:
             self.called_numbers.append(number)
 
         self._update_hero_details(number)
-        self._update_matrix_cell(number, is_active=True)
+        self._update_matrix_board(number)
         self._update_session_chips()
+        self.play_song(number)
 
-        # Play audio clip
-        self._play_song_for_number(number)
+        # Sync with global app & other screens
+        self.app.sync_number_called(number)
 
-        # Notify parent app and child screens
-        self.number_called.emit(number)
+        # Auto-switch to visualizer if enabled
+        if self.auto_switch_var.get():
+            self.after(1500, lambda: self.app.switch_tab(1))
 
     def manual_call_number(self, number: int):
-        """Allow host to click an uncalled cell to manually call it."""
+        """Allow host to click uncalled matrix cell directly with confirmation."""
         if number in self.called_numbers:
-            # Already called, replay song
-            self._play_song_for_number(number)
+            self.play_song(number)
             self._update_hero_details(number)
             return
 
-        reply = QMessageBox.question(
-            self, "Manual Call Confirmation",
-            f"Are you sure you want to call Track #{number:02d} ({song_bank.get_song_title(number)})?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        )
-        if reply == QMessageBox.StandardButton.Yes:
+        if messagebox.askyesno("Confirm Manual Call", f"Call Track #{number:02d} ({song_bank.get_song_title(number)})?"):
+            self.target_number = number
             self.current_number = number
-            self.chute_widget.trigger_drop(number)
+            self.is_animating = False
+            self.display_number = f"#{number:02d}"
+            self._on_ball_landed(number)
 
     def _update_hero_details(self, number: int):
         song = song_bank.get_song(number)
         title = song.get("title", f"Track #{number}") if song else f"Track #{number}"
-        artist = song.get("artist", "Evergreen Hit") if song else ""
+        artist = song.get("artist", "Bollywood Evergreen") if song else ""
         year = song.get("year", "") if song else ""
 
-        pillar_name = "Satyam" if number <= 29 else ("Shivam" if number <= 59 else "Sundaram")
+        pillar = "Satyam" if number <= 29 else ("Shivam" if number <= 59 else "Sundaram")
         col_idx = song.get("column", 0) + 1 if song else 1
 
-        self.lbl_hero_pillar.setText(f"✦ NOW CALLING: {pillar_name.upper()} • COLUMN {col_idx}")
-        self.lbl_hero_title.setText(f"#{number:02d} • {title}")
-        sub = f"Album/Artist: {artist}"
+        self.lbl_hero_pillar.config(text=f"✦ NOW CALLING: {pillar.upper()} • COLUMN {col_idx}")
+        self.lbl_hero_title.config(text=f"#{number:02d} • {title}")
+        sub = f"Album: {artist}"
         if year:
             sub += f" ({year})"
-        self.lbl_hero_subtitle.setText(sub)
+        self.lbl_hero_sub.config(text=sub)
 
-    def _play_song_for_number(self, number: int):
-        audio_path = song_bank.find_audio_file(number)
-        if audio_path and os.path.exists(audio_path):
-            self.audio_player.play_track(audio_path)
-            self.lbl_audio_status.setText(f"Playing: Track #{number:02d}")
-            self.btn_play_pause.setText("⏸ Pause")
-        else:
-            self.lbl_audio_status.setText(f"Audio for #{number:02d} missing (Silent Mode)")
-
-    def _toggle_play_pause(self):
-        if self.audio_player.is_playing:
-            if self.audio_player.is_paused:
-                self.audio_player.unpause()
-                self.btn_play_pause.setText("⏸ Pause")
-                self.lbl_audio_status.setText("Playing")
-            else:
-                self.audio_player.pause()
-                self.btn_play_pause.setText("▶ Resume")
-                self.lbl_audio_status.setText("Paused")
-        elif self.current_number:
-            self._play_song_for_number(self.current_number)
-
-    def _replay_current_song(self):
-        if self.current_number:
-            self._play_song_for_number(self.current_number)
-
-    def _stop_audio(self):
-        self.audio_player.stop()
-        self.btn_play_pause.setText("▶ Play")
-        self.lbl_audio_status.setText("Stopped")
-
-    def _on_seek_moved(self, val: int):
-        if self.audio_player.total_duration > 0:
-            target_time = (val / 1000.0) * self.audio_player.total_duration
-            self.audio_player.seek(target_time)
-
-    def _on_volume_changed(self, val: int):
-        self.audio_player.set_volume(val / 100.0)
-
-    def _sync_player_status(self):
-        if self.audio_player.is_playing and not self.audio_player.is_paused:
-            pos = self.audio_player.get_current_position()
-            total = self.audio_player.total_duration
-            if total > 0:
-                frac = min(1000, int((pos / total) * 1000))
-                self.slider_seek.blockSignals(True)
-                self.slider_seek.setValue(frac)
-                self.slider_seek.blockSignals(False)
-
-                pos_m, pos_s = divmod(int(pos), 60)
-                tot_m, tot_s = divmod(int(total), 60)
-                self.lbl_audio_time.setText(f"{pos_m}:{pos_s:02d} / {tot_m}:{tot_s:02d}")
-
-    def _update_matrix_cell(self, number: int, is_active: bool = True):
-        # Update past active button to called
+    def _update_matrix_board(self, active_number: int):
         for n, btn in self.matrix_buttons.items():
-            if n in self.called_numbers:
-                if n == number and is_active:
-                    self._apply_cell_style(btn, "active")
-                else:
-                    self._apply_cell_style(btn, "called")
+            if n == active_number:
+                # Active Call: Coral Rose #FFF1F2 bg, #F43F5E text
+                btn.config(bg=PALETTE["coral_light"], fg=PALETTE["coral"], relief="solid", bd=2)
+            elif n in self.called_numbers:
+                # Previously Called: Mint #ECFDF5 bg, #059669 text
+                btn.config(bg=PALETTE["emerald_light"], fg=PALETTE["emerald"], relief="solid", bd=1)
             else:
-                self._apply_cell_style(btn, "uncalled")
-
-    def _apply_cell_style(self, btn: QPushButton, state: str):
-        if state == "active":
-            btn.setStyleSheet(f"""
-                QPushButton {{
-                    background-color: {PALETTE['amber_light']};
-                    color: {PALETTE['amber_dark']};
-                    border: 2px solid {PALETTE['amber']};
-                    border-radius: 6px;
-                    font-weight: 800;
-                }}
-            """)
-        elif state == "called":
-            btn.setStyleSheet(f"""
-                QPushButton {{
-                    background-color: {PALETTE['emerald_light']};
-                    color: {PALETTE['emerald_dark']};
-                    border: 1.5px solid {PALETTE['emerald']};
-                    border-radius: 6px;
-                    font-weight: 700;
-                }}
-            """)
-        else:
-            btn.setStyleSheet(f"""
-                QPushButton {{
-                    background-color: {PALETTE['bg_card']};
-                    color: {PALETTE['text_secondary']};
-                    border: 1px solid {PALETTE['border']};
-                    border-radius: 6px;
-                }}
-                QPushButton:hover {{
-                    border-color: {PALETTE['indigo']};
-                    color: {PALETTE['indigo']};
-                }}
-            """)
+                # Uncalled: #F8FAFC bg, #94A3B8 text
+                btn.config(bg=PALETTE["bg_card_alt"], fg=PALETTE["text_dim"], relief="solid", bd=1)
 
     def _update_session_chips(self):
         drawn = len(self.called_numbers)
-        remaining = 90 - drawn
-        self.lbl_session_count.setText(f"Drawn: {drawn} / 90  •  Remaining: {remaining}")
+        rem = 90 - drawn
+        self.lbl_session_count.config(text=f"Drawn: {drawn} / 90  •  Remaining: {rem}")
 
-        # Show last 5 calls in chips
         last_five = self.called_numbers[-5:] if len(self.called_numbers) >= 5 else self.called_numbers
         for i in range(5):
             idx = len(last_five) - 1 - i
             if idx >= 0:
                 n = last_five[idx]
-                self.chip_labels[i].setText(f"#{n:02d}")
-                if i == 0:
-                    self.chip_labels[i].setStyleSheet(f"background: {PALETTE['amber_light']}; border: 1px solid {PALETTE['amber']}; border-radius: 6px; font-weight: 800; color: {PALETTE['amber_dark']}; padding: 3px 6px; font-size: 11px;")
-                else:
-                    self.chip_labels[i].setStyleSheet(f"background: {PALETTE['emerald_light']}; border: 1px solid {PALETTE['emerald']}; border-radius: 6px; font-weight: 700; color: {PALETTE['emerald_dark']}; padding: 3px 6px; font-size: 11px;")
+                self.chip_labels[i].config(
+                    text=f"#{n:02d}",
+                    bg=PALETTE["coral_light"] if i == 0 else PALETTE["emerald_light"],
+                    fg=PALETTE["coral"] if i == 0 else PALETTE["emerald"]
+                )
             else:
-                self.chip_labels[i].setText("—")
-                self.chip_labels[i].setStyleSheet(f"background: {PALETTE['bg_card']}; border: 1px solid {PALETTE['border']}; border-radius: 6px; font-weight: 700; color: {PALETTE['text_muted']}; padding: 3px 6px; font-size: 11px;")
+                self.chip_labels[i].config(text="—", bg=PALETTE["bg_card_alt"], fg=PALETTE["text_dim"])
 
-    def confirm_reset_game(self):
-        """Prompt user with explicit confirmation dialog before resetting board state."""
-        reply = QMessageBox.question(
-            self, "Reset Game Session",
-            "Are you sure you want to reset the current game?\nAll called numbers and board highlights will be cleared.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        )
-        if reply == QMessageBox.StandardButton.Yes:
+    def play_song(self, number: int):
+        if not HAS_AUDIO:
+            self.lbl_audio_status.config(text="Audio disabled (mixer unavailable)")
+            return
+
+        # Cancel any active duration timer
+        if self._stop_timer:
+            try:
+                self.after_cancel(self._stop_timer)
+            except Exception:
+                pass
+            self._stop_timer = None
+
+        cue = get_song_cue(number)
+        audio_file = cue.get("file_path")
+        start_sec = cue.get("start_time", 0.0)
+        duration = cue.get("duration", 0.0)
+
+        if audio_file and os.path.exists(audio_file):
+            try:
+                pygame.mixer.music.load(audio_file)
+                try:
+                    pygame.mixer.music.play(start=start_sec)
+                except Exception:
+                    pygame.mixer.music.play()
+
+                cue_txt = f" (from {format_seconds_to_time(start_sec)})" if start_sec > 0 else ""
+                dur_txt = f" • {int(duration)}s clip" if duration > 0 else ""
+                self.lbl_audio_status.config(text=f"Playing Track #{number:02d}{cue_txt}{dur_txt}")
+                self.btn_pause.config(text="⏸ Pause")
+                self.is_paused = False
+
+                # Schedule automatic clip stop if duration is set
+                if duration > 0.0:
+                    self._stop_timer = self.after(int(duration * 1000), self.stop_audio)
+            except Exception as e:
+                self.lbl_audio_status.config(text=f"Playback error: {e}")
+        else:
+            self.lbl_audio_status.config(text=f"Audio for #{number:02d} missing (Silent)")
+
+    def replay_current_song(self):
+        if self.current_number:
+            self.play_song(self.current_number)
+
+    def toggle_pause(self):
+        if not HAS_AUDIO:
+            return
+        if pygame.mixer.music.get_busy() and not self.is_paused:
+            pygame.mixer.music.pause()
+            self.is_paused = True
+            self.btn_pause.config(text="▶ Resume")
+            self.lbl_audio_status.config(text="Paused")
+        elif self.is_paused:
+            pygame.mixer.music.unpause()
+            self.is_paused = False
+            self.btn_pause.config(text="⏸ Pause")
+            self.lbl_audio_status.config(text=f"Playing Track #{self.current_number:02d}" if self.current_number else "Playing")
+
+    def stop_audio(self):
+        if self._stop_timer:
+            try:
+                self.after_cancel(self._stop_timer)
+            except Exception:
+                pass
+            self._stop_timer = None
+
+        if HAS_AUDIO:
+            try:
+                pygame.mixer.music.stop()
+            except Exception:
+                pass
+        self.lbl_audio_status.config(text="Stopped")
+        self.btn_pause.config(text="▶ Play")
+        self.is_paused = False
+
+    def _on_volume_change(self, val):
+        if HAS_AUDIO:
+            try:
+                pygame.mixer.music.set_volume(int(val) / 100.0)
+            except Exception:
+                pass
+
+    def reset_game(self):
+        """Prompt confirmation before clearing board."""
+        if messagebox.askyesno("Reset Game Session", "Are you sure you want to reset the current session?\nAll drawn tracks will be cleared."):
             self.called_numbers.clear()
             self.current_number = None
-            self.chute_widget.reset()
-            self.audio_player.stop()
-
-            self.lbl_hero_pillar.setText("READY TO COMMENCE GAME")
-            self.lbl_hero_title.setText("Press 'Roll & Drop' or Spacebar")
-            self.lbl_hero_subtitle.setText("90 Evergreen Indian Songs • Full Decade Mapping")
-            self.lbl_audio_status.setText("Audio: Ready")
-
+            self.stop_audio()
+            self.display_number = "--"
+            self._draw_static_chute()
+            self.lbl_hero_pillar.config(text="READY TO COMMENCE GAME")
+            self.lbl_hero_title.config(text="Press 'Draw Next Track' or Spacebar")
+            self.lbl_hero_sub.config(text="90 Evergreen Indian Songs • Full Decade Mapping")
+            self.lbl_audio_status.config(text="Audio: Ready")
             for btn in self.matrix_buttons.values():
-                self._apply_cell_style(btn, "uncalled")
-
+                btn.config(bg=PALETTE["bg_card_alt"], fg=PALETTE["text_dim"])
             self._update_session_chips()
-            self.game_reset.emit()
+            self.app.sync_reset()
 
 
 # ---------------------------------------------------------------------------
-# SCREEN 2: 3D Particle Audio Sphere Visualizer Screen
+# SCREEN 2: 3D Audio Dot-Sphere Visualizer (Fibonacci Lattice, 60 FPS)
 # ---------------------------------------------------------------------------
-class ParticleSphereScreen(QWidget):
+class DotSphereScreen(tk.Frame):
     """
-    Dedicated immersive visualizer screen hosting the rotating 3D particle sphere.
-    Provides beat modulation toggle, speed controls, now playing track card,
-    and a quick return button to the live caller stage.
+    Screen 2: 3D Audio "Sphere of Dots" Visualizer
+    - Renders 280 points on a Fibonacci spherical lattice using Canvas.
+    - Continuous perspective rotation around X & Y axes.
+    - Audio-reactive harmonic pulsation synced to pygame audio.
     """
-    return_to_caller_requested = pyqtSignal()
+    def __init__(self, master, app_controller):
+        super().__init__(master, bg=PALETTE["bg_body"])
+        self.app = app_controller
 
-    def __init__(self, audio_player: AudioPlayer, parent=None):
-        super().__init__(parent)
-        self.audio_player = audio_player
-        self.current_song_name = "Ready for Calling"
+        # 3D Fibonacci Points
+        self.num_points = 280
+        self.points: List[Tuple[float, float, float]] = []
+        self._build_fibonacci_sphere()
+
+        # Dynamic Sphere State
+        self.base_radius = 160.0
+        self.yaw = 0.0
+        self.pitch = 0.0
+        self.yaw_speed = 0.015
+        self.pitch_speed = 0.008
+        self.pulse_phase = 0.0
+        self.is_running = False
 
         self._init_ui()
 
+    def _build_fibonacci_sphere(self):
+        """Distribute 280 points evenly over a unit sphere."""
+        self.points.clear()
+        phi_golden = math.pi * (3.0 - math.sqrt(5.0))  # ~2.39996 rad
+        for i in range(self.num_points):
+            y = 1.0 - (float(i) / float(self.num_points - 1)) * 2.0  # +1 to -1
+            r = math.sqrt(max(0.0, 1.0 - y * y))
+            theta = phi_golden * float(i)
+            x = r * math.cos(theta)
+            z = r * math.sin(theta)
+            self.points.append((x, y, z))
+
     def _init_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(18, 14, 18, 14)
-        layout.setSpacing(12)
+        # Header Bar
+        header = tk.Frame(self, bg=PALETTE["bg_card"], bd=1, relief="solid")
+        header.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
+        header.pack(fill="x", padx=20, pady=(16, 10))
 
-        # Header Control Bar
-        header = QFrame()
-        header.setProperty("class", "card-panel")
-        header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(16, 10, 16, 10)
+        h_inner = tk.Frame(header, bg=PALETTE["bg_card"], padx=16, pady=10)
+        h_inner.pack(fill="x")
 
-        title = QLabel("🔮 3D PARTICLE AUDIO SPHERE • LIVE RESONATOR")
-        title.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
-        title.setStyleSheet(f"color: {PALETTE['indigo']};")
-        header_layout.addWidget(title)
+        tk.Label(
+            h_inner, text="🔮 3D AUDIO DOT-SPHERE VISUALIZER • LIVE SOUND RESONATOR",
+            font=("Segoe UI", 12, "bold"), fg=PALETTE["primary"], bg=PALETTE["bg_card"]
+        ).pack(side="left")
 
-        header_layout.addStretch()
-
-        # Quick Return Button
-        btn_return = QPushButton("← Return to Live Caller Stage")
-        btn_return.setFixedHeight(34)
-        btn_return.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_return.clicked.connect(self.return_to_caller_requested.emit)
-        header_layout.addWidget(btn_return)
-
-        layout.addWidget(header)
+        btn_back = tk.Button(
+            h_inner, text="← Return to Live Stage",
+            font=("Segoe UI", 10, "bold"), bg=PALETTE["bg_card_alt"], fg=PALETTE["text_main"],
+            relief="groove", cursor="hand2", padx=12, pady=4,
+            command=lambda: self.app.switch_tab(0)
+        )
+        btn_back.pack(side="right")
 
         # Main 3D Canvas
-        self.sphere_widget = ParticleAudioSphereWidget(self)
-        layout.addWidget(self.sphere_widget, 1)
+        self.canvas_sphere = tk.Canvas(
+            self, bg=PALETTE["bg_card"], highlightthickness=1,
+            highlightbackground=PALETTE["border"]
+        )
+        self.canvas_sphere.pack(fill="both", expand=True, padx=20, pady=(0, 10))
 
-        # Bottom Floating Control Deck
-        deck = QFrame()
-        deck.setProperty("class", "card-panel")
-        deck_layout = QHBoxLayout(deck)
-        deck_layout.setContentsMargins(16, 10, 16, 10)
-        deck_layout.setSpacing(16)
+        # Bottom Controls HUD
+        hud = tk.Frame(self, bg=PALETTE["bg_card"], bd=1, relief="solid")
+        hud.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
+        hud.pack(fill="x", padx=20, pady=(0, 16))
 
-        # Beat Modulation Toggle
-        self.btn_beat_mod = QPushButton("✨ Beat Modulation: ACTIVE")
-        self.btn_beat_mod.setCheckable(True)
-        self.btn_beat_mod.setChecked(True)
-        self.btn_beat_mod.setFixedHeight(34)
-        self.btn_beat_mod.setStyleSheet(f"background: {PALETTE['emerald_light']}; color: {PALETTE['emerald_dark']}; border: 1.5px solid {PALETTE['emerald']}; font-weight: 700;")
-        self.btn_beat_mod.clicked.connect(self._toggle_beat_modulation)
-        deck_layout.addWidget(self.btn_beat_mod)
+        hud_inner = tk.Frame(hud, bg=PALETTE["bg_card"], padx=16, pady=8)
+        hud_inner.pack(fill="x")
 
-        # Rotation Speed Slider
-        deck_layout.addWidget(QLabel("Rotation Speed:"))
-        self.slider_speed = QSlider(Qt.Orientation.Horizontal)
-        self.slider_speed.setRange(2, 30)
-        self.slider_speed.setValue(10)
-        self.slider_speed.setFixedWidth(100)
-        self.slider_speed.valueChanged.connect(lambda v: self.sphere_widget.set_rotation_speed(v / 10.0))
-        deck_layout.addWidget(self.slider_speed)
+        self.lbl_now_playing = tk.Label(
+            hud_inner, text="Now Playing: Ready for Calling",
+            font=("Segoe UI", 11, "bold"), fg=PALETTE["text_main"], bg=PALETTE["bg_card"]
+        )
+        self.lbl_now_playing.pack(side="left")
 
-        # Sphere Scale Slider
-        deck_layout.addWidget(QLabel("Sphere Size:"))
-        self.slider_scale = QSlider(Qt.Orientation.Horizontal)
-        self.slider_scale.setRange(100, 240)
-        self.slider_scale.setValue(160)
-        self.slider_scale.setFixedWidth(100)
-        self.slider_scale.valueChanged.connect(lambda v: self.sphere_widget.set_sphere_scale(float(v)))
-        deck_layout.addWidget(self.slider_scale)
+        # Speed slider
+        tk.Label(hud_inner, text="Rotation Speed:", font=("Segoe UI", 9), bg=PALETTE["bg_card"], fg=PALETTE["text_muted"]).pack(side="left", padx=(24, 4))
+        self.scale_speed = tk.Scale(
+            hud_inner, from_=5, to=30, orient="horizontal", length=90,
+            showvalue=0, bg=PALETTE["bg_card"], highlightthickness=0,
+            command=lambda v: setattr(self, "yaw_speed", float(v) * 0.0015)
+        )
+        self.scale_speed.set(10)
+        self.scale_speed.pack(side="left")
 
-        deck_layout.addStretch()
+        # Size slider
+        tk.Label(hud_inner, text="Sphere Size:", font=("Segoe UI", 9), bg=PALETTE["bg_card"], fg=PALETTE["text_muted"]).pack(side="left", padx=(20, 4))
+        self.scale_radius = tk.Scale(
+            hud_inner, from_=100, to=240, orient="horizontal", length=90,
+            showvalue=0, bg=PALETTE["bg_card"], highlightthickness=0,
+            command=lambda v: setattr(self, "base_radius", float(v))
+        )
+        self.scale_radius.set(160)
+        self.scale_radius.pack(side="left")
 
-        # Now Playing Track Indicator
-        self.lbl_now_playing = QLabel("Now Playing: —")
-        self.lbl_now_playing.setStyleSheet(f"color: {PALETTE['text_secondary']}; font-weight: 600; font-size: 12px;")
-        deck_layout.addWidget(self.lbl_now_playing)
+    def start_loop(self):
+        """Start 60 FPS animation loop when screen is active."""
+        if not self.is_running:
+            self.is_running = True
+            self._render_frame()
 
-        layout.addWidget(deck)
-
-    def _toggle_beat_modulation(self):
-        active = self.btn_beat_mod.isChecked()
-        self.sphere_widget.set_beat_modulation(active)
-        if active:
-            self.btn_beat_mod.setText("✨ Beat Modulation: ACTIVE")
-            self.btn_beat_mod.setStyleSheet(f"background: {PALETTE['emerald_light']}; color: {PALETTE['emerald_dark']}; border: 1.5px solid {PALETTE['emerald']}; font-weight: 700;")
-        else:
-            self.btn_beat_mod.setText("⏸ Beat Modulation: OFF")
-            self.btn_beat_mod.setStyleSheet(f"background: {PALETTE['bg_card_alt']}; color: {PALETTE['text_muted']}; border: 1px solid {PALETTE['border']}; font-weight: 600;")
+    def stop_loop(self):
+        self.is_running = False
 
     def sync_track_info(self, number: int):
-        song = song_bank.get_song(number)
-        title = song.get("title", f"Track #{number}") if song else f"Track #{number}"
-        self.current_song_name = f"#{number:02d} • {title}"
-        self.lbl_now_playing.setText(f"Now Playing: {self.current_song_name}")
-        self.sphere_widget.set_audio_playing(True)
+        cue = get_song_cue(number)
+        title = cue.get("title") or song_bank.get_song_title(number)
+        start_sec = cue.get("start_time", 0.0)
+        duration = cue.get("duration", 0.0)
+        cue_info = ""
+        if start_sec > 0:
+            cue_info += f" • Start: {format_seconds_to_time(start_sec)}"
+        if duration > 0:
+            cue_info += f" • {int(duration)}s clip"
+        self.lbl_now_playing.config(text=f"Now Playing: #{number:02d} • {title}{cue_info}")
+
+    def _render_frame(self):
+        if not self.is_running:
+            return
+
+        w = self.canvas_sphere.winfo_width()
+        h = self.canvas_sphere.winfo_height()
+        if w < 10 or h < 10:
+            self.after(30, self._render_frame)
+            return
+
+        cx = w / 2.0
+        cy = h / 2.0
+        fov = 340.0
+        cam_dist = 380.0
+
+        # Update rotation angles
+        self.yaw = (self.yaw + self.yaw_speed) % (math.pi * 2)
+        self.pitch = (self.pitch + self.pitch_speed) % (math.pi * 2)
+        self.pulse_phase += 0.06
+
+        # Audio-Reactive Dynamic Radius Pulse
+        is_busy = False
+        if HAS_AUDIO:
+            try:
+                is_busy = pygame.mixer.music.get_busy()
+            except Exception:
+                is_busy = False
+
+        if is_busy:
+            # Multi-frequency harmonic pulse when music is active
+            pulse = (
+                0.16 * math.sin(self.pulse_phase * 4.0) +
+                0.08 * math.sin(self.pulse_phase * 9.5) +
+                0.04 * math.sin(self.pulse_phase * 15.0)
+            )
+            dyn_radius = self.base_radius * (1.0 + pulse)
+        else:
+            # Gentle ambient breathing when idle
+            dyn_radius = self.base_radius * (1.0 + 0.04 * math.sin(self.pulse_phase * 1.5))
+
+        cos_y, sin_y = math.cos(self.yaw), math.sin(self.yaw)
+        cos_p, sin_p = math.cos(self.pitch), math.sin(self.pitch)
+
+        projected = []
+        for bx, by, bz in self.points:
+            # Yaw (Y-axis)
+            x1 = bx * cos_y + bz * sin_y
+            y1 = by
+            z1 = -bx * sin_y + bz * cos_y
+
+            # Pitch (X-axis)
+            x2 = x1
+            y2 = y1 * cos_p - z1 * sin_p
+            z2 = y1 * sin_p + z1 * cos_p
+
+            # Perspective projection
+            world_z = z2 * dyn_radius
+            scale = fov / (cam_dist + world_z)
+            sx = cx + (x2 * dyn_radius) * scale
+            sy = cy + (y2 * dyn_radius) * scale
+
+            projected.append((z2, sx, sy))
+
+        # Sort back-to-front
+        projected.sort(key=lambda p: p[0])
+
+        self.canvas_sphere.delete("all")
+
+        # Draw connecting web lines between nearby front-facing dots
+        front_dots = [p for p in projected if p[0] > 0.4]
+        for i in range(0, len(front_dots), 3):
+            z_a, ax, ay = front_dots[i]
+            for j in range(i + 1, min(i + 4, len(front_dots))):
+                z_b, bx, by = front_dots[j]
+                dist_sq = (ax - bx) ** 2 + (ay - by) ** 2
+                if dist_sq < 1400.0:
+                    self.canvas_sphere.create_line(ax, ay, bx, by, fill="#EEF2FF", width=1)
+
+        # Render dots with depth shading
+        for z_norm, sx, sy in projected:
+            t = (z_norm + 1.0) / 2.0  # 0.0 (back) to 1.0 (front)
+            dot_r = 1.4 + t * 3.4
+            color = PALETTE["primary"] if t > 0.4 else PALETTE["text_dim"]
+
+            self.canvas_sphere.create_oval(
+                sx - dot_r, sy - dot_r, sx + dot_r, sy + dot_r,
+                fill=color, outline=""
+            )
+
+        self.after(16, self._render_frame)
 
 
 # ---------------------------------------------------------------------------
-# SCREEN 3: Lucky Draw & Slot Machine Roller (Tie-Breaker & Raffle)
+# SCREEN 3: Mechanical Slot Lucky Draw
 # ---------------------------------------------------------------------------
-class LuckyDrawScreen(QWidget):
+class LuckyDrawScreen(tk.Frame):
     """
-    Dedicated tie-breaker and raffle module featuring animated mechanical
-    slot-machine drums, configurable winners, category presets, and a persistent
-    session audit log table.
+    Screen 3: Mechanical Slot Lucky Draw (Tie-Breaker & Raffle Module)
+    - Dual-drum mechanical slot roller cycling digits with decelerating frame intervals.
+    - Configurable multi-winner selection (1 to 10 winners).
+    - Session audit history table with ttk.Treeview.
     """
-    def __init__(self, audio_player: AudioPlayer, parent=None):
-        super().__init__(parent)
-        self.audio_player = audio_player
+    def __init__(self, master, app_controller):
+        super().__init__(master, bg=PALETTE["bg_body"])
+        self.app = app_controller
+
+        # Data references
         self.called_numbers_ref: List[int] = []
         self.registered_tickets_ref: List[Dict[str, Any]] = []
 
+        # Slot drum animation state
+        self.is_spinning = False
+        self.spin_interval = 30
+        self.drum1_target = 0
+        self.drum2_target = 0
+        self.drum1_locked = False
+        self.drum2_locked = False
+        self.current_drum1 = 0
+        self.current_drum2 = 0
+        self.pending_winners: List[Dict[str, Any]] = []
+
         self._init_ui()
 
-    def set_called_numbers(self, called: List[int]):
-        self.called_numbers_ref = called
-        self._update_pool_labels()
-
-    def set_registered_tickets(self, tickets: List[Dict[str, Any]]):
-        self.registered_tickets_ref = tickets
-        self._update_pool_labels()
-
     def _init_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(18, 14, 18, 14)
-        layout.setSpacing(14)
+        # Header Card
+        header = tk.Frame(self, bg=PALETTE["bg_card"], bd=1, relief="solid")
+        header.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
+        header.pack(fill="x", padx=20, pady=(16, 12))
 
-        # Header Title Card
-        header = QFrame()
-        header.setProperty("class", "card-panel")
-        header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(16, 10, 16, 10)
+        h_inner = tk.Frame(header, bg=PALETTE["bg_card"], padx=16, pady=10)
+        h_inner.pack(fill="x")
 
-        title = QLabel("🎰 LUCKY DRAW & TIE-BREAKER RAFFLE")
-        title.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
-        title.setStyleSheet(f"color: {PALETTE['indigo']};")
-        header_layout.addWidget(title)
-        header_layout.addStretch()
+        tk.Label(
+            h_inner, text="🎰 MECHANICAL SLOT LUCKY DRAW & TIE-BREAKER",
+            font=("Segoe UI", 12, "bold"), fg=PALETTE["primary"], bg=PALETTE["bg_card"]
+        ).pack(side="left")
 
-        desc = QLabel("Provably Fair Random Tie-Breakers & Mechanical Slot Drum Engine")
-        desc.setStyleSheet(f"color: {PALETTE['text_secondary']}; font-size: 12px;")
-        header_layout.addWidget(desc)
-        layout.addWidget(header)
+        tk.Label(
+            h_inner, text="Provably Fair Random Tie-Breakers & Digit Drum Raffle",
+            font=("Segoe UI", 10), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"]
+        ).pack(side="right")
 
         # Main Split Content
-        split_layout = QHBoxLayout()
-        split_layout.setSpacing(14)
+        split_frame = tk.Frame(self, bg=PALETTE["bg_body"])
+        split_frame.pack(fill="both", expand=True, padx=20, pady=(0, 12))
 
-        # Left Config Panel
-        cfg_frame = QFrame()
-        cfg_frame.setProperty("class", "card-panel")
-        cfg_frame.setFixedWidth(380)
-        cfg_layout = QVBoxLayout(cfg_frame)
-        cfg_layout.setContentsMargins(16, 16, 16, 16)
-        cfg_layout.setSpacing(12)
+        # Left Config Panel (340px)
+        cfg_panel = tk.Frame(split_frame, bg=PALETTE["bg_card"], bd=1, relief="solid", width=340)
+        cfg_panel.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
+        cfg_panel.pack(side="left", fill="y", padx=(0, 10))
+        cfg_panel.pack_propagate(False)
 
-        cfg_title = QLabel("1. Configure Draw Parameters")
-        cfg_title.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
-        cfg_layout.addWidget(cfg_title)
+        cfg_inner = tk.Frame(cfg_panel, bg=PALETTE["bg_card"], padx=14, pady=14)
+        cfg_inner.pack(fill="both", expand=True)
 
-        # Prize / Category Preset Dropdown
-        cfg_layout.addWidget(QLabel("Prize / Claim Category:"))
-        self.combo_category = QComboBox()
-        self.combo_category.addItems([
-            "Early 5 Tie-Breaker",
-            "Top Line Tie-Breaker",
-            "Middle Line Tie-Breaker",
-            "Bottom Line Tie-Breaker",
-            "Four Corners Tie-Breaker",
-            "Full House Tie-Breaker",
-            "Lucky Participant Raffle",
-            "Bumper Jackpot Draw",
-            "Consolation Gift",
-            "Custom Claim..."
-        ])
-        self.combo_category.currentIndexChanged.connect(self._on_category_changed)
-        cfg_layout.addWidget(self.combo_category)
+        tk.Label(cfg_inner, text="1. Draw Parameters", font=("Segoe UI", 11, "bold"), fg=PALETTE["text_main"], bg=PALETTE["bg_card"]).pack(anchor="w", pady=(0, 8))
 
-        # Custom Category Text Input
-        self.txt_custom_cat = QLineEdit()
-        self.txt_custom_cat.setPlaceholderText("Enter custom prize name...")
-        self.txt_custom_cat.setVisible(False)
-        cfg_layout.addWidget(self.txt_custom_cat)
+        # Prize category
+        tk.Label(cfg_inner, text="Prize / Claim Category:", font=("Segoe UI", 9, "bold"), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"]).pack(anchor="w")
+        self.combo_prize = ttk.Combobox(cfg_inner, values=[
+            "Early 5 Tie-Breaker", "Top Line Tie-Breaker", "Middle Line Tie-Breaker",
+            "Bottom Line Tie-Breaker", "Four Corners Tie-Breaker", "Full House Tie-Breaker",
+            "Lucky Participant Raffle", "Bumper Jackpot Draw", "Consolation Prize"
+        ], font=("Segoe UI", 10))
+        self.combo_prize.set("Early 5 Tie-Breaker")
+        self.combo_prize.pack(fill="x", pady=(2, 10))
 
         # Winner Count Spinbox
-        cfg_layout.addWidget(QLabel("Simultaneous Winner(s) to Draw (1–10):"))
-        self.spin_winners = QSpinBox()
-        self.spin_winners.setRange(1, 10)
-        self.spin_winners.setValue(1)
-        cfg_layout.addWidget(self.spin_winners)
+        tk.Label(cfg_inner, text="Simultaneous Winners (1–10):", font=("Segoe UI", 9, "bold"), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"]).pack(anchor="w")
+        self.spin_count = ttk.Spinbox(cfg_inner, from_=1, to=10, font=("Segoe UI", 10), width=6)
+        self.spin_count.set(1)
+        self.spin_count.pack(anchor="w", pady=(2, 10))
 
-        # Selection Pool Radio Group
-        cfg_layout.addWidget(QLabel("Draw Selection Pool:"))
-        self.btn_group_pool = QButtonGroup(self)
+        # Pool Selection
+        tk.Label(cfg_inner, text="Selection Pool:", font=("Segoe UI", 9, "bold"), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"]).pack(anchor="w")
+        self.pool_var = tk.StringVar(value="called")
+        tk.Radiobutton(cfg_inner, text="Already Called Numbers (Screen 1)", variable=self.pool_var, value="called", font=("Segoe UI", 9), bg=PALETTE["bg_card"]).pack(anchor="w")
+        tk.Radiobutton(cfg_inner, text="Registered Ticket IDs (Screen 4)", variable=self.pool_var, value="tickets", font=("Segoe UI", 9), bg=PALETTE["bg_card"]).pack(anchor="w")
 
-        self.radio_called_songs = QRadioButton("Already Called Numbers (Screen 1)")
-        self.radio_called_songs.setChecked(True)
-        self.btn_group_pool.addButton(self.radio_called_songs, 1)
-        cfg_layout.addWidget(self.radio_called_songs)
+        self.btn_spin = tk.Button(
+            cfg_inner, text="🎰 SPIN LUCKY DRUM",
+            font=("Segoe UI", 12, "bold"), bg=PALETTE["primary"], fg=PALETTE["text_white"],
+            activebackground=PALETTE["primary_hover"], relief="flat", cursor="hand2", height=2,
+            command=self.start_draw
+        )
+        self.btn_spin.pack(fill="x", side="bottom")
 
-        self.lbl_called_pool_count = QLabel("Available called numbers: 0")
-        self.lbl_called_pool_count.setStyleSheet(f"color: {PALETTE['text_muted']}; font-size: 11px; margin-left: 20px;")
-        cfg_layout.addWidget(self.lbl_called_pool_count)
+        # Right Slot Stage Panel
+        slot_panel = tk.Frame(split_frame, bg=PALETTE["bg_card"], bd=1, relief="solid")
+        slot_panel.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
+        slot_panel.pack(side="right", fill="both", expand=True)
 
-        self.radio_ticket_ids = QRadioButton("Registered Ticket IDs (Screen 4)")
-        self.btn_group_pool.addButton(self.radio_ticket_ids, 2)
-        cfg_layout.addWidget(self.radio_ticket_ids)
+        slot_inner = tk.Frame(slot_panel, bg=PALETTE["bg_card"], padx=18, pady=14)
+        slot_inner.pack(fill="both", expand=True)
 
-        self.lbl_ticket_pool_count = QLabel("Available registered tickets: 0")
-        self.lbl_ticket_pool_count.setStyleSheet(f"color: {PALETTE['text_muted']}; font-size: 11px; margin-left: 20px;")
-        cfg_layout.addWidget(self.lbl_ticket_pool_count)
+        # Dual Drum Canvas
+        self.canvas_drums = tk.Canvas(
+            slot_inner, width=400, height=140,
+            bg=PALETTE["bg_card_alt"], highlightthickness=1,
+            highlightbackground=PALETTE["border"]
+        )
+        self.canvas_drums.pack(fill="x", pady=(0, 10))
+        self._draw_drums(0, 0)
 
-        cfg_layout.addStretch()
+        # Winner Cards Display Area
+        tk.Label(slot_inner, text="🏆 Drawn Winner(s):", font=("Segoe UI", 11, "bold"), fg=PALETTE["text_main"], bg=PALETTE["bg_card"]).pack(anchor="w")
+        self.frame_winners = tk.Frame(slot_inner, bg=PALETTE["bg_card"])
+        self.frame_winners.pack(fill="both", expand=True, pady=6)
 
-        # Primary Action Button
-        self.btn_start_draw = QPushButton("🎰 ROLL & DRAW WINNERS")
-        self.btn_start_draw.setProperty("class", "btn-primary")
-        self.btn_start_draw.setFixedHeight(46)
-        self.btn_start_draw.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
-        self.btn_start_draw.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_start_draw.clicked.connect(self.start_draw)
-        cfg_layout.addWidget(self.btn_start_draw)
+        # Bottom Audit History Table
+        log_panel = tk.Frame(self, bg=PALETTE["bg_card"], bd=1, relief="solid", height=190)
+        log_panel.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
+        log_panel.pack(fill="x", padx=20, pady=(0, 16))
+        log_panel.pack_propagate(False)
 
-        split_layout.addWidget(cfg_frame)
+        log_inner = tk.Frame(log_panel, bg=PALETTE["bg_card"], padx=14, pady=8)
+        log_inner.pack(fill="both", expand=True)
 
-        # Right Slot Drum & Winner Reveal Deck
-        right_deck = QFrame()
-        right_deck.setProperty("class", "card-panel")
-        right_layout = QVBoxLayout(right_deck)
-        right_layout.setContentsMargins(18, 16, 18, 16)
-        right_layout.setSpacing(12)
+        log_top = tk.Frame(log_inner, bg=PALETTE["bg_card"])
+        log_top.pack(fill="x", pady=(0, 6))
 
-        # Mechanical Slot Machine Drums
-        self.drum_widget = SlotMachineDrumWidget(self)
-        self.drum_widget.draw_finished.connect(self._on_draw_animation_finished)
-        right_layout.addWidget(self.drum_widget)
+        tk.Label(log_top, text="📋 Session Raffle Audit Log", font=("Segoe UI", 10, "bold"), fg=PALETTE["text_main"], bg=PALETTE["bg_card"]).pack(side="left")
 
-        # Winner Cards Area
-        lbl_winner_header = QLabel("🏆 Drawn Winner(s):")
-        lbl_winner_header.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
-        right_layout.addWidget(lbl_winner_header)
+        tk.Button(log_top, text="Copy Log", font=("Segoe UI", 8), bg=PALETTE["bg_card_alt"], relief="groove", cursor="hand2", command=self._copy_log).pack(side="right", padx=(4, 0))
+        tk.Button(log_top, text="Clear Log", font=("Segoe UI", 8), bg=PALETTE["bg_card_alt"], fg=PALETTE["coral"], relief="groove", cursor="hand2", command=self._clear_log).pack(side="right")
 
-        self.scroll_winners = QScrollArea()
-        self.scroll_winners.setWidgetResizable(True)
-        self.scroll_winners.setFrameShape(QFrame.Shape.NoFrame)
-        self.scroll_winners.setStyleSheet("background: transparent;")
+        # Treeview for Audit History
+        cols = ("Time", "Category", "Pool", "Winner ID", "Details")
+        self.tree_log = ttk.Treeview(log_inner, columns=cols, show="headings", height=5)
+        for c in cols:
+            self.tree_log.heading(c, text=c)
+        self.tree_log.column("Time", width=80)
+        self.tree_log.column("Category", width=160)
+        self.tree_log.column("Pool", width=130)
+        self.tree_log.column("Winner ID", width=90)
+        self.tree_log.column("Details", width=300)
+        self.tree_log.pack(fill="both", expand=True)
 
-        self.winners_container = QWidget()
-        self.winners_layout = QVBoxLayout(self.winners_container)
-        self.winners_layout.setContentsMargins(0, 0, 0, 0)
-        self.winners_layout.setSpacing(8)
-        self.scroll_winners.setWidget(self.winners_container)
-        right_layout.addWidget(self.scroll_winners, 1)
+    def _draw_drums(self, d1: int, d2: int):
+        self.canvas_drums.delete("all")
+        w, h = 400, 140
 
-        split_layout.addWidget(right_deck, 1)
-        layout.addLayout(split_layout, 1)
+        # Outer Chrome Frame
+        self.canvas_drums.create_rectangle(15, 12, w - 15, h - 12, fill="#F1F5F9", outline=PALETTE["border"], width=2)
 
-        # Bottom Frame: Persistent Session Audit Log Table
-        log_frame = QFrame()
-        log_frame.setProperty("class", "card-panel")
-        log_frame.setFixedHeight(200)
-        log_layout = QVBoxLayout(log_frame)
-        log_layout.setContentsMargins(16, 10, 16, 10)
-        log_layout.setSpacing(8)
+        # Drum 1 (Tens)
+        self.canvas_drums.create_rectangle(70, 24, 180, h - 24, fill="#FFFFFF", outline=PALETTE["border"], width=2)
+        self.canvas_drums.create_text(125, h / 2, text=str(d1), font=("Segoe UI", 48, "bold"), fill=PALETTE["primary"])
 
-        log_top = QHBoxLayout()
-        lbl_log = QLabel("📋 Session Raffle Audit Log")
-        lbl_log.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
-        log_top.addWidget(lbl_log)
-        log_top.addStretch()
+        # Drum 2 (Units)
+        self.canvas_drums.create_rectangle(220, 24, 330, h - 24, fill="#FFFFFF", outline=PALETTE["border"], width=2)
+        self.canvas_drums.create_text(275, h / 2, text=str(d2), font=("Segoe UI", 48, "bold"), fill=PALETTE["primary"])
 
-        btn_copy = QPushButton("Copy Log")
-        btn_copy.setStyleSheet("font-size: 11px;")
-        btn_copy.clicked.connect(self._copy_log)
-        log_top.addWidget(btn_copy)
-
-        btn_clear = QPushButton("Clear Log")
-        btn_clear.setStyleSheet(f"font-size: 11px; color: {PALETTE['coral']};")
-        btn_clear.clicked.connect(self._clear_log)
-        log_top.addWidget(btn_clear)
-
-        log_layout.addLayout(log_top)
-
-        self.table_log = QTableWidget(0, 5)
-        self.table_log.setHorizontalHeaderLabels(["Timestamp", "Prize Category", "Pool Source", "Winner ID/Number", "Details / Song Title"])
-        self.table_log.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.table_log.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        log_layout.addWidget(self.table_log)
-
-        layout.addWidget(log_frame)
-
-    def _on_category_changed(self, idx: int):
-        is_custom = self.combo_category.currentText() == "Custom Claim..."
-        self.txt_custom_cat.setVisible(is_custom)
-
-    def _update_pool_labels(self):
-        self.lbl_called_pool_count.setText(f"Available called numbers: {len(self.called_numbers_ref)}")
-        self.lbl_ticket_pool_count.setText(f"Available registered tickets: {len(self.registered_tickets_ref)}")
+        # Center reticle line
+        self.canvas_drums.create_line(60, h / 2, 340, h / 2, fill=PALETTE["amber"], dash=(3, 3), width=1)
 
     def start_draw(self):
-        pool_type = self.btn_group_pool.checkedId()
+        if self.is_spinning:
+            return
+
+        pool = self.pool_var.get()
         candidates: List[Dict[str, Any]] = []
 
-        if pool_type == 1:
+        if pool == "called":
             if not self.called_numbers_ref:
-                QMessageBox.warning(self, "Empty Pool", "No numbers have been called yet in Screen 1!")
+                messagebox.showwarning("Empty Pool", "No numbers have been called yet in Screen 1!")
                 return
             for n in self.called_numbers_ref:
                 title = song_bank.get_song_title(n)
                 candidates.append({"id": n, "label": f"#{n:02d}", "details": title, "source": "Called Songs"})
         else:
             if not self.registered_tickets_ref:
-                QMessageBox.warning(self, "No Tickets Loaded", "No ticket registry loaded. Select a batch in Screen 4 first!")
+                messagebox.showwarning("No Tickets", "Load a batch in Screen 4 first!")
                 return
             for t in self.registered_tickets_ref:
                 tid = t.get("ticket_id", "001")
-                num_id = int(str(tid).lstrip("#")) if str(tid).isdigit() else 1
-                candidates.append({"id": num_id, "label": f"Ticket #{tid}", "details": "Verified Participant", "source": "Ticket Registry"})
+                num = int(str(tid).lstrip("#")) if str(tid).isdigit() else 1
+                candidates.append({"id": num, "label": f"Ticket #{tid}", "details": "Participant", "source": "Ticket Registry"})
 
-        k = min(self.spin_winners.value(), len(candidates))
-        drawn_winners = random.sample(candidates, k)
-        self.pending_winners = drawn_winners
+        k = min(int(self.spin_count.get()), len(candidates))
+        drawn = random.sample(candidates, k)
+        self.pending_winners = drawn
 
-        # Animate slot machine drum to the 1st winner's number
-        first_num = drawn_winners[0]["id"]
-        self.drum_widget.spin_to_number(first_num)
+        first = drawn[0]["id"]
+        self.drum1_target = (first // 10) % 10
+        self.drum2_target = first % 10
 
-    def _on_draw_animation_finished(self, drum_values: list):
+        self.is_spinning = True
+        self.spin_interval = 30
+        self.drum1_locked = False
+        self.drum2_locked = False
+
+        self._step_drum_spin()
+
+    def _step_drum_spin(self):
+        """Rapidly cycles digits with decelerating frame intervals (30ms down to 140ms)."""
+        if not self.drum1_locked:
+            self.current_drum1 = random.randint(0, 9)
+        if not self.drum2_locked:
+            self.current_drum2 = random.randint(0, 9)
+
+        self._draw_drums(self.current_drum1, self.current_drum2)
+
+        # Decelerate interval
+        self.spin_interval += 5
+
+        # Sequential locking
+        if self.spin_interval >= 85 and not self.drum1_locked:
+            self.drum1_locked = True
+            self.current_drum1 = self.drum1_target
+
+        if self.spin_interval >= 135 and not self.drum2_locked:
+            self.drum2_locked = True
+            self.current_drum2 = self.drum2_target
+            self.is_spinning = False
+            self._finalize_draw()
+            return
+
+        self.after(self.spin_interval, self._step_drum_spin)
+
+    def _finalize_draw(self):
+        self._draw_drums(self.drum1_target, self.drum2_target)
+
         # Clear existing winner cards
-        while self.winners_layout.count():
-            item = self.winners_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
+        for w in self.frame_winners.winfo_children():
+            w.destroy()
 
-        cat = self.txt_custom_cat.text().strip() if self.combo_category.currentText() == "Custom Claim..." else self.combo_category.currentText()
+        cat = self.combo_prize.get()
         now_str = datetime.now().strftime("%H:%M:%S")
 
         for rank, w in enumerate(self.pending_winners, 1):
-            card = QFrame()
-            card.setProperty("class", "card-subtle")
-            c_layout = QHBoxLayout(card)
-            c_layout.setContentsMargins(12, 8, 12, 8)
+            c = tk.Frame(self.frame_winners, bg=PALETTE["emerald_light"], bd=1, relief="solid")
+            c.configure(highlightbackground=PALETTE["emerald"], highlightthickness=1)
+            c.pack(fill="x", pady=2)
 
-            lbl_rank = QLabel(f"#{rank}")
-            lbl_rank.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
-            lbl_rank.setStyleSheet(f"color: {PALETTE['amber_dark']};")
-            c_layout.addWidget(lbl_rank)
+            tk.Label(c, text=f"#{rank} Winner: {w['label']}", font=("Segoe UI", 11, "bold"), fg=PALETTE["emerald_dark"], bg=PALETTE["emerald_light"]).pack(side="left", padx=10, pady=4)
+            tk.Label(c, text=w["details"], font=("Segoe UI", 10), fg=PALETTE["text_main"], bg=PALETTE["emerald_light"]).pack(side="left", padx=10)
 
-            lbl_name = QLabel(f"<b>{w['label']}</b> • {w['details']}")
-            lbl_name.setFont(QFont("Segoe UI", 12))
-            c_layout.addWidget(lbl_name)
-
-            c_layout.addStretch()
-
-            lbl_source = QLabel(w["source"])
-            lbl_source.setStyleSheet(f"background: {PALETTE['indigo_light']}; color: {PALETTE['indigo']}; font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 700;")
-            c_layout.addWidget(lbl_source)
-
-            self.winners_layout.addWidget(card)
-
-            # Append to persistent audit log
-            r_idx = self.table_log.rowCount()
-            self.table_log.insertRow(r_idx)
-            self.table_log.setItem(r_idx, 0, QTableWidgetItem(now_str))
-            self.table_log.setItem(r_idx, 1, QTableWidgetItem(cat))
-            self.table_log.setItem(r_idx, 2, QTableWidgetItem(w["source"]))
-            self.table_log.setItem(r_idx, 3, QTableWidgetItem(str(w["label"])))
-            self.table_log.setItem(r_idx, 4, QTableWidgetItem(str(w["details"])))
+            # Prepend into audit log
+            self.tree_log.insert("", 0, values=(now_str, cat, w["source"], str(w["label"]), str(w["details"])))
 
     def _copy_log(self):
         rows = []
-        for r in range(self.table_log.rowCount()):
-            cols = [self.table_log.item(r, c).text() if self.table_log.item(r, c) else "" for c in range(5)]
-            rows.append("\t".join(cols))
-        text = "\n".join(rows)
-        QApplication.clipboard().setText(text)
-        QMessageBox.information(self, "Copied", "Raffle audit log copied to clipboard!")
+        for child in self.tree_log.get_children():
+            rows.append("\t".join(str(v) for v in self.tree_log.item(child)["values"]))
+        self.clipboard_clear()
+        self.clipboard_append("\n".join(rows))
+        messagebox.showinfo("Copied", "Audit log copied to clipboard!")
 
     def _clear_log(self):
-        reply = QMessageBox.question(self, "Clear Log", "Clear session raffle audit log?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-        if reply == QMessageBox.StandardButton.Yes:
-            self.table_log.setRowCount(0)
+        if messagebox.askyesno("Clear Log", "Clear session audit log?"):
+            for child in self.tree_log.get_children():
+                self.tree_log.delete(child)
 
 
 # ---------------------------------------------------------------------------
-# SCREEN 4: Claim Verifier & Ticket Inspector
+# SCREEN 4: Animated Claim Verifier (Dual 2-Strip Sheet Inspector)
 # ---------------------------------------------------------------------------
-class ClaimVerifierScreen(QWidget):
-    """
-    Automated cross-check engine with batch registry auto-loader,
-    ticket ID search, 3x9 visual grid overlay with CALLED/PENDING status badges,
-    and a real-time automated verdict evaluation engine.
-    """
-    tickets_loaded = pyqtSignal(list)
+def normalize_ticket_query(query: Any) -> Optional[int]:
+    """Extracts integer ticket or sheet number from strings like '#042', ' 042 ', 'Ticket 42', 'Sheet 21'."""
+    if query is None:
+        return None
+    s = str(query).strip().upper()
+    for prefix in ["TICKET #", "TICKET#", "TICKET ", "SHEET #", "SHEET#", "SHEET ", "T-", "S-", "#"]:
+        if s.startswith(prefix):
+            s = s[len(prefix):].strip()
+            break
+    try:
+        return int(s)
+    except ValueError:
+        return None
 
-    def __init__(self, audio_player: AudioPlayer, parent=None):
-        super().__init__(parent)
-        self.audio_player = audio_player
+
+def extract_cell_id(cell: Any) -> int:
+    """Extracts numeric song ID from integer or dictionary cell."""
+    if isinstance(cell, dict):
+        return int(cell.get("id", 0))
+    elif isinstance(cell, (int, float)):
+        return int(cell)
+    return 0
+
+
+def normalize_batch_registry(data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Normalizes any batch registry (legacy sheets or individual 2-strip pairs) into a unified structure:
+    - sheets: {sheet_num: {'sheet': int, 'top': dict, 'bottom': Optional[dict]}}
+    - tickets_by_num: {ticket_num: dict}
+    - tickets_by_id: {ticket_id_str: dict}
+    - ordered_sheet_nums: List[int]
+    - tickets_list: List[dict]
+    """
+    raw_tickets = data.get("tickets", [])
+    batch_name = data.get("batch_name", "Unnamed_Batch")
+    fmt = data.get("format_mode", "2-strip")
+    is_2_strip = "2-strip" in fmt
+
+    sheets: Dict[int, Dict[str, Any]] = {}
+    tickets_by_num: Dict[int, Dict[str, Any]] = {}
+    tickets_by_id: Dict[str, Dict[str, Any]] = {}
+    all_tickets_list: List[Dict[str, Any]] = []
+
+    # Check if raw_tickets already contains individual tickets with 'sheet' and 'grid'
+    is_flat_individual = False
+    if raw_tickets and "grid" in raw_tickets[0] and "sheet" in raw_tickets[0]:
+        is_flat_individual = True
+
+    if is_flat_individual:
+        for t in raw_tickets:
+            tid_num = normalize_ticket_query(t.get("ticket_id"))
+            if tid_num is None:
+                continue
+            s_num = int(t.get("sheet", (tid_num + 1) // 2 if tid_num % 2 != 0 else tid_num // 2))
+            pos = t.get("strip_pos", "Top Strip" if tid_num % 2 != 0 else "Bottom Strip")
+            paired = t.get("paired_ticket_id")
+            if not paired:
+                paired = f"{(tid_num + 1):03d}" if tid_num % 2 != 0 else f"{(tid_num - 1):03d}"
+
+            t_obj = {
+                "ticket_id": f"{tid_num:03d}",
+                "ticket_num": tid_num,
+                "sheet": s_num,
+                "strip_pos": pos,
+                "paired_ticket_id": paired,
+                "grid": t.get("grid", [])
+            }
+            tickets_by_num[tid_num] = t_obj
+            tickets_by_id[f"{tid_num:03d}"] = t_obj
+            tickets_by_id[str(tid_num)] = t_obj
+            all_tickets_list.append(t_obj)
+
+            if s_num not in sheets:
+                sheets[s_num] = {"sheet": s_num, "top": None, "bottom": None}
+            if "top" in pos.lower() or tid_num % 2 != 0:
+                sheets[s_num]["top"] = t_obj
+            else:
+                sheets[s_num]["bottom"] = t_obj
+    else:
+        # Legacy sheets registry where each item in tickets contains strips=[strip1, strip2]
+        for s_idx, item in enumerate(raw_tickets, start=1):
+            s_num = normalize_ticket_query(item.get("ticket_id", s_idx))
+            if s_num is None:
+                s_num = s_idx
+
+            strips = item.get("strips", [])
+            if not strips:
+                continue
+
+            if len(strips) >= 2 or is_2_strip:
+                top_tid = s_num * 2 - 1
+                bot_tid = s_num * 2
+
+                top_obj = {
+                    "ticket_id": f"{top_tid:03d}",
+                    "ticket_num": top_tid,
+                    "sheet": s_num,
+                    "strip_pos": "Top Strip",
+                    "paired_ticket_id": f"{bot_tid:03d}",
+                    "paired_ticket_num": bot_tid,
+                    "grid": strips[0]
+                }
+                bot_grid = strips[1] if len(strips) > 1 else strips[0]
+                bot_obj = {
+                    "ticket_id": f"{bot_tid:03d}",
+                    "ticket_num": bot_tid,
+                    "sheet": s_num,
+                    "strip_pos": "Bottom Strip",
+                    "paired_ticket_id": f"{top_tid:03d}",
+                    "paired_ticket_num": top_tid,
+                    "grid": bot_grid
+                }
+
+                tickets_by_num[top_tid] = top_obj
+                tickets_by_id[f"{top_tid:03d}"] = top_obj
+                tickets_by_id[str(top_tid)] = top_obj
+                all_tickets_list.append(top_obj)
+
+                tickets_by_num[bot_tid] = bot_obj
+                tickets_by_id[f"{bot_tid:03d}"] = bot_obj
+                tickets_by_id[str(bot_tid)] = bot_obj
+                all_tickets_list.append(bot_obj)
+
+                sheets[s_num] = {"sheet": s_num, "top": top_obj, "bottom": bot_obj}
+            else:
+                top_obj = {
+                    "ticket_id": f"{s_num:03d}",
+                    "ticket_num": s_num,
+                    "sheet": s_num,
+                    "strip_pos": "Single Strip",
+                    "paired_ticket_id": None,
+                    "paired_ticket_num": None,
+                    "grid": strips[0]
+                }
+                tickets_by_num[s_num] = top_obj
+                tickets_by_id[f"{s_num:03d}"] = top_obj
+                tickets_by_id[str(s_num)] = top_obj
+                all_tickets_list.append(top_obj)
+                sheets[s_num] = {"sheet": s_num, "top": top_obj, "bottom": None}
+
+    ordered_sheet_nums = sorted(sheets.keys())
+    ordered_ticket_nums = sorted(tickets_by_num.keys())
+
+    return {
+        "batch_name": batch_name,
+        "total_sheets": len(sheets),
+        "total_tickets": len(tickets_by_num),
+        "sheets": sheets,
+        "tickets_by_num": tickets_by_num,
+        "tickets_by_id": tickets_by_id,
+        "ordered_sheet_nums": ordered_sheet_nums,
+        "ordered_ticket_nums": ordered_ticket_nums,
+        "tickets_list": all_tickets_list
+    }
+
+
+def evaluate_strip_patterns(grid: List[List[Any]], called_set: set) -> Dict[str, Any]:
+    """Evaluates Tambola claim conditions across a 3x9 grid."""
+    all_nums = []
+    rows = [[], [], []]
+    for r_idx, row in enumerate(grid):
+        for cell in row:
+            cid = extract_cell_id(cell)
+            if cid > 0:
+                all_nums.append(cid)
+                rows[r_idx].append(cid)
+
+    hits = [n for n in all_nums if n in called_set]
+    total_hits = len(hits)
+    early5 = total_hits >= 5
+    r1 = len(rows[0]) > 0 and all(n in called_set for n in rows[0])
+    r2 = len(rows[1]) > 0 and all(n in called_set for n in rows[1])
+    r3 = len(rows[2]) > 0 and all(n in called_set for n in rows[2])
+
+    corners = []
+    if len(rows[0]) >= 2 and len(rows[2]) >= 2:
+        corners = [rows[0][0], rows[0][-1], rows[2][0], rows[2][-1]]
+    corn_ok = len(corners) == 4 and all(n in called_set for n in corners)
+    fh = len(all_nums) > 0 and total_hits == len(all_nums)
+
+    patterns = []
+    if fh: patterns.append("Full House")
+    if r1: patterns.append("Top Line")
+    if r2: patterns.append("Middle Line")
+    if r3: patterns.append("Bottom Line")
+    if corn_ok: patterns.append("Four Corners")
+    if early5: patterns.append("Early 5")
+
+    return {
+        "total_hits": total_hits,
+        "total_nums": len(all_nums),
+        "early5": early5,
+        "r1": r1,
+        "r2": r2,
+        "r3": r3,
+        "corners": corn_ok,
+        "full_house": fh,
+        "patterns": patterns,
+        "r1_hits": sum(1 for n in rows[0] if n in called_set),
+        "r2_hits": sum(1 for n in rows[1] if n in called_set),
+        "r3_hits": sum(1 for n in rows[2] if n in called_set),
+        "corn_hits": sum(1 for n in corners if n in called_set)
+    }
+
+
+class ClaimVerifierScreen(tk.Frame):
+    """
+    Screen 4: Animated Claim Verifier (Dual 2-Strip Player Sheet Inspector)
+    - Full 2-strip sheet pairing: entering either odd or even ticket ID displays the entire player sheet.
+    - Prominent live counters: Total Game Drawn, Strip 1 Hits, Strip 2 Hits, and Combined Sheet Total.
+    - Staggered scanline reveal with exact call-order badges ([✔ DRAWN — Call #Order]).
+    - Automated real-time verdict engine supporting Early 5, Lines, Corners, Full House, and Sheet House.
+    """
+    def __init__(self, master, app_controller):
+        super().__init__(master, bg=PALETTE["bg_body"])
+        self.app = app_controller
+
         self.called_numbers_ref: List[int] = []
-        self.current_registry_data: Optional[Dict[str, Any]] = None
-        self.current_tickets: List[Dict[str, Any]] = []
-        self.active_ticket_idx = 0
+        self.batch_files_map: Dict[str, str] = {}
+        self.normalized_batch: Optional[Dict[str, Any]] = None
+        self.current_tickets: List[Dict[str, Any]] = []  # Backwards compatibility reference
+
+        self.current_sheet_num: Optional[int] = 1
+        self.focused_ticket_id: Optional[str] = "001"
+        self.dual_view_var = tk.BooleanVar(value=True)
+
+        self.cell_widgets: Dict[Tuple[str, int, int], Tuple[tk.Frame, int]] = {}
 
         self._init_ui()
         self.reload_batch_registries()
 
-    def set_called_numbers(self, called: List[int]):
-        self.called_numbers_ref = called
-        self._refresh_ticket_view()
-
     def _init_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(18, 14, 18, 14)
-        layout.setSpacing(12)
+        # -------------------------------------------------------------
+        # 1. TOP CONTROL HEADER: Batch Selector, Search & Navigation
+        # -------------------------------------------------------------
+        header = tk.Frame(self, bg=PALETTE["bg_card"], bd=1, relief="solid")
+        header.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
+        header.pack(fill="x", padx=20, pady=(16, 8))
 
-        # Header Control Bar
-        header = QFrame()
-        header.setProperty("class", "card-panel")
-        header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(16, 10, 16, 10)
-        header_layout.setSpacing(12)
+        h_inner = tk.Frame(header, bg=PALETTE["bg_card"], padx=16, pady=10)
+        h_inner.pack(fill="x")
 
-        title = QLabel("🔍 CLAIM VERIFIER & INSPECTOR")
-        title.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
-        title.setStyleSheet(f"color: {PALETTE['indigo']};")
-        header_layout.addWidget(title)
+        # Row 1: Title and Summary Badge
+        top_row = tk.Frame(h_inner, bg=PALETTE["bg_card"])
+        top_row.pack(fill="x", pady=(0, 6))
 
-        header_layout.addWidget(QLabel("Batch Registry:"))
-        self.combo_batch = QComboBox()
-        self.combo_batch.setMinimumWidth(260)
-        self.combo_batch.currentIndexChanged.connect(self._on_batch_selected)
-        header_layout.addWidget(self.combo_batch)
+        tk.Label(
+            top_row, text="🔍 CLAIM VERIFIER • 2-STRIP PLAYER SHEET INSPECTOR",
+            font=("Segoe UI", 12, "bold"), fg=PALETTE["primary"], bg=PALETTE["bg_card"]
+        ).pack(side="left")
 
-        btn_refresh = QPushButton("🔄 Refresh")
-        btn_refresh.clicked.connect(self.reload_batch_registries)
-        header_layout.addWidget(btn_refresh)
+        self.lbl_batch_stats = tk.Label(
+            top_row, text="Scanning archives...",
+            font=("Segoe UI", 9, "bold"), fg=PALETTE["emerald_dark"], bg=PALETTE["emerald_light"],
+            padx=10, pady=3, relief="solid", bd=1
+        )
+        self.lbl_batch_stats.pack(side="right")
 
-        header_layout.addSpacing(16)
+        # Row 2: Batch Registry Loader & Search Controls
+        ctrl_row = tk.Frame(h_inner, bg=PALETTE["bg_card"])
+        ctrl_row.pack(fill="x")
 
-        header_layout.addWidget(QLabel("Ticket ID:"))
-        self.txt_search_id = QLineEdit()
-        self.txt_search_id.setPlaceholderText("e.g. 001")
-        self.txt_search_id.setFixedWidth(90)
-        self.txt_search_id.returnPressed.connect(self._search_ticket)
-        header_layout.addWidget(self.txt_search_id)
+        # Left: Batch selector controls
+        b_box = tk.Frame(ctrl_row, bg=PALETTE["bg_card"])
+        b_box.pack(side="left")
 
-        btn_search = QPushButton("Find")
-        btn_search.clicked.connect(self._search_ticket)
-        header_layout.addWidget(btn_search)
+        tk.Label(b_box, text="Batch Registry:", font=("Segoe UI", 9, "bold"), bg=PALETTE["bg_card"], fg=PALETTE["text_muted"]).pack(side="left", padx=(0, 4))
+        self.combo_batch = ttk.Combobox(b_box, font=("Segoe UI", 9), width=24)
+        self.combo_batch.bind("<<ComboboxSelected>>", self._on_batch_selected)
+        self.combo_batch.pack(side="left", padx=(0, 6))
 
-        btn_prev = QPushButton("◀ Prev")
-        btn_prev.clicked.connect(self._prev_ticket)
-        header_layout.addWidget(btn_prev)
+        btn_refresh = tk.Button(
+            b_box, text="🔄 Refresh", font=("Segoe UI", 8, "bold"),
+            bg=PALETTE["bg_card_alt"], relief="groove", cursor="hand2", padx=6, pady=2,
+            command=self.reload_batch_registries
+        )
+        btn_refresh.pack(side="left", padx=(0, 6))
 
-        btn_next = QPushButton("Next ▶")
-        btn_next.clicked.connect(self._next_ticket)
-        header_layout.addWidget(btn_next)
+        btn_browse_json = tk.Button(
+            b_box, text="📂 Load External JSON", font=("Segoe UI", 8, "bold"),
+            bg=PALETTE["bg_card_alt"], relief="groove", cursor="hand2", padx=6, pady=2,
+            command=self.browse_external_registry
+        )
+        btn_browse_json.pack(side="left", padx=(0, 16))
 
-        header_layout.addStretch()
-        layout.addWidget(header)
+        # Right: Search & Navigation controls
+        s_box = tk.Frame(ctrl_row, bg=PALETTE["bg_card"])
+        s_box.pack(side="right")
 
-        # Real-Time Verdict Banner
-        self.verdict_frame = QFrame()
-        self.verdict_frame.setProperty("class", "card-panel")
-        self.verdict_layout = QVBoxLayout(self.verdict_frame)
-        self.verdict_layout.setContentsMargins(16, 12, 16, 12)
-        self.verdict_layout.setSpacing(6)
+        tk.Label(s_box, text="Ticket / Sheet #:", font=("Segoe UI", 9, "bold"), bg=PALETTE["bg_card"], fg=PALETTE["text_muted"]).pack(side="left", padx=(0, 4))
+        self.txt_search = tk.Entry(s_box, font=("Segoe UI", 10, "bold"), width=8)
+        self.txt_search.bind("<Return>", lambda e: self.search_ticket())
+        self.txt_search.pack(side="left", padx=(0, 4))
 
-        self.lbl_verdict_title = QLabel("WAITING FOR TICKET SELECTION")
-        self.lbl_verdict_title.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
-        self.verdict_layout.addWidget(self.lbl_verdict_title)
+        btn_find = tk.Button(
+            s_box, text="🔍 Find", font=("Segoe UI", 9, "bold"),
+            bg=PALETTE["primary"], fg=PALETTE["text_white"], activebackground=PALETTE["primary_hover"],
+            relief="flat", cursor="hand2", padx=10, pady=2, command=self.search_ticket
+        )
+        btn_find.pack(side="left", padx=(0, 8))
 
-        self.lbl_verdict_details = QLabel("Select a batch registry above to inspect claims in real time.")
-        self.lbl_verdict_details.setStyleSheet(f"color: {PALETTE['text_secondary']}; font-size: 12px;")
-        self.verdict_layout.addWidget(self.lbl_verdict_details)
+        btn_prev = tk.Button(
+            s_box, text="◀ Prev Sheet", font=("Segoe UI", 8, "bold"),
+            bg=PALETTE["bg_card_alt"], relief="groove", cursor="hand2", padx=8, pady=2,
+            command=self.prev_sheet
+        )
+        btn_prev.pack(side="left", padx=(0, 4))
 
-        # Claim qualification badges row
-        self.claim_badges_row = QHBoxLayout()
-        self.claim_badges_row.setSpacing(8)
-        self.claim_labels: Dict[str, QLabel] = {}
-        for cname in ["Early 5", "Top Line", "Middle Line", "Bottom Line", "Four Corners", "Full House"]:
-            lbl = QLabel(f"{cname}: —")
-            lbl.setStyleSheet(f"background: {PALETTE['bg_card_alt']}; color: {PALETTE['text_muted']}; border: 1px solid {PALETTE['border']}; border-radius: 6px; padding: 4px 8px; font-size: 11px; font-weight: 700;")
-            self.claim_labels[cname] = lbl
-            self.claim_badges_row.addWidget(lbl)
-        self.claim_badges_row.addStretch()
-        self.verdict_layout.addLayout(self.claim_badges_row)
+        btn_next = tk.Button(
+            s_box, text="Next Sheet ▶", font=("Segoe UI", 8, "bold"),
+            bg=PALETTE["bg_card_alt"], relief="groove", cursor="hand2", padx=8, pady=2,
+            command=self.next_sheet
+        )
+        btn_next.pack(side="left", padx=(0, 12))
 
-        layout.addWidget(self.verdict_frame)
+        chk_dual = tk.Checkbutton(
+            s_box, text="Show Full 2-Strip Sheet", variable=self.dual_view_var,
+            font=("Segoe UI", 9, "bold"), bg=PALETTE["bg_card"], fg=PALETTE["primary"],
+            activebackground=PALETTE["bg_card"], command=self.render_ticket_staggered
+        )
+        chk_dual.pack(side="left")
 
-        # 3x9 Visual Ticket Grid Overlay
-        ticket_box = QFrame()
-        ticket_box.setProperty("class", "card-panel")
-        t_layout = QVBoxLayout(ticket_box)
-        t_layout.setContentsMargins(18, 14, 18, 14)
-        t_layout.setSpacing(10)
+        # -------------------------------------------------------------
+        # 2. PROMINENT TOP 4 LIVE STATS METRIC CARDS
+        # -------------------------------------------------------------
+        stats_frame = tk.Frame(self, bg=PALETTE["bg_body"])
+        stats_frame.pack(fill="x", padx=20, pady=(0, 8))
 
-        self.lbl_ticket_heading = QLabel("TICKET #001 • 3×9 TAMBOLA MATRIX")
-        self.lbl_ticket_heading.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
-        t_layout.addWidget(self.lbl_ticket_heading)
+        for c_idx in range(4):
+            stats_frame.grid_columnconfigure(c_idx, weight=1)
 
-        self.grid_ticket = QGridLayout()
-        self.grid_ticket.setSpacing(8)
-        t_layout.addLayout(self.grid_ticket, 1)
+        # Metric 1: Game Drawn Songs
+        m1_card = tk.Frame(stats_frame, bg=PALETTE["bg_card"], bd=1, relief="solid")
+        m1_card.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
+        m1_card.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
+        m1_inner = tk.Frame(m1_card, bg=PALETTE["bg_card"], padx=12, pady=8)
+        m1_inner.pack(fill="both", expand=True)
+        tk.Label(m1_inner, text="🎵 GAME SONGS DRAWN", font=("Segoe UI", 8, "bold"), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"]).pack(anchor="w")
+        self.lbl_stat_game_drawn = tk.Label(m1_inner, text="0 / 90 Drawn", font=("Segoe UI", 14, "bold"), fg=PALETTE["primary"], bg=PALETTE["bg_card"])
+        self.lbl_stat_game_drawn.pack(anchor="w")
+        self.lbl_stat_game_rem = tk.Label(m1_inner, text="90 Songs Remaining", font=("Segoe UI", 8), fg=PALETTE["text_dim"], bg=PALETTE["bg_card"])
+        self.lbl_stat_game_rem.pack(anchor="w")
 
-        layout.addWidget(ticket_box, 1)
+        # Metric 2: Strip 1 Hits (Top Ticket #ODD)
+        m2_card = tk.Frame(stats_frame, bg=PALETTE["bg_card"], bd=1, relief="solid")
+        m2_card.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
+        m2_card.grid(row=0, column=1, sticky="nsew", padx=(0, 6))
+        m2_inner = tk.Frame(m2_card, bg=PALETTE["bg_card"], padx=12, pady=8)
+        m2_inner.pack(fill="both", expand=True)
+        self.lbl_stat_strip1_title = tk.Label(m2_inner, text="🎫 STRIP 1 (#001)", font=("Segoe UI", 8, "bold"), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"])
+        self.lbl_stat_strip1_title.pack(anchor="w")
+        self.lbl_stat_strip1_hits = tk.Label(m2_inner, text="0 / 15 Hits", font=("Segoe UI", 14, "bold"), fg=PALETTE["emerald_dark"], bg=PALETTE["bg_card"])
+        self.lbl_stat_strip1_hits.pack(anchor="w")
+        self.lbl_stat_strip1_status = tk.Label(m2_inner, text="Pending", font=("Segoe UI", 8, "bold"), fg=PALETTE["text_dim"], bg=PALETTE["bg_card"])
+        self.lbl_stat_strip1_status.pack(anchor="w")
 
+        # Metric 3: Strip 2 Hits (Bottom Ticket #EVEN)
+        m3_card = tk.Frame(stats_frame, bg=PALETTE["bg_card"], bd=1, relief="solid")
+        m3_card.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
+        m3_card.grid(row=0, column=2, sticky="nsew", padx=(0, 6))
+        m3_inner = tk.Frame(m3_card, bg=PALETTE["bg_card"], padx=12, pady=8)
+        m3_inner.pack(fill="both", expand=True)
+        self.lbl_stat_strip2_title = tk.Label(m3_inner, text="🎫 STRIP 2 (#002)", font=("Segoe UI", 8, "bold"), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"])
+        self.lbl_stat_strip2_title.pack(anchor="w")
+        self.lbl_stat_strip2_hits = tk.Label(m3_inner, text="0 / 15 Hits", font=("Segoe UI", 14, "bold"), fg=PALETTE["emerald_dark"], bg=PALETTE["bg_card"])
+        self.lbl_stat_strip2_hits.pack(anchor="w")
+        self.lbl_stat_strip2_status = tk.Label(m3_inner, text="Pending", font=("Segoe UI", 8, "bold"), fg=PALETTE["text_dim"], bg=PALETTE["bg_card"])
+        self.lbl_stat_strip2_status.pack(anchor="w")
+
+        # Metric 4: Combined Sheet Total Hits
+        m4_card = tk.Frame(stats_frame, bg=PALETTE["bg_card"], bd=1, relief="solid")
+        m4_card.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
+        m4_card.grid(row=0, column=3, sticky="nsew")
+        m4_inner = tk.Frame(m4_card, bg=PALETTE["bg_card"], padx=12, pady=8)
+        m4_inner.pack(fill="both", expand=True)
+        self.lbl_stat_sheet_title = tk.Label(m4_inner, text="🏆 SHEET #1 COMBINED", font=("Segoe UI", 8, "bold"), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"])
+        self.lbl_stat_sheet_title.pack(anchor="w")
+        self.lbl_stat_sheet_hits = tk.Label(m4_inner, text="0 / 30 Hits", font=("Segoe UI", 14, "bold"), fg=PALETTE["amber_dark"], bg=PALETTE["bg_card"])
+        self.lbl_stat_sheet_hits.pack(anchor="w")
+        self.lbl_stat_sheet_status = tk.Label(m4_inner, text="0.0% Match", font=("Segoe UI", 8, "bold"), fg=PALETTE["text_dim"], bg=PALETTE["bg_card"])
+        self.lbl_stat_sheet_status.pack(anchor="w")
+
+        # -------------------------------------------------------------
+        # 3. REAL-TIME CLAIM VERDICT BANNER & PATTERN CHIPS
+        # -------------------------------------------------------------
+        self.card_verdict = tk.Frame(self, bg=PALETTE["bg_card"], bd=1, relief="solid")
+        self.card_verdict.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
+        self.card_verdict.pack(fill="x", padx=20, pady=(0, 8))
+
+        v_inner = tk.Frame(self.card_verdict, bg=PALETTE["bg_card"], padx=16, pady=8)
+        v_inner.pack(fill="x")
+
+        self.lbl_verdict_title = tk.Label(
+            v_inner, text="WAITING FOR TICKET SELECTION",
+            font=("Segoe UI", 11, "bold"), fg=PALETTE["text_main"], bg=PALETTE["bg_card"]
+        )
+        self.lbl_verdict_title.pack(anchor="w")
+
+        self.lbl_verdict_sub = tk.Label(
+            v_inner, text="Select an archive batch and enter a ticket or sheet number.",
+            font=("Segoe UI", 9), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"]
+        )
+        self.lbl_verdict_sub.pack(anchor="w", pady=(1, 4))
+
+        # Progress Chips Row
+        self.chips_row = tk.Frame(v_inner, bg=PALETTE["bg_card"])
+        self.chips_row.pack(fill="x")
+
+        self.verdict_chips: Dict[str, tk.Label] = {}
+        chip_defs = [
+            ("s1_e5", "S1 Early 5"), ("s1_l1", "S1 Top Line"), ("s1_l2", "S1 Mid Line"),
+            ("s1_l3", "S1 Bot Line"), ("s1_crn", "S1 Corners"), ("s1_fh", "S1 Full House"),
+            ("s2_e5", "S2 Early 5"), ("s2_l1", "S2 Top Line"), ("s2_l2", "S2 Mid Line"),
+            ("s2_l3", "S2 Bot Line"), ("s2_crn", "S2 Corners"), ("s2_fh", "S2 Full House"),
+            ("sheet_house", "Sheet House (30/30)")
+        ]
+
+        for k, label in chip_defs:
+            lbl = tk.Label(
+                self.chips_row, text=f"{label}: —", font=("Segoe UI", 8, "bold"),
+                bg=PALETTE["bg_card_alt"], fg=PALETTE["text_dim"],
+                relief="solid", bd=1, padx=6, pady=2
+            )
+            lbl.pack(side="left", padx=(0, 4), pady=2)
+            self.verdict_chips[k] = lbl
+
+        # -------------------------------------------------------------
+        # 4. SCROLLABLE VISUAL DUAL-STRIP TICKET DISPLAY AREA
+        # -------------------------------------------------------------
+        card_grids_outer = tk.Frame(self, bg=PALETTE["bg_card"], bd=1, relief="solid")
+        card_grids_outer.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
+        card_grids_outer.pack(fill="both", expand=True, padx=20, pady=(0, 16))
+
+        # Canvas with Scrollbar for versatile display on all resolutions
+        self.canvas_scroll = tk.Canvas(card_grids_outer, bg=PALETTE["bg_card"], highlightthickness=0)
+        scroll_y = ttk.Scrollbar(card_grids_outer, orient="vertical", command=self.canvas_scroll.yview)
+        self.canvas_scroll.configure(yscrollcommand=scroll_y.set)
+
+        self.scroll_inner = tk.Frame(self.canvas_scroll, bg=PALETTE["bg_card"], padx=14, pady=10)
+        self.scroll_window_id = self.canvas_scroll.create_window((0, 0), window=self.scroll_inner, anchor="nw")
+
+        self.scroll_inner.bind("<Configure>", lambda e: self.canvas_scroll.configure(scrollregion=self.canvas_scroll.bbox("all")))
+        self.canvas_scroll.bind("<Configure>", lambda e: self.canvas_scroll.itemconfig(self.scroll_window_id, width=e.width))
+
+        self.canvas_scroll.pack(side="left", fill="both", expand=True)
+        scroll_y.pack(side="right", fill="y")
+
+    # -------------------------------------------------------------
+    # REGISTRY BATCH LOADER & EXTERNAL BROWSER
+    # -------------------------------------------------------------
     def reload_batch_registries(self):
-        self.combo_batch.blockSignals(True)
-        self.combo_batch.clear()
-
+        """Scans tickets_archive/ for all *_registry.json files."""
         archive_dir = TICKETS_ARCHIVE_DIR
+        self.batch_files_map = {}
         if archive_dir.exists():
-            reg_files = sorted(list(archive_dir.glob("*_registry.json")), key=lambda p: p.stat().st_mtime, reverse=True)
-            for rf in reg_files:
-                display_name = rf.name.replace("_registry.json", "")
-                self.combo_batch.addItem(f"📁 {display_name}", str(rf))
+            for rf in sorted(archive_dir.glob("*_registry.json"), key=lambda p: p.stat().st_mtime, reverse=True):
+                disp = rf.name.replace("_registry.json", "")
+                self.batch_files_map[disp] = str(rf.resolve())
 
-        self.combo_batch.blockSignals(False)
-        if self.combo_batch.count() > 0:
-            self._on_batch_selected(0)
+        items = list(self.batch_files_map.keys())
+        self.combo_batch["values"] = items
+        if items:
+            self.combo_batch.set(items[0])
+            self._load_active_registry()
+        else:
+            self.lbl_batch_stats.config(text="⚠️ No batches in tickets_archive/", bg=PALETTE["amber_light"], fg=PALETTE["amber_dark"])
 
-    def _on_batch_selected(self, idx: int):
-        if idx < 0 or idx >= self.combo_batch.count():
-            return
-        rf_path = self.combo_batch.itemData(idx)
-        try:
-            with open(rf_path, "r", encoding="utf-8") as f:
-                self.current_registry_data = json.load(f)
-            self.current_tickets = self.current_registry_data.get("tickets", [])
-            self.active_ticket_idx = 0
-            self.tickets_loaded.emit(self.current_tickets)
-            self._refresh_ticket_view()
-        except Exception as e:
-            QMessageBox.critical(self, "Load Error", f"Failed to load registry: {e}")
-
-    def _search_ticket(self):
-        query = self.txt_search_id.text().strip().lstrip("#")
-        if not query:
-            return
-        for idx, t in enumerate(self.current_tickets):
-            tid = str(t.get("ticket_id", "")).lstrip("#")
-            if tid == query or tid.endswith(query):
-                self.active_ticket_idx = idx
-                self._refresh_ticket_view()
-                return
-        QMessageBox.warning(self, "Not Found", f"Ticket ID '{query}' not found in this batch!")
-
-    def _prev_ticket(self):
-        if self.current_tickets and self.active_ticket_idx > 0:
-            self.active_ticket_idx -= 1
-            self._refresh_ticket_view()
-
-    def _next_ticket(self):
-        if self.current_tickets and self.active_ticket_idx < len(self.current_tickets) - 1:
-            self.active_ticket_idx += 1
-            self._refresh_ticket_view()
-
-    def _refresh_ticket_view(self):
-        # Clear grid
-        while self.grid_ticket.count():
-            item = self.grid_ticket.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
-
-        if not self.current_tickets or self.active_ticket_idx >= len(self.current_tickets):
-            self.lbl_verdict_title.setText("NO TICKET LOADED")
+    def browse_external_registry(self):
+        """Allows host to load any external *_registry.json from anywhere on the PC."""
+        path = filedialog.askopenfilename(
+            title="Select External Ticket Registry JSON",
+            filetypes=[("Registry JSON", "*_registry.json *.json"), ("All Files", "*.*")]
+        )
+        if not path:
             return
 
-        ticket = self.current_tickets[self.active_ticket_idx]
-        tid = ticket.get("ticket_id", "001")
-        strips = ticket.get("strips", [])
-        if not strips:
+        disp_name = Path(path).stem.replace("_registry", "")
+        self.batch_files_map[disp_name] = str(Path(path).resolve())
+        self.combo_batch["values"] = list(self.batch_files_map.keys())
+        self.combo_batch.set(disp_name)
+        self._load_active_registry()
+
+    def _on_batch_selected(self, event):
+        self._load_active_registry()
+
+    def _load_active_registry(self):
+        sel = self.combo_batch.get()
+        if sel in self.batch_files_map:
+            filepath = self.batch_files_map[sel]
+            try:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+
+                self.normalized_batch = normalize_batch_registry(data)
+                self.current_tickets = self.normalized_batch.get("tickets_list", [])
+                self.app.sync_tickets_loaded(self.current_tickets)
+
+                tot_sheets = self.normalized_batch["total_sheets"]
+                tot_tickets = self.normalized_batch["total_tickets"]
+                self.lbl_batch_stats.config(
+                    text=f"Loaded: {tot_tickets} Tickets ({tot_sheets} 2-Strip Sheets)",
+                    bg=PALETTE["emerald_light"], fg=PALETTE["emerald_dark"]
+                )
+
+                # Set initial sheet
+                if self.normalized_batch["ordered_sheet_nums"]:
+                    self.current_sheet_num = self.normalized_batch["ordered_sheet_nums"][0]
+                    first_sheet = self.normalized_batch["sheets"].get(self.current_sheet_num)
+                    if first_sheet and first_sheet["top"]:
+                        self.focused_ticket_id = first_sheet["top"]["ticket_id"]
+                        self.txt_search.delete(0, tk.END)
+                        self.txt_search.insert(0, self.focused_ticket_id)
+
+                self.render_ticket_staggered()
+            except Exception as e:
+                messagebox.showerror("Registry Error", f"Could not load archive registry:\n{e}")
+
+    # -------------------------------------------------------------
+    # TICKET SEARCH & SHEET NAVIGATION
+    # -------------------------------------------------------------
+    def search_ticket(self):
+        """
+        Searches any entered ticket number (e.g. 1, 001, 2, 42, 042) or sheet number.
+        Pulls up that player's entire 2-strip sheet with targeted focus!
+        """
+        if not self.normalized_batch or not self.normalized_batch["sheets"]:
+            messagebox.showwarning("No Batch Loaded", "Please select or load a batch registry above.")
             return
 
-        strip = strips[0]
-        self.lbl_ticket_heading.setText(f"TICKET #{tid} • 3×9 TAMBOLA MATRIX")
-        self.txt_search_id.setText(str(tid))
+        query_raw = self.txt_search.get().strip()
+        num = normalize_ticket_query(query_raw)
+        if num is None:
+            messagebox.showinfo("Invalid Search", f"Please enter a valid numeric Ticket ID or Sheet Number.")
+            return
 
-        # Collect numbers per row and overall
-        strip_numbers = []
-        row_numbers: List[List[int]] = [[], [], []]
+        # 1. Search directly in tickets_by_num
+        if num in self.normalized_batch["tickets_by_num"]:
+            t_obj = self.normalized_batch["tickets_by_num"][num]
+            self.current_sheet_num = t_obj["sheet"]
+            self.focused_ticket_id = t_obj["ticket_id"]
+            self.render_ticket_staggered()
+            return
 
-        for r_idx, row in enumerate(strip):
+        # 2. Search in sheets directly
+        if num in self.normalized_batch["sheets"]:
+            self.current_sheet_num = num
+            sh = self.normalized_batch["sheets"][num]
+            self.focused_ticket_id = sh["top"]["ticket_id"] if sh["top"] else f"{num:03d}"
+            self.render_ticket_staggered()
+            return
+
+        # 3. Mathematically deduce sheet if within overall bounds
+        tot_sheets = self.normalized_batch["total_sheets"]
+        est_sheet = (num + 1) // 2 if num % 2 != 0 else num // 2
+        if est_sheet in self.normalized_batch["sheets"]:
+            self.current_sheet_num = est_sheet
+            self.focused_ticket_id = f"{num:03d}"
+            self.render_ticket_staggered()
+            return
+
+        messagebox.showinfo("Ticket Not Found", f"Ticket or Sheet #{num} was not found in active batch '{self.normalized_batch['batch_name']}'.")
+
+    def prev_sheet(self):
+        if not self.normalized_batch or not self.normalized_batch["ordered_sheet_nums"]:
+            return
+        nums = self.normalized_batch["ordered_sheet_nums"]
+        if self.current_sheet_num in nums:
+            idx = nums.index(self.current_sheet_num)
+            if idx > 0:
+                self.current_sheet_num = nums[idx - 1]
+                sh = self.normalized_batch["sheets"][self.current_sheet_num]
+                self.focused_ticket_id = sh["top"]["ticket_id"] if sh["top"] else f"{self.current_sheet_num:03d}"
+                self.txt_search.delete(0, tk.END)
+                self.txt_search.insert(0, self.focused_ticket_id)
+                self.render_ticket_staggered()
+
+    def next_sheet(self):
+        if not self.normalized_batch or not self.normalized_batch["ordered_sheet_nums"]:
+            return
+        nums = self.normalized_batch["ordered_sheet_nums"]
+        if self.current_sheet_num in nums:
+            idx = nums.index(self.current_sheet_num)
+            if idx < len(nums) - 1:
+                self.current_sheet_num = nums[idx + 1]
+                sh = self.normalized_batch["sheets"][self.current_sheet_num]
+                self.focused_ticket_id = sh["top"]["ticket_id"] if sh["top"] else f"{self.current_sheet_num:03d}"
+                self.txt_search.delete(0, tk.END)
+                self.txt_search.insert(0, self.focused_ticket_id)
+                self.render_ticket_staggered()
+
+    # -------------------------------------------------------------
+    # 2-STRIP RENDERING & MOTION GRAPHICS SCANLINE REVEAL
+    # -------------------------------------------------------------
+    def render_current_view(self):
+        """Alias for live updates when drawn song counts change."""
+        self.render_ticket_staggered()
+
+    def render_ticket_staggered(self):
+        """Renders both Strip 1 and Strip 2 on the player's sheet with live counts and scanline animation."""
+        for child in self.scroll_inner.winfo_children():
+            child.destroy()
+        self.cell_widgets.clear()
+
+        if not self.normalized_batch or not self.current_sheet_num:
+            return
+
+        sheet_data = self.normalized_batch["sheets"].get(self.current_sheet_num)
+        if not sheet_data:
+            return
+
+        top_ticket = sheet_data.get("top")
+        bottom_ticket = sheet_data.get("bottom")
+        if not top_ticket:
+            return
+
+        called_set = set(self.called_numbers_ref)
+        dual_view = self.dual_view_var.get() and (bottom_ticket is not None)
+
+        # 1. Update Game Drawn Stats
+        tot_drawn = len(self.called_numbers_ref)
+        self.lbl_stat_game_drawn.config(text=f"{tot_drawn} / 90 Drawn")
+        self.lbl_stat_game_rem.config(text=f"{90 - tot_drawn} Songs Remaining")
+
+        # 2. Evaluate Patterns
+        ev1 = evaluate_strip_patterns(top_ticket["grid"], called_set)
+        ev2 = evaluate_strip_patterns(bottom_ticket["grid"], called_set) if bottom_ticket else None
+
+        # Update Strip 1 Stat Card
+        self.lbl_stat_strip1_title.config(text=f"🎫 STRIP 1 (#{top_ticket['ticket_id']})")
+        self.lbl_stat_strip1_hits.config(text=f"{ev1['total_hits']} / {ev1['total_nums']} Hits")
+        self.lbl_stat_strip1_status.config(
+            text=", ".join(ev1["patterns"]) if ev1["patterns"] else f"{ev1['total_nums'] - ev1['total_hits']} Left",
+            fg=PALETTE["emerald_dark"] if ev1["patterns"] else PALETTE["text_dim"]
+        )
+
+        # Update Strip 2 Stat Card
+        if bottom_ticket and ev2:
+            self.lbl_stat_strip2_title.config(text=f"🎫 STRIP 2 (#{bottom_ticket['ticket_id']})")
+            self.lbl_stat_strip2_hits.config(text=f"{ev2['total_hits']} / {ev2['total_nums']} Hits")
+            self.lbl_stat_strip2_status.config(
+                text=", ".join(ev2["patterns"]) if ev2["patterns"] else f"{ev2['total_nums'] - ev2['total_hits']} Left",
+                fg=PALETTE["emerald_dark"] if ev2["patterns"] else PALETTE["text_dim"]
+            )
+        else:
+            self.lbl_stat_strip2_title.config(text="🎫 STRIP 2 (None)")
+            self.lbl_stat_strip2_hits.config(text="—")
+            self.lbl_stat_strip2_status.config(text="Single Strip Mode")
+
+        # Update Combined Sheet Stat Card
+        combined_hits = ev1["total_hits"] + (ev2["total_hits"] if ev2 else 0)
+        combined_total = ev1["total_nums"] + (ev2["total_nums"] if ev2 else 0)
+        pct = (combined_hits / combined_total * 100) if combined_total > 0 else 0
+        sheet_house_ok = (combined_hits == combined_total and combined_total > 0)
+
+        self.lbl_stat_sheet_title.config(text=f"🏆 SHEET #{self.current_sheet_num} COMBINED")
+        self.lbl_stat_sheet_hits.config(text=f"{combined_hits} / {combined_total} Hits")
+        self.lbl_stat_sheet_status.config(
+            text="🌟 SHEET HOUSE QUALIFIED!" if sheet_house_ok else f"{pct:.1f}% Sheet Match",
+            fg=PALETTE["emerald_dark"] if sheet_house_ok else PALETTE["amber_dark"]
+        )
+
+        # 3. Update Chips
+        self._update_chip("s1_e5", f"{min(5, ev1['total_hits'])}/5", ev1["early5"])
+        self._update_chip("s1_l1", f"{ev1['r1_hits']}/5", ev1["r1"])
+        self._update_chip("s1_l2", f"{ev1['r2_hits']}/5", ev1["r2"])
+        self._update_chip("s1_l3", f"{ev1['r3_hits']}/5", ev1["r3"])
+        self._update_chip("s1_crn", f"{ev1['corn_hits']}/4", ev1["corners"])
+        self._update_chip("s1_fh", f"{ev1['total_hits']}/15", ev1["full_house"])
+
+        if ev2:
+            self._update_chip("s2_e5", f"{min(5, ev2['total_hits'])}/5", ev2["early5"])
+            self._update_chip("s2_l1", f"{ev2['r1_hits']}/5", ev2["r1"])
+            self._update_chip("s2_l2", f"{ev2['r2_hits']}/5", ev2["r2"])
+            self._update_chip("s2_l3", f"{ev2['r3_hits']}/5", ev2["r3"])
+            self._update_chip("s2_crn", f"{ev2['corn_hits']}/4", ev2["corners"])
+            self._update_chip("s2_fh", f"{ev2['total_hits']}/15", ev2["full_house"])
+        else:
+            for k in ["s2_e5", "s2_l1", "s2_l2", "s2_l3", "s2_crn", "s2_fh"]:
+                self._update_chip(k, "—", False)
+
+        self._update_chip("sheet_house", f"{combined_hits}/{combined_total}", sheet_house_ok)
+
+        # 4. Update Verdict Banner
+        all_qualified = []
+        if sheet_house_ok:
+            all_qualified.append(f"DOUBLE FULL HOUSE (Sheet #{self.current_sheet_num} 30/30)")
+        for p in ev1["patterns"]:
+            all_qualified.append(f"Strip 1 {p}")
+        if ev2:
+            for p in ev2["patterns"]:
+                all_qualified.append(f"Strip 2 {p}")
+
+        if all_qualified:
+            self.lbl_verdict_title.config(
+                text=f"🎉 BOGEY VALIDATED: {', '.join(all_qualified[:3])} QUALIFIED!",
+                fg=PALETTE["emerald_dark"]
+            )
+            self.lbl_verdict_sub.config(
+                text=f"Sheet #{self.current_sheet_num} meets winning criteria ({combined_hits}/{combined_total} songs verified)."
+            )
+            self.card_verdict.config(bg=PALETTE["emerald_light"])
+        else:
+            rem1 = ev1["total_nums"] - ev1["total_hits"]
+            rem2 = (ev2["total_nums"] - ev2["total_hits"]) if ev2 else 0
+            self.lbl_verdict_title.config(
+                text=f"⏳ CLAIM PENDING • Strip 1: {rem1} Left • Strip 2: {rem2} Left",
+                fg=PALETTE["coral_dark"]
+            )
+            self.lbl_verdict_sub.config(
+                text=f"Current Match: {combined_hits} of {combined_total} songs drawn. Review individual cells below."
+            )
+            self.card_verdict.config(bg=PALETTE["bg_card"])
+
+        # -------------------------------------------------------------
+        # 5. RENDER DUAL 3x9 GRIDS (STRIP 1 & STRIP 2)
+        # -------------------------------------------------------------
+        # Determine whether to show both or single strip
+        focused_is_bottom = (bottom_ticket and str(self.focused_ticket_id).lstrip("#") == str(bottom_ticket["ticket_id"]).lstrip("#"))
+
+        # Render Strip 1 Card
+        if dual_view or not focused_is_bottom:
+            self._build_strip_card(
+                parent=self.scroll_inner,
+                strip_key="strip1",
+                ticket_data=top_ticket,
+                sheet_num=self.current_sheet_num,
+                is_queried=(not focused_is_bottom),
+                hits_text=f"{ev1['total_hits']}/15 Hits"
+            )
+
+        # Render Strip 2 Card
+        if bottom_ticket and (dual_view or focused_is_bottom):
+            self._build_strip_card(
+                parent=self.scroll_inner,
+                strip_key="strip2",
+                ticket_data=bottom_ticket,
+                sheet_num=self.current_sheet_num,
+                is_queried=focused_is_bottom,
+                hits_text=f"{ev2['total_hits']}/15 Hits"
+            )
+
+        # 6. Execute Staggered Scanline Reveal (20ms per column)
+        strips_to_reveal = [("strip1", top_ticket["grid"])]
+        if bottom_ticket and (dual_view or focused_is_bottom):
+            strips_to_reveal.append(("strip2", bottom_ticket["grid"]))
+
+        for c in range(9):
+            self.after(c * 20, lambda col=c, s_list=strips_to_reveal: self._reveal_scanline_column(col, s_list))
+
+    def _build_strip_card(self, parent, strip_key: str, ticket_data: Dict[str, Any], sheet_num: int, is_queried: bool, hits_text: str):
+        """Constructs an individual strip card frame and sets up the 3x9 table skeleton."""
+        tid = ticket_data["ticket_id"]
+        pos = ticket_data.get("strip_pos", "Strip")
+
+        card = tk.Frame(parent, bg=PALETTE["bg_card"], bd=1, relief="solid")
+        card_border = PALETTE["primary"] if is_queried else PALETTE["border"]
+        card.configure(highlightbackground=card_border, highlightthickness=2 if is_queried else 1)
+        card.pack(fill="x", pady=(0, 10))
+
+        # Header Strip
+        c_hdr = tk.Frame(card, bg=PALETTE["primary_light"] if is_queried else PALETTE["bg_card_alt"], padx=12, pady=6)
+        c_hdr.pack(fill="x")
+
+        # Left label
+        hdr_txt = f"🎫 {pos.upper()} • TICKET #{tid}  (PLAYER SHEET #{sheet_num})"
+        tk.Label(
+            c_hdr, text=hdr_txt, font=("Segoe UI", 10, "bold"),
+            fg=PALETTE["primary"] if is_queried else PALETTE["text_main"],
+            bg=c_hdr["bg"]
+        ).pack(side="left")
+
+        # Right tags
+        if is_queried:
+            tk.Label(
+                c_hdr, text="★ QUERIED TICKET", font=("Segoe UI", 8, "bold"),
+                bg=PALETTE["primary"], fg=PALETTE["text_white"], padx=8, pady=2
+            ).pack(side="right", padx=(6, 0))
+        else:
+            tk.Label(
+                c_hdr, text="COMPANION STRIP", font=("Segoe UI", 8, "bold"),
+                bg=PALETTE["bg_card"], fg=PALETTE["text_muted"], padx=6, pady=2, relief="solid", bd=1
+            ).pack(side="right", padx=(6, 0))
+
+        tk.Label(
+            c_hdr, text=hits_text, font=("Segoe UI", 9, "bold"),
+            bg=PALETTE["emerald_light"], fg=PALETTE["emerald_dark"], padx=8, pady=2, relief="solid", bd=1
+        ).pack(side="right")
+
+        # 3x9 Grid Frame
+        grid_frame = tk.Frame(card, bg=PALETTE["bg_card"], padx=10, pady=8)
+        grid_frame.pack(fill="x")
+
+        for c in range(9):
+            grid_frame.grid_columnconfigure(c, weight=1)
+
+        grid = ticket_data.get("grid", [])
+        for r_idx, row in enumerate(grid):
+            grid_frame.grid_rowconfigure(r_idx, weight=1)
             for c_idx, cell in enumerate(row):
-                cell_id = cell["id"] if isinstance(cell, dict) else int(cell)
+                cid = extract_cell_id(cell)
+                box = tk.Frame(grid_frame, bg=PALETTE["bg_card_alt"], bd=1, relief="solid")
+                box.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
+                box.grid(row=r_idx, column=c_idx, sticky="nsew", padx=2, pady=2)
+                self.cell_widgets[(strip_key, r_idx, c_idx)] = (box, cid)
 
-                cell_frame = QFrame()
-                c_layout = QVBoxLayout(cell_frame)
-                c_layout.setContentsMargins(6, 6, 6, 6)
-                c_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    def _reveal_scanline_column(self, col: int, strips_to_reveal: List[Tuple[str, List[List[Any]]]]):
+        """Animates column `col` left-to-right with high-contrast colors, call orders, and hit badges."""
+        called_set = set(self.called_numbers_ref)
+        last_drawn_num = self.called_numbers_ref[-1] if self.called_numbers_ref else None
+
+        for strip_key, grid in strips_to_reveal:
+            for r in range(3):
+                key = (strip_key, r, col)
+                if key not in self.cell_widgets:
+                    continue
+                box, cell_id = self.cell_widgets[key]
+
+                for child in box.winfo_children():
+                    child.destroy()
 
                 if cell_id > 0:
-                    strip_numbers.append(cell_id)
-                    row_numbers[r_idx].append(cell_id)
+                    is_hit = cell_id in called_set
+                    song_title = song_bank.get_song_title(cell_id)
 
-                    is_called = cell_id in self.called_numbers_ref
-                    song = song_bank.get_song(cell_id)
-                    title = song.get("title", f"Track #{cell_id}") if song else f"Track #{cell_id}"
+                    if is_hit:
+                        order = self.called_numbers_ref.index(cell_id) + 1
+                        is_latest = (cell_id == last_drawn_num)
 
-                    lbl_num = QLabel(f"#{cell_id:02d}")
-                    lbl_num.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
+                        bg_col = PALETTE["emerald_light"]
+                        bd_col = PALETTE["coral"] if is_latest else PALETTE["emerald"]
+                        box.config(bg=bg_col)
+                        box.configure(highlightbackground=bd_col, highlightthickness=2 if is_latest else 1)
 
-                    lbl_title = QLabel(title)
-                    lbl_title.setFont(QFont("Segoe UI", 9))
-                    lbl_title.setWordWrap(True)
-                    lbl_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                        # Track number
+                        tk.Label(
+                            box, text=f"#{cell_id:02d}", font=("Segoe UI", 10, "bold"),
+                            fg=PALETTE["emerald_dark"], bg=bg_col
+                        ).pack(anchor="center", pady=(3, 0))
 
-                    lbl_badge = QLabel("CALLED ✓" if is_called else "PENDING ⏳")
-                    lbl_badge.setFont(QFont("Segoe UI", 8, QFont.Weight.Bold))
+                        # Song title
+                        tk.Label(
+                            box, text=song_title, font=("Segoe UI", 8, "bold"),
+                            fg=PALETTE["text_main"], bg=bg_col, wraplength=105, justify="center"
+                        ).pack(anchor="center")
 
-                    if is_called:
-                        cell_frame.setStyleSheet(f"background: {PALETTE['emerald_light']}; border: 1.5px solid {PALETTE['emerald']}; border-radius: 6px;")
-                        lbl_num.setStyleSheet(f"color: {PALETTE['emerald_dark']};")
-                        lbl_title.setStyleSheet(f"color: {PALETTE['emerald_dark']};")
-                        lbl_badge.setStyleSheet(f"color: {PALETTE['emerald_dark']}; font-weight: 800;")
+                        # Call Order Badge
+                        if is_latest:
+                            badge_text = f"[★ LATEST — Call #{order}]"
+                            b_fg = PALETTE["coral"]
+                        else:
+                            badge_text = f"[✔ DRAWN — Call #{order}]"
+                            b_fg = PALETTE["emerald"]
+
+                        tk.Label(
+                            box, text=badge_text, font=("Segoe UI", 7, "bold"),
+                            fg=b_fg, bg=bg_col
+                        ).pack(anchor="center", pady=(2, 3))
+
                     else:
-                        cell_frame.setStyleSheet(f"background: {PALETTE['coral_light']}; border: 1px dashed {PALETTE['coral']}; border-radius: 6px;")
-                        lbl_num.setStyleSheet(f"color: {PALETTE['coral_dark']};")
-                        lbl_title.setStyleSheet(f"color: {PALETTE['coral_dark']};")
-                        lbl_badge.setStyleSheet(f"color: {PALETTE['coral_dark']};")
+                        bg_col = "#FFFFFF"
+                        box.config(bg=bg_col)
+                        box.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
 
-                    c_layout.addWidget(lbl_num)
-                    c_layout.addWidget(lbl_title)
-                    c_layout.addWidget(lbl_badge)
+                        tk.Label(
+                            box, text=f"#{cell_id:02d}", font=("Segoe UI", 10, "bold"),
+                            fg=PALETTE["text_muted"], bg=bg_col
+                        ).pack(anchor="center", pady=(3, 0))
+
+                        tk.Label(
+                            box, text=song_title, font=("Segoe UI", 8),
+                            fg=PALETTE["text_muted"], bg=bg_col, wraplength=105, justify="center"
+                        ).pack(anchor="center")
+
+                        tk.Label(
+                            box, text="[⏳ PENDING]", font=("Segoe UI", 7),
+                            fg=PALETTE["text_dim"], bg=bg_col
+                        ).pack(anchor="center", pady=(2, 3))
                 else:
-                    # Blank slot
-                    cell_frame.setStyleSheet(f"background: {PALETTE['cell_blank']}; border: 1px solid {PALETTE['cell_blank_border']}; border-radius: 6px;")
-                    lbl_blank = QLabel("—")
-                    lbl_blank.setStyleSheet(f"color: {PALETTE['text_muted']}; font-weight: 700;")
-                    c_layout.addWidget(lbl_blank)
+                    box.config(bg=PALETTE["cell_blank"])
+                    box.configure(highlightbackground=PALETTE["cell_blank_border"], highlightthickness=1)
+                    tk.Label(
+                        box, text="—", font=("Segoe UI", 11),
+                        fg=PALETTE["text_dim"], bg=PALETTE["cell_blank"]
+                    ).pack(anchor="center", pady=14)
 
-                self.grid_ticket.addWidget(cell_frame, r_idx, c_idx)
-
-        # Evaluate Claims
-        self._evaluate_verdicts(strip_numbers, row_numbers)
-
-    def _evaluate_verdicts(self, all_nums: List[int], row_nums: List[List[int]]):
-        called_set = set(self.called_numbers_ref)
-        total_called = sum(1 for n in all_nums if n in called_set)
-
-        # 1. Early 5
-        early5_ok = total_called >= 5
-        self._update_claim_label("Early 5", f"{min(5, total_called)}/5", early5_ok)
-
-        # 2. Top Line
-        r1_called = sum(1 for n in row_nums[0] if n in called_set)
-        r1_ok = (r1_called == len(row_nums[0]) and len(row_nums[0]) > 0)
-        self._update_claim_label("Top Line", f"{r1_called}/{len(row_nums[0])}", r1_ok)
-
-        # 3. Middle Line
-        r2_called = sum(1 for n in row_nums[1] if n in called_set)
-        r2_ok = (r2_called == len(row_nums[1]) and len(row_nums[1]) > 0)
-        self._update_claim_label("Middle Line", f"{r2_called}/{len(row_nums[1])}", r2_ok)
-
-        # 4. Bottom Line
-        r3_called = sum(1 for n in row_nums[2] if n in called_set)
-        r3_ok = (r3_called == len(row_nums[2]) and len(row_nums[2]) > 0)
-        self._update_claim_label("Bottom Line", f"{r3_called}/{len(row_nums[2])}", r3_ok)
-
-        # 5. Four Corners
-        corners = []
-        if len(row_nums[0]) >= 2 and len(row_nums[2]) >= 2:
-            corners = [row_nums[0][0], row_nums[0][-1], row_nums[2][0], row_nums[2][-1]]
-        corn_called = sum(1 for n in corners if n in called_set)
-        corn_ok = (corn_called == 4)
-        self._update_claim_label("Four Corners", f"{corn_called}/4", corn_ok)
-
-        # 6. Full House
-        fh_ok = (total_called == len(all_nums) and len(all_nums) > 0)
-        self._update_claim_label("Full House", f"{total_called}/{len(all_nums)}", fh_ok)
-
-        # Overall Status Banner
-        valid_claims = []
-        if fh_ok: valid_claims.append("FULL HOUSE")
-        if r1_ok: valid_claims.append("TOP LINE")
-        if r2_ok: valid_claims.append("MIDDLE LINE")
-        if r3_ok: valid_claims.append("BOTTOM LINE")
-        if corn_ok: valid_claims.append("FOUR CORNERS")
-        if early5_ok: valid_claims.append("EARLY 5")
-
-        if valid_claims:
-            self.lbl_verdict_title.setText(f"🎉 BOGEY VALIDATED: {', '.join(valid_claims)} QUALIFIED!")
-            self.lbl_verdict_title.setStyleSheet(f"color: {PALETTE['emerald_dark']}; font-size: 14px; font-weight: 800;")
-            self.lbl_verdict_details.setText(f"Ticket #{self.txt_search_id.text()} satisfies the claim criteria. {total_called} of 15 numbers called.")
-            self.verdict_frame.setStyleSheet(f"QFrame {{ background: {PALETTE['emerald_light']}; border: 2px solid {PALETTE['emerald']}; border-radius: 12px; }}")
-        else:
-            rem = len(all_nums) - total_called
-            self.lbl_verdict_title.setText(f"⏳ CLAIM PENDING • {rem} Numbers Remaining for Full House")
-            self.lbl_verdict_title.setStyleSheet(f"color: {PALETTE['coral_dark']}; font-size: 13px; font-weight: 800;")
-            self.lbl_verdict_details.setText(f"{total_called}/15 called. Check individual line progress badges below.")
-            self.verdict_frame.setStyleSheet(f"QFrame {{ background: {PALETTE['bg_card']}; border: 1px solid {PALETTE['border']}; border-radius: 12px; }}")
-
-    def _update_claim_label(self, name: str, progress: str, is_ok: bool):
-        lbl = self.claim_labels.get(name)
+    def _update_chip(self, chip_key: str, progress: str, is_ok: bool):
+        lbl = self.verdict_chips.get(chip_key)
         if lbl:
+            txt = lbl.cget("text").split(":")[0]
             if is_ok:
-                lbl.setText(f"{name}: {progress} ✓")
-                lbl.setStyleSheet(f"background: {PALETTE['emerald_light']}; color: {PALETTE['emerald_dark']}; border: 1.5px solid {PALETTE['emerald']}; border-radius: 6px; padding: 4px 8px; font-size: 11px; font-weight: 800;")
+                lbl.config(text=f"{txt}: {progress} ✔", bg=PALETTE["emerald_light"], fg=PALETTE["emerald_dark"])
             else:
-                lbl.setText(f"{name}: {progress}")
-                lbl.setStyleSheet(f"background: {PALETTE['bg_card_alt']}; color: {PALETTE['text_secondary']}; border: 1px solid {PALETTE['border']}; border-radius: 6px; padding: 4px 8px; font-size: 11px; font-weight: 600;")
+                lbl.config(text=f"{txt}: {progress}", bg=PALETTE["bg_card_alt"], fg=PALETTE["text_muted"])
 
 
 # ---------------------------------------------------------------------------
-# SCREEN 5: Ticket Generator & Template Studio (Non-Destructive Archival)
+# SCREEN 5: Non-Destructive Ticket Studio
 # ---------------------------------------------------------------------------
-class TicketGeneratorScreen(QWidget):
+class TicketStudioScreen(tk.Frame):
     """
-    Print-ahead batch generator enforcing STRICT non-destructive archival,
-    collision protection, template selection, mathematical constraint balancing,
-    and direct browser/folder opening.
+    Screen 5: Non-Destructive Ticket Studio
+    - 2-strip landscape A4 generator with .hide-top-slots CSS patch.
+    - Strict Non-Destructive Collision Guard: checks os.path.exists() before saving,
+      appending unique timestamp suffix so existing tickets are NEVER overwritten.
     """
-    batch_generated = pyqtSignal(str)
+    def __init__(self, master, app_controller):
+        super().__init__(master, bg=PALETTE["bg_body"])
+        self.app = app_controller
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
         self.selected_template_path: Optional[str] = None
         self.last_generated_html: Optional[str] = None
 
         self._init_ui()
 
     def _init_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(18, 14, 18, 14)
-        layout.setSpacing(14)
+        # Header Card
+        header = tk.Frame(self, bg=PALETTE["bg_card"], bd=1, relief="solid")
+        header.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
+        header.pack(fill="x", padx=20, pady=(16, 12))
 
-        # Header Title Card
-        header = QFrame()
-        header.setProperty("class", "card-panel")
-        header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(16, 10, 16, 10)
+        h_inner = tk.Frame(header, bg=PALETTE["bg_card"], padx=16, pady=10)
+        h_inner.pack(fill="x")
 
-        title = QLabel("🎫 TICKET GENERATOR & TEMPLATE STUDIO")
-        title.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
-        title.setStyleSheet(f"color: {PALETTE['indigo']};")
-        header_layout.addWidget(title)
-        header_layout.addStretch()
+        tk.Label(h_inner, text="🎫 TICKET GENERATOR & TEMPLATE STUDIO", font=("Segoe UI", 12, "bold"), fg=PALETTE["primary"], bg=PALETTE["bg_card"]).pack(side="left")
 
-        safety_badge = QLabel("🛡️ Strict Non-Destructive Archival Guaranteed")
-        safety_badge.setStyleSheet(f"color: {PALETTE['emerald_dark']}; font-size: 11px; font-weight: 700; background: {PALETTE['emerald_light']}; padding: 3px 8px; border-radius: 6px;")
-        header_layout.addWidget(safety_badge)
-        layout.addWidget(header)
+        badge = tk.Label(h_inner, text="🛡️ Strict Non-Destructive Archival Guaranteed", font=("Segoe UI", 9, "bold"), fg=PALETTE["emerald_dark"], bg=PALETTE["emerald_light"], padx=8, pady=3)
+        badge.pack(side="right")
 
-        # Main 2-Column Split
-        split_layout = QHBoxLayout()
-        split_layout.setSpacing(14)
+        # Split 2 Columns
+        split_frame = tk.Frame(self, bg=PALETTE["bg_body"])
+        split_frame.pack(fill="both", expand=True, padx=20, pady=(0, 16))
 
-        # Left Column: Configuration Controls
-        form_frame = QFrame()
-        form_frame.setProperty("class", "card-panel")
-        form_frame.setFixedWidth(460)
-        form_layout = QVBoxLayout(form_frame)
-        form_layout.setContentsMargins(18, 16, 18, 16)
-        form_layout.setSpacing(10)
+        # Left Form Panel (440px)
+        form_panel = tk.Frame(split_frame, bg=PALETTE["bg_card"], bd=1, relief="solid", width=440)
+        form_panel.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
+        form_panel.pack(side="left", fill="y", padx=(0, 10))
+        form_panel.pack_propagate(False)
 
-        # 1. Custom Batch Name with Live Collision Guard
-        form_layout.addWidget(QLabel("Batch / Event Name (e.g. Garba_Night_2026):"))
-        self.txt_batch_name = QLineEdit()
-        self.txt_batch_name.setText(datetime.now().strftime("Musical_Housie_%Y%m%d"))
-        self.txt_batch_name.textChanged.connect(self._check_batch_collision)
-        form_layout.addWidget(self.txt_batch_name)
+        f_inner = tk.Frame(form_panel, bg=PALETTE["bg_card"], padx=16, pady=16)
+        f_inner.pack(fill="both", expand=True)
 
-        # Collision Guard Status Badge
-        self.lbl_collision_status = QLabel("✓ Available batch name")
-        self.lbl_collision_status.setStyleSheet(f"color: {PALETTE['emerald_dark']}; font-size: 11px; font-weight: 700;")
-        form_layout.addWidget(self.lbl_collision_status)
+        tk.Label(f_inner, text="Batch / Event Name (e.g. Diwali_Gala_2026):", font=("Segoe UI", 9, "bold"), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"]).pack(anchor="w")
+        self.txt_batch = tk.Entry(f_inner, font=("Segoe UI", 10))
+        self.txt_batch.insert(0, f"Musical_Housie_{datetime.now().strftime('%Y%m%d')}")
+        self.txt_batch.pack(fill="x", pady=(2, 4))
 
-        # 2. Template Picker
-        form_layout.addWidget(QLabel("Background Template Image:"))
-        tpl_row = QHBoxLayout()
-        self.combo_templates = QComboBox()
-        self._populate_standard_templates()
-        self.combo_templates.currentIndexChanged.connect(self._on_template_selected)
-        tpl_row.addWidget(self.combo_templates, 1)
+        self.lbl_guard_status = tk.Label(f_inner, text="✓ Collision Guard Active", font=("Segoe UI", 9, "bold"), fg=PALETTE["emerald_dark"], bg=PALETTE["bg_card"])
+        self.lbl_guard_status.pack(anchor="w", pady=(0, 12))
 
-        btn_browse_tpl = QPushButton("Browse...")
-        btn_browse_tpl.clicked.connect(self._browse_custom_template)
-        tpl_row.addWidget(btn_browse_tpl)
-        form_layout.addLayout(tpl_row)
+        # Template Picker
+        tk.Label(f_inner, text="Background Template Image:", font=("Segoe UI", 9, "bold"), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"]).pack(anchor="w")
+        tpl_row = tk.Frame(f_inner, bg=PALETTE["bg_card"])
+        tpl_row.pack(fill="x", pady=(2, 12))
 
-        # 3. Sheet Count
-        form_layout.addWidget(QLabel("Number of Sheets to Generate:"))
-        sheet_row = QHBoxLayout()
-        self.spin_sheets = QSpinBox()
-        self.spin_sheets.setRange(1, 500)
-        self.spin_sheets.setValue(50)
-        self.spin_sheets.valueChanged.connect(self._on_sheet_count_changed)
-        sheet_row.addWidget(self.spin_sheets, 1)
+        self.combo_tpl = ttk.Combobox(tpl_row, font=("Segoe UI", 9))
+        self._populate_templates()
+        self.combo_tpl.pack(side="left", fill="x", expand=True, padx=(0, 6))
+        self.combo_tpl.bind("<<ComboboxSelected>>", self._on_template_picked)
 
-        self.lbl_ticket_equiv = QLabel("(= 100 Tickets in 2-Strip)")
-        self.lbl_ticket_equiv.setStyleSheet(f"color: {PALETTE['text_secondary']}; font-size: 12px; font-weight: 600;")
-        sheet_row.addWidget(self.lbl_ticket_equiv)
-        form_layout.addLayout(sheet_row)
+        btn_browse = tk.Button(tpl_row, text="Browse...", font=("Segoe UI", 8), bg=PALETTE["bg_card_alt"], relief="groove", cursor="hand2", command=self._browse_custom_template)
+        btn_browse.pack(side="right")
 
-        # 4. Format & Options
-        form_layout.addWidget(QLabel("Format Mode:"))
-        self.combo_format = QComboBox()
-        self.combo_format.addItems(["2-Strip Landscape (2 tickets per A4 page)", "1-Strip Landscape (1 ticket per page)"])
-        self.combo_format.currentIndexChanged.connect(self._on_sheet_count_changed)
-        form_layout.addWidget(self.combo_format)
+        # Sheet Count
+        tk.Label(f_inner, text="Number of Sheets (2 tickets / sheet):", font=("Segoe UI", 9, "bold"), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"]).pack(anchor="w")
+        self.spin_sheets = ttk.Spinbox(f_inner, from_=1, to=500, font=("Segoe UI", 10), width=8)
+        self.spin_sheets.set(50)
+        self.spin_sheets.pack(anchor="w", pady=(2, 12))
 
-        self.chk_participant_slots = QCheckBox("Include Participant Name & Mobile Slots")
-        self.chk_participant_slots.setChecked(True)
-        form_layout.addWidget(self.chk_participant_slots)
+        # Format Mode
+        tk.Label(f_inner, text="Format Mode:", font=("Segoe UI", 9, "bold"), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"]).pack(anchor="w")
+        self.combo_fmt = ttk.Combobox(f_inner, values=["2-Strip Landscape (2 tickets per A4)", "1-Strip Landscape (1 ticket per page)"], font=("Segoe UI", 9))
+        self.combo_fmt.set("2-Strip Landscape (2 tickets per A4)")
+        self.combo_fmt.pack(fill="x", pady=(2, 14))
 
-        form_layout.addStretch()
+        # Progress bar
+        self.progress = ttk.Progressbar(f_inner, mode="indeterminate")
+        self.progress.pack(fill="x", pady=(0, 12))
 
-        # Generate Action Button
-        self.btn_generate = QPushButton("🚀 GENERATE & ARCHIVE HOUSIE TICKETS")
-        self.btn_generate.setProperty("class", "btn-primary")
-        self.btn_generate.setFixedHeight(48)
-        self.btn_generate.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
-        self.btn_generate.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_generate.clicked.connect(self.generate_tickets)
-        form_layout.addWidget(self.btn_generate)
+        # Generate Button
+        self.btn_gen = tk.Button(
+            f_inner, text="🚀 GENERATE & ARCHIVE HOUSIE TICKETS",
+            font=("Segoe UI", 11, "bold"), bg=PALETTE["primary"], fg=PALETTE["text_white"],
+            activebackground=PALETTE["primary_hover"], relief="flat", cursor="hand2", height=2,
+            command=self.generate_batch
+        )
+        self.btn_gen.pack(fill="x", side="bottom")
 
-        split_layout.addWidget(form_frame)
+        # Right Console & Actions Panel
+        r_panel = tk.Frame(split_frame, bg=PALETTE["bg_card"], bd=1, relief="solid")
+        r_panel.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
+        r_panel.pack(side="right", fill="both", expand=True)
 
-        # Right Column: Live Template Preview & Output Actions
-        preview_frame = QFrame()
-        preview_frame.setProperty("class", "card-panel")
-        preview_layout = QVBoxLayout(preview_frame)
-        preview_layout.setContentsMargins(18, 16, 18, 16)
-        preview_layout.setSpacing(12)
+        r_inner = tk.Frame(r_panel, bg=PALETTE["bg_card"], padx=18, pady=16)
+        r_inner.pack(fill="both", expand=True)
 
-        lbl_prev_title = QLabel("Template Preview & Generation Console")
-        lbl_prev_title.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
-        preview_layout.addWidget(lbl_prev_title)
+        tk.Label(r_inner, text="Template Preview & Generation Console", font=("Segoe UI", 11, "bold"), fg=PALETTE["text_main"], bg=PALETTE["bg_card"]).pack(anchor="w")
 
-        # Template Thumbnail Image Box
-        self.lbl_img_preview = QLabel("No template preview available")
-        self.lbl_img_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.lbl_img_preview.setFixedHeight(240)
-        self.lbl_img_preview.setStyleSheet(f"background: {PALETTE['bg_card_alt']}; border: 1px dashed {PALETTE['border']}; border-radius: 8px;")
-        preview_layout.addWidget(self.lbl_img_preview)
+        self.canvas_tpl_preview = tk.Canvas(r_inner, height=220, bg=PALETTE["bg_card_alt"], highlightthickness=1, highlightbackground=PALETTE["border"])
+        self.canvas_tpl_preview.pack(fill="x", pady=10)
+        self.canvas_tpl_preview.create_text(200, 110, text="Minimalist Clean Layout (No Template)", font=("Segoe UI", 10), fill=PALETTE["text_muted"])
 
-        # Generation Summary Box
-        self.summary_box = QFrame()
-        self.summary_box.setProperty("class", "card-subtle")
-        s_layout = QVBoxLayout(self.summary_box)
-        s_layout.setContentsMargins(14, 10, 14, 10)
-        s_layout.setSpacing(4)
+        self.lbl_gen_status = tk.Label(r_inner, text="Ready to generate immutable ticket batch.", font=("Segoe UI", 10, "bold"), fg=PALETTE["text_main"], bg=PALETTE["bg_card"])
+        self.lbl_gen_status.pack(anchor="w", pady=(8, 2))
 
-        self.lbl_gen_status = QLabel("Ready to generate new immutable ticket batch.")
-        self.lbl_gen_status.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
-        s_layout.addWidget(self.lbl_gen_status)
+        self.lbl_gen_path = tk.Label(r_inner, text="Output destination: tickets_archive/<Batch_Name>.html", font=("Segoe UI", 9), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"], wraplength=480, justify="left")
+        self.lbl_gen_path.pack(anchor="w", pady=(0, 14))
 
-        self.lbl_gen_path = QLabel("Output will be stored in tickets_archive/<Batch_Name>.html")
-        self.lbl_gen_path.setStyleSheet(f"color: {PALETTE['text_secondary']}; font-size: 11px;")
-        self.lbl_gen_path.setWordWrap(True)
-        s_layout.addWidget(self.lbl_gen_path)
-        preview_layout.addWidget(self.summary_box)
+        btn_row = tk.Frame(r_inner, bg=PALETTE["bg_card"])
+        btn_row.pack(fill="x")
 
-        # Post-Generation Action Buttons
-        act_row = QHBoxLayout()
-        self.btn_open_browser = QPushButton("🌐 Open in Web Browser")
-        self.btn_open_browser.setEnabled(False)
-        self.btn_open_browser.setFixedHeight(40)
-        self.btn_open_browser.clicked.connect(self._open_in_browser)
-        act_row.addWidget(self.btn_open_browser)
+        self.btn_open_browser = tk.Button(btn_row, text="🌐 Open in Web Browser", font=("Segoe UI", 10, "bold"), bg=PALETTE["bg_card_alt"], relief="groove", cursor="hand2", state="disabled", padx=14, pady=6, command=self._open_in_browser)
+        self.btn_open_browser.pack(side="left", padx=(0, 10))
 
-        self.btn_open_folder = QPushButton("📁 Open Archive Folder")
-        self.btn_open_folder.setFixedHeight(40)
-        self.btn_open_folder.clicked.connect(self._open_archive_folder)
-        act_row.addWidget(self.btn_open_folder)
+        btn_open_folder = tk.Button(btn_row, text="📁 Open Archive Folder", font=("Segoe UI", 10, "bold"), bg=PALETTE["bg_card_alt"], relief="groove", cursor="hand2", padx=14, pady=6, command=self._open_archive_folder)
+        btn_open_folder.pack(side="left")
 
-        preview_layout.addLayout(act_row)
-        split_layout.addWidget(preview_frame, 1)
-
-        layout.addLayout(split_layout, 1)
-
-        # Trigger initial checks
-        self._check_batch_collision()
-        self._update_template_preview()
-
-    def _populate_standard_templates(self):
-        self.combo_templates.clear()
-        self.combo_templates.addItem("None (Clean Off-White Minimalist)", "")
-
+    def _populate_templates(self):
+        self.tpl_map = {"None (Clean Minimalist)": ""}
         brand_dir = BRANDING_DIR
         if brand_dir.exists():
             for p in sorted(brand_dir.glob("*.png")) + sorted(brand_dir.glob("*.jpg")):
-                self.combo_templates.addItem(f"🎨 {p.name}", str(p))
+                self.tpl_map[p.name] = str(p)
+        self.combo_tpl["values"] = list(self.tpl_map.keys())
+        self.combo_tpl.set("None (Clean Minimalist)")
 
-    def _on_template_selected(self, idx: int):
-        self.selected_template_path = self.combo_templates.itemData(idx)
-        self._update_template_preview()
+    def _on_template_picked(self, event):
+        sel = self.combo_tpl.get()
+        self.selected_template_path = self.tpl_map.get(sel, "")
+        self._render_template_preview()
 
     def _browse_custom_template(self):
-        path, _ = QFileDialog.getOpenFileName(
-            self, "Select Background Template Image",
-            str(BRANDING_DIR if BRANDING_DIR.exists() else BASE_DIR),
-            "Images (*.png *.jpg *.jpeg)"
+        path = filedialog.askopenfilename(
+            title="Select Background Template Image",
+            initialdir=str(BRANDING_DIR if BRANDING_DIR.exists() else BASE_DIR),
+            filetypes=[("Image Files", "*.png *.jpg *.jpeg")]
         )
         if path:
-            self.combo_templates.addItem(f"📁 {Path(path).name}", path)
-            self.combo_templates.setCurrentIndex(self.combo_templates.count() - 1)
+            name = Path(path).name
+            self.tpl_map[name] = path
+            self.combo_tpl["values"] = list(self.tpl_map.keys())
+            self.combo_tpl.set(name)
+            self.selected_template_path = path
+            self._render_template_preview()
 
-    def _update_template_preview(self):
+    def _render_template_preview(self):
+        self.canvas_tpl_preview.delete("all")
         if self.selected_template_path and os.path.exists(self.selected_template_path):
-            pix = QPixmap(self.selected_template_path)
-            if not pix.isNull():
-                scaled = pix.scaled(
-                    self.lbl_img_preview.width() - 20, 220,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation
-                )
-                self.lbl_img_preview.setPixmap(scaled)
+            try:
+                img = Image.open(self.selected_template_path)
+                img.thumbnail((380, 200))
+                self.tk_tpl_img = ImageTk.PhotoImage(img)
+                self.canvas_tpl_preview.create_image(200, 110, image=self.tk_tpl_img)
                 return
-        self.lbl_img_preview.setText("Minimalist Clean Layout (No Background Image)")
+            except Exception:
+                pass
+        self.canvas_tpl_preview.create_text(200, 110, text="Minimalist Clean Layout (No Template)", font=("Segoe UI", 10), fill=PALETTE["text_muted"])
 
-    def _on_sheet_count_changed(self):
-        sheets = self.spin_sheets.value()
-        is_2strip = "2-Strip" in self.combo_format.currentText()
-        factor = 2 if is_2strip else 1
-        total_tickets = sheets * factor
-        self.lbl_ticket_equiv.setText(f"(= {total_tickets} Tickets in {'2-Strip' if is_2strip else '1-Strip'})")
-
-    def _check_batch_collision(self):
-        raw_name = self.txt_batch_name.text().strip()
-        clean = sanitize_batch_name(raw_name)
-        archive_dir = TICKETS_ARCHIVE_DIR
-
-        html_exists = (archive_dir / f"{clean}.html").exists()
-        reg_exists = (archive_dir / f"{clean}_registry.json").exists()
-
-        if html_exists or reg_exists:
-            self.lbl_collision_status.setText(f"⚠️ Batch exists! Will auto-increment to {clean}_02 to protect previous tickets.")
-            self.lbl_collision_status.setStyleSheet(f"color: {PALETTE['amber_dark']}; font-size: 11px; font-weight: 700;")
-        else:
-            self.lbl_collision_status.setText(f"✓ Available batch name ({clean}.html)")
-            self.lbl_collision_status.setStyleSheet(f"color: {PALETTE['emerald_dark']}; font-size: 11px; font-weight: 700;")
-
-    def generate_tickets(self):
-        raw_name = self.txt_batch_name.text().strip()
+    def generate_batch(self):
+        """Generates tickets enforcing strict Non-Destructive Collision Guard."""
+        raw_name = self.txt_batch.get().strip()
         if not raw_name:
-            QMessageBox.warning(self, "Invalid Name", "Please enter a batch or event name.")
+            messagebox.showwarning("Batch Name", "Please enter an event or batch name.")
             return
 
         clean = sanitize_batch_name(raw_name)
-        unique_name = resolve_unique_batch_name(clean, TICKETS_ARCHIVE_DIR)
 
-        if unique_name != clean:
-            reply = QMessageBox.question(
-                self, "Non-Destructive Archival Notice",
-                f"Batch '{clean}' already exists in tickets_archive/.\n\n"
-                f"To protect all previously printed tickets, this new run will be saved as:\n"
-                f"👉 {unique_name}\n\nProceed with generation?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        # -------------------------------------------------------------
+        # STRICT NON-DESTRUCTIVE COLLISION GUARD:
+        # Check if file exists, automatically append timestamp if so!
+        # -------------------------------------------------------------
+        archive_html = TICKETS_ARCHIVE_DIR / f"{clean}.html"
+        archive_reg = TICKETS_ARCHIVE_DIR / f"{clean}_registry.json"
+
+        if archive_html.exists() or archive_reg.exists():
+            timestamp_suffix = datetime.now().strftime("%Y%m%d_%H%M%S")
+            target_batch_name = f"{clean}_{timestamp_suffix}"
+            self.lbl_guard_status.config(
+                text=f"🛡️ Safeguarded: Batch existed. Auto-incremented to {target_batch_name}",
+                fg=PALETTE["amber_dark"]
             )
-            if reply != QMessageBox.StandardButton.Yes:
-                return
+        else:
+            target_batch_name = clean
+            self.lbl_guard_status.config(text="✓ Available Unique Batch Name", fg=PALETTE["emerald_dark"])
 
-        sheets = self.spin_sheets.value()
-        format_mode = "2-strip" if "2-Strip" in self.combo_format.currentText() else "1-strip"
-        show_slots = self.chk_participant_slots.isChecked()
+        sheets = int(self.spin_sheets.get())
+        fmt_mode = "2-strip" if "2-Strip" in self.combo_fmt.get() else "1-strip"
 
         try:
-            self.btn_generate.setEnabled(False)
-            self.lbl_gen_status.setText("Generating mathematical ticket matrix...")
-            QApplication.processEvents()
+            self.btn_gen.config(state="disabled")
+            self.progress.start(10)
+            self.lbl_gen_status.config(text=f"Generating {sheets} balanced sheets for '{target_batch_name}'...")
+            self.update_idletasks()
 
             out_html = generate_housie_tickets(
                 num_sheets=sheets,
-                format_mode=format_mode,
+                format_mode=fmt_mode,
                 template_path=self.selected_template_path,
-                show_participant_slots=show_slots,
-                batch_name=unique_name
+                show_participant_slots=True,
+                batch_name=target_batch_name
             )
 
             self.last_generated_html = out_html
-            self.btn_open_browser.setEnabled(True)
-            self.lbl_gen_status.setText(f"✓ Successfully generated {sheets} sheets ({unique_name})!")
-            self.lbl_gen_path.setText(f"Archived to: {out_html}")
+            self.btn_open_browser.config(state="normal")
+            self.lbl_gen_status.config(text=f"✔ Successfully Archived: {target_batch_name}.html")
+            self.lbl_gen_path.config(text=f"Saved at: {out_html}")
 
-            self.batch_generated.emit(out_html)
+            self.app.sync_batch_generated(out_html)
 
-            QMessageBox.information(
-                self, "Generation Complete",
-                f"Tickets generated successfully!\n\n"
-                f"Archived: {unique_name}.html\n"
-                f"Registry: {unique_name}_registry.json\n\n"
-                f"Click 'Open in Web Browser' to inspect or print."
+            messagebox.showinfo(
+                "Generation Success",
+                f"Tickets generated successfully without touching prior batches!\n\n"
+                f"Archived: {target_batch_name}.html\n"
+                f"Registry: {target_batch_name}_registry.json\n\n"
+                f"Click 'Open in Web Browser' to view & print."
             )
         except Exception as e:
-            QMessageBox.critical(self, "Generation Error", f"Failed to generate tickets: {e}")
-            self.lbl_gen_status.setText("Error occurred during generation.")
+            messagebox.showerror("Generation Error", f"Failed to generate tickets: {e}")
+            self.lbl_gen_status.config(text="Generation encountered an error.")
         finally:
-            self.btn_generate.setEnabled(True)
-            self._check_batch_collision()
+            self.progress.stop()
+            self.btn_gen.config(state="normal")
 
     def _open_in_browser(self):
         if self.last_generated_html and os.path.exists(self.last_generated_html):
@@ -2393,160 +2645,957 @@ class TicketGeneratorScreen(QWidget):
 
 
 # ---------------------------------------------------------------------------
-# MAIN APPLICATION HUB CONTAINER
+# SCREEN 6: Audio Catalog & Song Studio (PRD Module 2.1)
 # ---------------------------------------------------------------------------
-class MusicalHousieApp(QMainWindow):
+class AudioCatalogScreen(tk.Frame):
     """
-    Primary desktop window for Musical Housie (Tambola).
-    Ties together all 5 screens in an elegant off-white light theme with rich
-    animations, zero cloud dependencies, and strict data safety.
+    Screen 6: Audio Catalog & Song Asset Studio
+    - Custom Songs Folder Selector with smart 1-90 file matching.
+    - Song Catalog Upload (.csv / .xlsx) with Start Time & Clip Duration parsing.
+    - Live Search & Pillar Filters (Satyam, Shivam, Sundaram, Missing Audio).
+    - 90-Track Catalog Treeview (Serial, Pillar, Title, Start Cue, Path, File Status, Game Status).
+    - Right Panel: Interactive Timestamp & Clip Cue Editor, Test Playback from Start Cue,
+      Animated Equalizer Canvas, and Single File Linker.
+    """
+    def __init__(self, master, app_controller):
+        super().__init__(master, bg=PALETTE["bg_body"])
+        self.app = app_controller
+
+        self.selected_song_id: Optional[int] = 1
+        self.active_filter = "all"
+        self.search_query = ""
+
+        # Mini Equalizer & Preview Playback State
+        self.is_preview_playing = False
+        self._preview_timer: Optional[str] = None
+        self.eq_step = 0
+        self.eq_bars = [4.0] * 14
+
+        self._init_ui()
+        self._update_folder_label()
+        self.populate_catalog()
+
+    def _init_ui(self):
+        # -------------------------------------------------------------
+        # TOP CONTROL CARD: Title, Folder Path, Catalog Upload & Filters
+        # -------------------------------------------------------------
+        card_filter = tk.Frame(self, bg=PALETTE["bg_card"], bd=1, relief="solid")
+        card_filter.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
+        card_filter.pack(fill="x", padx=20, pady=(16, 12))
+
+        f_inner = tk.Frame(card_filter, bg=PALETTE["bg_card"], padx=16, pady=10)
+        f_inner.pack(fill="x")
+
+        # Row 1: Title & Ready Files Summary Badge
+        top_row = tk.Frame(f_inner, bg=PALETTE["bg_card"])
+        top_row.pack(fill="x", pady=(0, 8))
+
+        tk.Label(
+            top_row, text="🎵 AUDIO CATALOG & SONG ASSET STUDIO",
+            font=("Segoe UI", 12, "bold"), fg=PALETTE["primary"], bg=PALETTE["bg_card"]
+        ).pack(side="left")
+
+        self.lbl_summary_badge = tk.Label(
+            top_row, text="Scanning songs...",
+            font=("Segoe UI", 9, "bold"), fg=PALETTE["emerald_dark"], bg=PALETTE["emerald_light"],
+            padx=10, pady=3, relief="solid", bd=1
+        )
+        self.lbl_summary_badge.pack(side="right")
+
+        # Row 2: Folder Path Configuration & Batch Tools
+        tools_row = tk.Frame(f_inner, bg=PALETTE["bg_card"])
+        tools_row.pack(fill="x", pady=(0, 8))
+
+        btn_folder = tk.Button(
+            tools_row, text="📁 Set Songs Folder Path",
+            font=("Segoe UI", 9, "bold"), bg=PALETTE["primary_light"], fg=PALETTE["primary"],
+            activebackground=PALETTE["primary"], activeforeground=PALETTE["text_white"],
+            relief="flat", cursor="hand2", padx=10, pady=4,
+            command=self.choose_audio_folder
+        )
+        btn_folder.pack(side="left", padx=(0, 8))
+
+        self.lbl_folder_path = tk.Label(
+            tools_row, text="Active Folder: songs/ (Default)",
+            font=("Segoe UI", 9), fg=PALETTE["text_main"], bg=PALETTE["bg_card_alt"],
+            relief="solid", bd=1, padx=10, pady=3
+        )
+        self.lbl_folder_path.pack(side="left", padx=(0, 16))
+
+        btn_upload = tk.Button(
+            tools_row, text="📄 Upload Catalog (Excel/CSV)",
+            font=("Segoe UI", 9, "bold"), bg=PALETTE["emerald_light"], fg=PALETTE["emerald_dark"],
+            activebackground=PALETTE["emerald"], activeforeground=PALETTE["text_white"],
+            relief="flat", cursor="hand2", padx=10, pady=4,
+            command=self.upload_catalog_file
+        )
+        btn_upload.pack(side="right", padx=(8, 0))
+
+        btn_rescan = tk.Button(
+            tools_row, text="🔄 Re-scan Directory",
+            font=("Segoe UI", 9, "bold"), bg=PALETTE["bg_card_alt"], fg=PALETTE["text_main"],
+            relief="groove", cursor="hand2", padx=10, pady=4,
+            command=self.rescan_directory
+        )
+        btn_rescan.pack(side="right")
+
+        # Row 3: Live Search Entry & Decade / Missing Filters
+        ctrl_row = tk.Frame(f_inner, bg=PALETTE["bg_card"])
+        ctrl_row.pack(fill="x")
+
+        tk.Label(ctrl_row, text="Search Track:", font=("Segoe UI", 9, "bold"), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"]).pack(side="left", padx=(0, 6))
+        self.txt_search = tk.Entry(ctrl_row, font=("Segoe UI", 10), width=18)
+        self.txt_search.pack(side="left", padx=(0, 16))
+        self.txt_search.bind("<KeyRelease>", self._on_search_changed)
+
+        self.filter_buttons: Dict[str, tk.Button] = {}
+        filters_meta = [
+            ("all", "All (1–90)"),
+            ("satyam", "सत्यम / Satyam (1–29)"),
+            ("shivam", "शिवम / Shivam (30–59)"),
+            ("sundaram", "सुन्दरम / Sundaram (60–90)"),
+            ("missing", "⚠️ Missing Audio Only")
+        ]
+
+        pills_box = tk.Frame(ctrl_row, bg=PALETTE["bg_card"])
+        pills_box.pack(side="left")
+
+        for f_key, f_label in filters_meta:
+            btn = tk.Button(
+                pills_box, text=f_label, font=("Segoe UI", 9, "bold"),
+                bg=PALETTE["primary"] if f_key == "all" else PALETTE["bg_card_alt"],
+                fg=PALETTE["text_white"] if f_key == "all" else PALETTE["text_muted"],
+                relief="flat", cursor="hand2", padx=10, pady=3,
+                command=lambda k=f_key: self.set_filter(k)
+            )
+            btn.pack(side="left", padx=3)
+            self.filter_buttons[f_key] = btn
+
+        # -------------------------------------------------------------
+        # MAIN SPLIT CONTENT: Treeview (Left) + Inspector Deck (Right)
+        # -------------------------------------------------------------
+        split_frame = tk.Frame(self, bg=PALETTE["bg_body"])
+        split_frame.pack(fill="both", expand=True, padx=20, pady=(0, 16))
+
+        # Left / Center Table Card
+        table_card = tk.Frame(split_frame, bg=PALETTE["bg_card"], bd=1, relief="solid")
+        table_card.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
+        table_card.pack(side="left", fill="both", expand=True, padx=(0, 12))
+
+        t_inner = tk.Frame(table_card, bg=PALETTE["bg_card"], padx=12, pady=12)
+        t_inner.pack(fill="both", expand=True)
+
+        cols = ("serial", "pillar", "title", "start_cue", "file_path", "file_status", "game_status")
+        self.tree_catalog = ttk.Treeview(t_inner, columns=cols, show="headings", selectmode="browse")
+
+        self.tree_catalog.heading("serial", text="Serial")
+        self.tree_catalog.heading("pillar", text="Pillar / Column")
+        self.tree_catalog.heading("title", text="Song Title")
+        self.tree_catalog.heading("start_cue", text="Start Cue (MM:SS)")
+        self.tree_catalog.heading("file_path", text="Audio File Path")
+        self.tree_catalog.heading("file_status", text="File Status")
+        self.tree_catalog.heading("game_status", text="Game Status")
+
+        self.tree_catalog.column("serial", width=65, anchor="center")
+        self.tree_catalog.column("pillar", width=135, anchor="w")
+        self.tree_catalog.column("title", width=210, anchor="w")
+        self.tree_catalog.column("start_cue", width=125, anchor="center")
+        self.tree_catalog.column("file_path", width=165, anchor="w")
+        self.tree_catalog.column("file_status", width=100, anchor="center")
+        self.tree_catalog.column("game_status", width=95, anchor="center")
+
+        scroll_y = ttk.Scrollbar(t_inner, orient="vertical", command=self.tree_catalog.yview)
+        self.tree_catalog.configure(yscrollcommand=scroll_y.set)
+
+        self.tree_catalog.pack(side="left", fill="both", expand=True)
+        scroll_y.pack(side="right", fill="y")
+
+        self.tree_catalog.bind("<<TreeviewSelect>>", self._on_tree_select)
+        self.tree_catalog.bind("<Double-1>", lambda e: self.test_start_cue())
+
+        # -------------------------------------------------------------
+        # RIGHT PANEL: Track Inspector & Interactive Start-Time Editor
+        # -------------------------------------------------------------
+        self.preview_panel = tk.Frame(split_frame, bg=PALETTE["bg_card"], bd=1, relief="solid", width=390)
+        self.preview_panel.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
+        self.preview_panel.pack(side="right", fill="y")
+        self.preview_panel.pack_propagate(False)
+
+        p_inner = tk.Frame(self.preview_panel, bg=PALETTE["bg_card"], padx=16, pady=14)
+        p_inner.pack(fill="both", expand=True)
+
+        tk.Label(p_inner, text="Track Inspector & Audio Deck", font=("Segoe UI", 11, "bold"), fg=PALETTE["text_main"], bg=PALETTE["bg_card"]).pack(anchor="w")
+
+        # Serial / Pillar Badge Box
+        self.badge_box = tk.Frame(p_inner, bg=PALETTE["primary_light"], padx=10, pady=4)
+        self.badge_box.pack(anchor="w", pady=(6, 4))
+        self.lbl_deck_serial = tk.Label(self.badge_box, text="Track #01", font=("Segoe UI", 10, "bold"), fg=PALETTE["primary"], bg=PALETTE["primary_light"])
+        self.lbl_deck_serial.pack(side="left")
+        self.lbl_deck_pillar = tk.Label(self.badge_box, text=" • Satyam (Col 1)", font=("Segoe UI", 10), fg=PALETTE["primary"], bg=PALETTE["primary_light"])
+        self.lbl_deck_pillar.pack(side="left")
+
+        # Track Title & Album
+        self.lbl_deck_title = tk.Label(
+            p_inner, text="Select a song from catalog",
+            font=("Segoe UI", 12, "bold"), fg=PALETTE["text_main"], bg=PALETTE["bg_card"],
+            wraplength=350, justify="left"
+        )
+        self.lbl_deck_title.pack(anchor="w", pady=(2, 2))
+
+        self.lbl_deck_artist = tk.Label(
+            p_inner, text="", font=("Segoe UI", 9), fg=PALETTE["text_muted"],
+            bg=PALETTE["bg_card"], wraplength=350, justify="left"
+        )
+        self.lbl_deck_artist.pack(anchor="w", pady=(0, 6))
+
+        # File Status Card
+        self.card_status = tk.Frame(p_inner, bg=PALETTE["bg_card_alt"], bd=1, relief="solid")
+        self.card_status.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
+        self.card_status.pack(fill="x", pady=(0, 8))
+
+        cs_inner = tk.Frame(self.card_status, bg=PALETTE["bg_card_alt"], padx=10, pady=6)
+        cs_inner.pack(fill="x")
+
+        self.lbl_deck_status = tk.Label(
+            cs_inner, text="Status: Verifying file...",
+            font=("Segoe UI", 9, "bold"), fg=PALETTE["text_main"], bg=PALETTE["bg_card_alt"]
+        )
+        self.lbl_deck_status.pack(anchor="w")
+
+        self.lbl_deck_path = tk.Label(
+            cs_inner, text="Path: —",
+            font=("Segoe UI", 8), fg=PALETTE["text_muted"], bg=PALETTE["bg_card_alt"],
+            wraplength=330, justify="left"
+        )
+        self.lbl_deck_path.pack(anchor="w", pady=(2, 0))
+
+        # -------------------------------------------------------------
+        # INTERACTIVE START-TIME & CLIP DURATION CUE EDITOR
+        # -------------------------------------------------------------
+        self.card_cue = tk.Frame(p_inner, bg=PALETTE["bg_card"], bd=1, relief="solid")
+        self.card_cue.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
+        self.card_cue.pack(fill="x", pady=(0, 10))
+
+        cue_inner = tk.Frame(self.card_cue, bg=PALETTE["bg_card"], padx=12, pady=10)
+        cue_inner.pack(fill="x")
+
+        tk.Label(
+            cue_inner, text="⏱️ Start Cue & Clip Duration",
+            font=("Segoe UI", 10, "bold"), fg=PALETTE["text_main"], bg=PALETTE["bg_card"]
+        ).pack(anchor="w")
+
+        tk.Label(
+            cue_inner, text="Drop into song at specific beat for game & preview",
+            font=("Segoe UI", 8), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"]
+        ).pack(anchor="w", pady=(0, 6))
+
+        # Start Time Row
+        row_st = tk.Frame(cue_inner, bg=PALETTE["bg_card"])
+        row_st.pack(fill="x", pady=2)
+        tk.Label(row_st, text="Start Time:", font=("Segoe UI", 9, "bold"), fg=PALETTE["text_main"], bg=PALETTE["bg_card"], width=12, anchor="w").pack(side="left")
+        self.txt_start_time = tk.Entry(row_st, font=("Segoe UI", 10), width=9)
+        self.txt_start_time.pack(side="left", padx=(0, 6))
+        self.txt_start_time.insert(0, "00:00")
+        tk.Label(row_st, text="(MM:SS or sec)", font=("Segoe UI", 8), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"]).pack(side="left")
+
+        # Duration Row
+        row_dur = tk.Frame(cue_inner, bg=PALETTE["bg_card"])
+        row_dur.pack(fill="x", pady=2)
+        tk.Label(row_dur, text="Clip Duration:", font=("Segoe UI", 9, "bold"), fg=PALETTE["text_main"], bg=PALETTE["bg_card"], width=12, anchor="w").pack(side="left")
+        self.txt_duration = tk.Entry(row_dur, font=("Segoe UI", 10), width=9)
+        self.txt_duration.pack(side="left", padx=(0, 6))
+        self.txt_duration.insert(0, "0")
+        tk.Label(row_dur, text="(sec, 0 = Full)", font=("Segoe UI", 8), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"]).pack(side="left")
+
+        # Action Buttons Row
+        cue_btn_row = tk.Frame(cue_inner, bg=PALETTE["bg_card"])
+        cue_btn_row.pack(fill="x", pady=(8, 4))
+
+        self.btn_save_cue = tk.Button(
+            cue_btn_row, text="💾 Save Cue",
+            font=("Segoe UI", 9, "bold"), bg=PALETTE["primary"], fg=PALETTE["text_white"],
+            activebackground=PALETTE["primary_hover"], activeforeground=PALETTE["text_white"],
+            relief="flat", cursor="hand2", padx=10, pady=4,
+            command=lambda: self.save_current_cue(show_alert=True)
+        )
+        self.btn_save_cue.pack(side="left", padx=(0, 6))
+
+        self.btn_test_cue = tk.Button(
+            cue_btn_row, text="▶️ Test from Start Cue",
+            font=("Segoe UI", 9, "bold"), bg=PALETTE["emerald_light"], fg=PALETTE["emerald_dark"],
+            activebackground=PALETTE["emerald"], activeforeground=PALETTE["text_white"],
+            relief="flat", cursor="hand2", padx=10, pady=4,
+            command=self.test_start_cue
+        )
+        self.btn_test_cue.pack(side="left", fill="x", expand=True)
+
+        self.lbl_cue_feedback = tk.Label(
+            cue_inner, text="", font=("Segoe UI", 8, "bold"),
+            fg=PALETTE["emerald_dark"], bg=PALETTE["bg_card"]
+        )
+        self.lbl_cue_feedback.pack(anchor="w", pady=(2, 0))
+
+        # Animated Mini-Equalizer Canvas (50px)
+        tk.Label(p_inner, text="Live Resonance:", font=("Segoe UI", 9, "bold"), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"]).pack(anchor="w", pady=(0, 2))
+        self.canvas_eq = tk.Canvas(
+            p_inner, width=350, height=50,
+            bg=PALETTE["bg_card_alt"], highlightthickness=1,
+            highlightbackground=PALETTE["border"]
+        )
+        self.canvas_eq.pack(fill="x", pady=(0, 10))
+        self._draw_equalizer_bars()
+
+        # Playback Preview Controls
+        deck_ctrls = tk.Frame(p_inner, bg=PALETTE["bg_card"])
+        deck_ctrls.pack(fill="x", pady=(0, 8))
+
+        self.btn_preview_play = tk.Button(
+            deck_ctrls, text="▶️ Play from 00:00",
+            font=("Segoe UI", 9, "bold"), bg=PALETTE["bg_card_alt"], fg=PALETTE["text_main"],
+            relief="groove", cursor="hand2", padx=8, pady=5,
+            command=self.play_preview_full
+        )
+        self.btn_preview_play.pack(side="left", fill="x", expand=True, padx=(0, 6))
+
+        self.btn_preview_stop = tk.Button(
+            deck_ctrls, text="⏹ Stop",
+            font=("Segoe UI", 9, "bold"), bg=PALETTE["bg_card_alt"], fg=PALETTE["coral"],
+            relief="groove", cursor="hand2", padx=10, pady=5,
+            command=self.stop_preview
+        )
+        self.btn_preview_stop.pack(side="right")
+
+        # Single Audio File Link Button
+        btn_link = tk.Button(
+            p_inner, text="📁 Link / Replace Single File",
+            font=("Segoe UI", 9, "bold"), bg=PALETTE["bg_card_alt"], fg=PALETTE["text_main"],
+            relief="solid", bd=1, cursor="hand2", pady=6,
+            command=self.link_replace_audio
+        )
+        btn_link.pack(fill="x", pady=(0, 4))
+
+        lbl_hint = tk.Label(
+            p_inner, text="Auditioning tracks here does not alter live game called numbers.",
+            font=("Segoe UI", 8), fg=PALETTE["text_dim"], bg=PALETTE["bg_card"],
+            wraplength=340, justify="center"
+        )
+        lbl_hint.pack(side="bottom", pady=2)
+
+    def _update_folder_label(self):
+        """Displays active songs directory path."""
+        cfg = load_audio_config()
+        fp = cfg.get("audio_folder_path")
+        if fp and Path(fp).exists():
+            try:
+                rel = str(Path(fp).relative_to(BASE_DIR))
+                disp = f"Active Folder: {rel}"
+            except Exception:
+                p = Path(fp)
+                disp = f"Active Folder: {p.name}" if len(str(p)) > 30 else f"Active: {p}"
+        else:
+            disp = "Active Folder: songs/ (Default)"
+        self.lbl_folder_path.config(text=disp)
+
+    def choose_audio_folder(self):
+        """Host selects custom directory containing tracks 1 to 90."""
+        folder = filedialog.askdirectory(
+            title="Select Custom Songs Folder (Arranged by track 1 to 90)"
+        )
+        if not folder:
+            return
+
+        cfg = load_audio_config()
+        cfg["audio_folder_path"] = str(Path(folder).resolve())
+
+        # Scan folder and map tracks by number 1-90
+        matched = scan_audio_folder(folder)
+        for num, fpath in matched.items():
+            num_str = str(num)
+            if num_str not in cfg["song_cues"]:
+                cfg["song_cues"][num_str] = {}
+            cfg["song_cues"][num_str]["file_path"] = fpath
+
+        save_audio_config(cfg)
+        self._update_folder_label()
+        self.populate_catalog()
+        if self.selected_song_id:
+            self._update_preview_deck(self.selected_song_id)
+
+        messagebox.showinfo(
+            "Songs Folder Configured",
+            f"Active Songs Folder set to:\n{folder}\n\n"
+            f"Successfully matched and mapped {len(matched)} of 90 audio tracks."
+        )
+
+    def upload_catalog_file(self):
+        """Host uploads Excel or CSV containing Start Times and song cues."""
+        filepath = filedialog.askopenfilename(
+            title="Upload Song Catalog (Excel / CSV)",
+            filetypes=[
+                ("Supported Catalogs", "*.csv *.xlsx *.xls"),
+                ("CSV Files", "*.csv"),
+                ("Excel Workbooks", "*.xlsx *.xls")
+            ]
+        )
+        if not filepath:
+            return
+
+        count, errors = import_catalog_file(filepath)
+        self.populate_catalog()
+        if self.selected_song_id:
+            self._update_preview_deck(self.selected_song_id)
+
+        if count > 0:
+            notice = f"Successfully updated start cues for {count} songs from:\n{Path(filepath).name}"
+            if errors:
+                notice += "\n\nNotices:\n" + "\n".join(errors[:3])
+            messagebox.showinfo("Catalog Uploaded", notice)
+        else:
+            err_msg = "\n".join(errors[:4]) if errors else "No rows matched numbers 1 to 90."
+            messagebox.showwarning("Upload Warning", f"Could not import song cues from file:\n{err_msg}")
+
+    def save_current_cue(self, show_alert: bool = False):
+        """Saves start time and clip duration for currently selected track."""
+        if not self.selected_song_id:
+            return
+
+        st_val = self.txt_start_time.get().strip()
+        dur_val = self.txt_duration.get().strip()
+
+        start_sec = parse_time_to_seconds(st_val)
+        dur_sec = parse_time_to_seconds(dur_val)
+
+        cfg = load_audio_config()
+        num_str = str(self.selected_song_id)
+        if num_str not in cfg["song_cues"]:
+            cfg["song_cues"][num_str] = {}
+
+        cfg["song_cues"][num_str]["start_time"] = start_sec
+        cfg["song_cues"][num_str]["duration"] = dur_sec
+        save_audio_config(cfg)
+
+        time_str = format_seconds_to_time(start_sec)
+        dur_txt = f"{int(dur_sec)}s" if dur_sec > 0 else "Full"
+        cue_display = f"{time_str} ({dur_txt})"
+
+        # Update Treeview row in place
+        try:
+            vals = list(self.tree_catalog.item(num_str)["values"])
+            if len(vals) == 7:
+                vals[3] = cue_display
+                self.tree_catalog.item(num_str, values=vals)
+        except Exception:
+            pass
+
+        self.lbl_cue_feedback.config(
+            text=f"✅ Saved! Start: {time_str} • Duration: {dur_txt}",
+            fg=PALETTE["emerald_dark"]
+        )
+
+        if show_alert:
+            messagebox.showinfo(
+                "Cue Saved",
+                f"Track #{self.selected_song_id:02d} cue updated:\n"
+                f"Start Time: {time_str}\n"
+                f"Duration: {dur_txt}"
+            )
+
+    def test_start_cue(self):
+        """Immediately test playback from configured start cue with duration auto-stop."""
+        if not self.selected_song_id or not HAS_AUDIO:
+            return
+        # Save current typed entries first so the audition reflects user edits
+        self.save_current_cue(show_alert=False)
+        self.play_preview(from_start_cue=True)
+
+    def play_preview_full(self):
+        """Play track from timestamp 00:00."""
+        self.play_preview(from_start_cue=False)
+
+    def play_preview(self, from_start_cue: bool = True):
+        if not self.selected_song_id or not HAS_AUDIO:
+            return
+
+        # Cancel any previous preview auto-stop timer
+        if self._preview_timer:
+            try:
+                self.after_cancel(self._preview_timer)
+            except Exception:
+                pass
+            self._preview_timer = None
+
+        cue = get_song_cue(self.selected_song_id)
+        audio_path = cue.get("file_path")
+        if audio_path and os.path.exists(audio_path):
+            try:
+                pygame.mixer.music.load(audio_path)
+                start_sec = cue.get("start_time", 0.0) if from_start_cue else 0.0
+                duration = cue.get("duration", 0.0) if from_start_cue else 0.0
+
+                try:
+                    pygame.mixer.music.play(start=start_sec)
+                except Exception:
+                    pygame.mixer.music.play()
+
+                self.is_preview_playing = True
+                cue_str = f" from {format_seconds_to_time(start_sec)}" if start_sec > 0 else ""
+                self.btn_preview_play.config(text="▶️ Playing...")
+                self._step_equalizer()
+
+                # Auto-stop preview after clip duration
+                if duration > 0.0:
+                    self._preview_timer = self.after(int(duration * 1000), self.stop_preview)
+            except Exception as e:
+                messagebox.showerror("Playback Error", f"Could not play audio: {e}")
+        else:
+            messagebox.showwarning(
+                "Missing Audio",
+                f"No audio file found for Track #{self.selected_song_id:02d}.\n"
+                f"Use 'Set Songs Folder Path' or 'Link / Replace Single File' to map this track."
+            )
+
+    def stop_preview(self):
+        if self._preview_timer:
+            try:
+                self.after_cancel(self._preview_timer)
+            except Exception:
+                pass
+            self._preview_timer = None
+
+        if HAS_AUDIO:
+            try:
+                pygame.mixer.music.stop()
+            except Exception:
+                pass
+        self.is_preview_playing = False
+        self.btn_preview_play.config(text="▶️ Play from 00:00")
+        self.eq_bars = [4.0] * 14
+        self._draw_equalizer_bars()
+
+    def _draw_equalizer_bars(self):
+        self.canvas_eq.delete("all")
+        w = 350
+        h = 50
+        num_bars = len(self.eq_bars)
+        bar_w = 16.0
+        spacing = (w - (num_bars * bar_w)) / float(num_bars + 1)
+        colors = [PALETTE["primary"], PALETTE["emerald"], PALETTE["amber"], PALETTE["coral"]]
+        for i, bar_h in enumerate(self.eq_bars):
+            bx = spacing + i * (bar_w + spacing)
+            by = h - 4 - (bar_h * 0.8)
+            col = colors[i % len(colors)]
+            self.canvas_eq.create_rectangle(bx, by, bx + bar_w, h - 4, fill=col, outline="")
+            self.canvas_eq.create_oval(bx, by - 2, bx + bar_w, by + 4, fill=col, outline="")
+
+    def _step_equalizer(self):
+        if not self.is_preview_playing:
+            return
+        if HAS_AUDIO:
+            try:
+                if not pygame.mixer.music.get_busy():
+                    self.stop_preview()
+                    return
+            except Exception:
+                pass
+
+        self.eq_step += 1
+        for i in range(len(self.eq_bars)):
+            wave = math.sin(self.eq_step * 0.35 + i * 0.5)
+            h = max(5.0, min(42.0, 22.0 + wave * 16.0 + random.uniform(-3, 5)))
+            self.eq_bars[i] = h
+
+        self._draw_equalizer_bars()
+        self.after(50, self._step_equalizer)
+
+    def set_filter(self, filter_key: str):
+        self.active_filter = filter_key
+        for k, btn in self.filter_buttons.items():
+            if k == filter_key:
+                btn.config(bg=PALETTE["primary"], fg=PALETTE["text_white"])
+            else:
+                btn.config(bg=PALETTE["bg_card_alt"], fg=PALETTE["text_muted"])
+        self.populate_catalog()
+
+    def _on_search_changed(self, event):
+        self.search_query = self.txt_search.get().strip().lower()
+        self.populate_catalog()
+
+    def populate_catalog(self):
+        for item in self.tree_catalog.get_children():
+            self.tree_catalog.delete(item)
+
+        cfg = load_audio_config()
+        called_set = set(self.app.screen_live.called_numbers)
+        total_ready = 0
+
+        for num in range(1, 91):
+            cue = get_song_cue(num, cfg)
+            title = cue.get("title") or song_bank.get_song_title(num)
+            song = song_bank.get_song(num)
+            artist = song.get("artist", "") if song else ""
+            col_idx = (song.get("column", 0) + 1) if song else 1
+
+            pillar_name = "Satyam" if num <= 29 else ("Shivam" if num <= 59 else "Sundaram")
+            pillar_display = f"{pillar_name} (Col {col_idx})"
+
+            audio_file = cue.get("file_path")
+            has_audio = bool(audio_file and os.path.exists(audio_file))
+            if has_audio:
+                total_ready += 1
+
+            is_called = num in called_set
+
+            # Pillar filter
+            if self.active_filter == "satyam" and num > 29:
+                continue
+            if self.active_filter == "shivam" and (num < 30 or num > 59):
+                continue
+            if self.active_filter == "sundaram" and num < 60:
+                continue
+            if self.active_filter == "missing" and has_audio:
+                continue
+
+            # Search query
+            if self.search_query:
+                match_num = self.search_query in str(num) or self.search_query in f"#{num:02d}"
+                match_title = self.search_query in title.lower()
+                match_artist = self.search_query in artist.lower()
+                if not (match_num or match_title or match_artist):
+                    continue
+
+            # Start cue formatting
+            start_sec = cue.get("start_time", 0.0)
+            dur_sec = cue.get("duration", 0.0)
+            time_str = format_seconds_to_time(start_sec)
+            if dur_sec > 0:
+                cue_display = f"{time_str} ({int(dur_sec)}s)"
+            elif start_sec > 0:
+                cue_display = f"{time_str} (Full)"
+            else:
+                cue_display = "00:00 (Full)"
+
+            # Path formatting
+            if audio_file:
+                try:
+                    rel_path = str(Path(audio_file).relative_to(BASE_DIR))
+                except Exception:
+                    rel_path = Path(audio_file).name
+            else:
+                rel_path = f"songs/{num}.wav (missing)"
+
+            f_status = "✅ Ready" if has_audio else "❌ Missing"
+            g_status = "Called ✔" if is_called else "Pending ⏳"
+
+            self.tree_catalog.insert(
+                "", "end", iid=str(num),
+                values=(f"#{num:02d}", pillar_display, title, cue_display, rel_path, f_status, g_status)
+            )
+
+        # Update summary badge
+        if total_ready == 90:
+            self.lbl_summary_badge.config(
+                text="✅ 90/90 Audio Files Ready",
+                bg=PALETTE["emerald_light"], fg=PALETTE["emerald_dark"]
+            )
+        else:
+            self.lbl_summary_badge.config(
+                text=f"⚠️ {total_ready}/90 Files Ready ({90 - total_ready} Missing)",
+                bg=PALETTE["amber_light"], fg=PALETTE["amber_dark"]
+            )
+
+        # Select first available item if none selected
+        children = self.tree_catalog.get_children()
+        if children:
+            target = str(self.selected_song_id) if str(self.selected_song_id) in children else children[0]
+            self.tree_catalog.selection_set(target)
+            self.tree_catalog.focus(target)
+            self._update_preview_deck(int(target))
+
+    def _on_tree_select(self, event):
+        sel = self.tree_catalog.selection()
+        if sel:
+            try:
+                num = int(sel[0])
+                self._update_preview_deck(num)
+            except Exception:
+                pass
+
+    def _update_preview_deck(self, num: int):
+        self.selected_song_id = num
+        cue = get_song_cue(num)
+        title = cue.get("title") or song_bank.get_song_title(num)
+        song = song_bank.get_song(num)
+        artist = song.get("artist", "") if song else ""
+        year = song.get("year", "") if song else ""
+        col_idx = (song.get("column", 0) + 1) if song else 1
+
+        pillar_name = "Satyam" if num <= 29 else ("Shivam" if num <= 59 else "Sundaram")
+
+        self.lbl_deck_serial.config(text=f"Track #{num:02d}")
+        self.lbl_deck_pillar.config(text=f" • {pillar_name} (Col {col_idx})")
+        self.lbl_deck_title.config(text=title)
+
+        sub = f"Artist: {artist}" if artist else "Bollywood Evergreen Hit"
+        if year:
+            sub += f" ({year})"
+        self.lbl_deck_artist.config(text=sub)
+
+        # Update cue inputs
+        self.txt_start_time.delete(0, "end")
+        self.txt_start_time.insert(0, format_seconds_to_time(cue.get("start_time", 0.0)))
+
+        dur = cue.get("duration", 0.0)
+        self.txt_duration.delete(0, "end")
+        self.txt_duration.insert(0, str(int(dur)) if dur > 0 else "0")
+
+        self.lbl_cue_feedback.config(text="")
+
+        audio_file = cue.get("file_path")
+        if audio_file and os.path.exists(audio_file):
+            try:
+                rel = str(Path(audio_file).relative_to(BASE_DIR))
+            except Exception:
+                rel = Path(audio_file).name
+            self.lbl_deck_status.config(text="Status: ✅ Audio File Verified", fg=PALETTE["emerald_dark"])
+            self.lbl_deck_path.config(text=f"Path: {rel}", fg=PALETTE["text_muted"])
+            self.card_status.configure(highlightbackground=PALETTE["emerald"])
+        else:
+            self.lbl_deck_status.config(text="Status: ❌ Audio File Missing", fg=PALETTE["coral_dark"])
+            self.lbl_deck_path.config(text=f"Expected: songs/{num}.wav or custom folder track", fg=PALETTE["coral"])
+            self.card_status.configure(highlightbackground=PALETTE["coral"])
+
+    def link_replace_audio(self):
+        if not self.selected_song_id:
+            return
+        path = filedialog.askopenfilename(
+            title=f"Select Audio File for Track #{self.selected_song_id:02d}",
+            filetypes=[("Audio Files", "*.mp3 *.wav *.ogg *.m4a *.aac *.flac")]
+        )
+        if path:
+            try:
+                cfg = load_audio_config()
+                num_str = str(self.selected_song_id)
+                if num_str not in cfg["song_cues"]:
+                    cfg["song_cues"][num_str] = {}
+                cfg["song_cues"][num_str]["file_path"] = str(Path(path).resolve())
+                save_audio_config(cfg)
+
+                # Also update database & song_bank if available
+                try:
+                    database.update_audio_path(self.selected_song_id, str(path))
+                    song_bank.sync_with_database()
+                except Exception:
+                    pass
+
+                self.populate_catalog()
+                self._update_preview_deck(self.selected_song_id)
+                messagebox.showinfo(
+                    "Asset Linked",
+                    f"Audio file mapped successfully for Track #{self.selected_song_id:02d}:\n{Path(path).name}"
+                )
+            except Exception as e:
+                messagebox.showerror("Error Linking File", f"Failed to link audio file: {e}")
+
+    def rescan_directory(self):
+        cfg = load_audio_config()
+        folder = cfg.get("audio_folder_path") or str(SONGS_DIR.resolve())
+        matched = scan_audio_folder(folder) if Path(folder).is_dir() else {}
+        for num, fpath in matched.items():
+            num_str = str(num)
+            if num_str not in cfg["song_cues"]:
+                cfg["song_cues"][num_str] = {}
+            cfg["song_cues"][num_str]["file_path"] = fpath
+        save_audio_config(cfg)
+
+        try:
+            song_bank.sync_with_database()
+        except Exception:
+            pass
+
+        self._update_folder_label()
+        self.populate_catalog()
+        if self.selected_song_id:
+            self._update_preview_deck(self.selected_song_id)
+
+        ready_count = sum(1 for n in range(1, 91) if get_song_cue(n).get("file_path"))
+        messagebox.showinfo("Directory Scanned", f"Scanned active directory:\n{folder}\n\n{ready_count} of 90 audio tracks ready.")
+
+    def sync_game_status(self):
+        """Updates Called/Pending statuses in the treeview without losing selection."""
+        called_set = set(self.app.screen_live.called_numbers)
+        for num_str in self.tree_catalog.get_children():
+            try:
+                num = int(num_str)
+                vals = list(self.tree_catalog.item(num_str)["values"])
+                if len(vals) == 7:
+                    vals[6] = "Called ✔" if num in called_set else "Pending ⏳"
+                    self.tree_catalog.item(num_str, values=vals)
+            except Exception:
+                pass
+
+
+# ---------------------------------------------------------------------------
+# MAIN MULTI-SCREEN APPLICATION CONTAINER
+# ---------------------------------------------------------------------------
+class MusicalHousieApp(tk.Tk):
+    """
+    Main Tkinter application hub hosting custom top navigation bar
+    and 6 high-frame-rate animated screens.
     """
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Musical Housie (Tambola) — Offline Master Studio & Caller")
-        self.resize(1380, 880)
-        self.setMinimumSize(1120, 760)
+        self.title("Musical Housie (Tambola) — Offline Motion Graphics Suite")
+        self.geometry("1380x880")
+        self.minsize(1140, 760)
+        self.configure(bg=PALETTE["bg_body"])
 
-        # Shared Pygame Audio Controller
-        self.audio_player = AudioPlayer()
+        # Top Navigation & Screen Switching Setup
+        self._init_top_navbar()
+        self._init_screens()
 
-        self._apply_theme()
-        self._init_ui()
-        self._connect_signals()
+        # Keyboard shortcuts
+        self.bind("<space>", self._on_space_pressed)
 
-    def _apply_theme(self):
-        self.setStyleSheet(GLOBAL_STYLESHEET)
+    def _init_top_navbar(self):
+        nav_frame = tk.Frame(self, bg=PALETTE["bg_card"], bd=1, relief="solid")
+        nav_frame.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
+        nav_frame.pack(fill="x", padx=16, pady=(12, 0))
 
-    def _init_ui(self):
-        root = QWidget()
-        root.setObjectName("root_container")
-        self.setCentralWidget(root)
+        nav_inner = tk.Frame(nav_frame, bg=PALETTE["bg_card"], padx=14, pady=8)
+        nav_inner.pack(fill="x")
 
-        root_layout = QVBoxLayout(root)
-        root_layout.setContentsMargins(14, 12, 14, 12)
-        root_layout.setSpacing(10)
+        # Logo Title & Offline Tag
+        tk.Label(nav_inner, text="🎵 MUSICAL HOUSIE", font=("Segoe UI", 14, "bold"), fg=PALETTE["primary"], bg=PALETTE["bg_card"]).pack(side="left", padx=(0, 10))
 
-        # Top System Navigation Bar
-        nav_header = QHBoxLayout()
-        nav_header.setSpacing(12)
+        lbl_off = tk.Label(nav_inner, text="🟢 OFFLINE MASTER STUDIO", font=("Segoe UI", 9, "bold"), fg=PALETTE["emerald_dark"], bg=PALETTE["emerald_light"], padx=8, pady=2)
+        lbl_off.pack(side="left", padx=(0, 20))
 
-        logo_title = QLabel("🎵 MUSICAL HOUSIE")
-        logo_title.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
-        logo_title.setStyleSheet(f"color: {PALETTE['indigo']}; letter-spacing: 0.5px;")
-        nav_header.addWidget(logo_title)
+        # 6 Tab Navigation Buttons
+        self.tab_buttons: List[tk.Button] = []
+        tabs_meta = [
+            ("🎯 Live Stage", 0),
+            ("🔮 3D Dot-Sphere", 1),
+            ("🎰 Lucky Draw", 2),
+            ("🔍 Claim Verifier", 3),
+            ("🎫 Ticket Studio", 4),
+            ("🎵 Audio Catalog", 5),
+        ]
 
-        badge_offline = QLabel("🟢 OFFLINE MASTER STUDIO")
-        badge_offline.setStyleSheet(
-            f"background: {PALETTE['emerald_light']}; color: {PALETTE['emerald_dark']}; "
-            f"font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px;"
+        pills_container = tk.Frame(nav_inner, bg=PALETTE["bg_card"])
+        pills_container.pack(side="left")
+
+        for label, idx in tabs_meta:
+            btn = tk.Button(
+                pills_container, text=label, font=("Segoe UI", 10, "bold"),
+                bg=PALETTE["bg_card_alt"], fg=PALETTE["text_muted"],
+                relief="flat", cursor="hand2", padx=12, pady=4,
+                command=lambda i=idx: self.switch_tab(i)
+            )
+            btn.pack(side="left", padx=3)
+            self.tab_buttons.append(btn)
+
+        # Right Side Status & Reset
+        self.lbl_global_session = tk.Label(
+            nav_inner, text="Session: 0 / 90 Numbers Called",
+            font=("Segoe UI", 9, "bold"), fg=PALETTE["text_muted"], bg=PALETTE["bg_card_alt"],
+            relief="solid", bd=1, padx=10, pady=3
         )
-        nav_header.addWidget(badge_offline)
+        self.lbl_global_session.pack(side="right", padx=(10, 0))
 
-        nav_header.addStretch()
-
-        # Global Session Summary Pill
-        self.lbl_global_summary = QLabel("Active Session: 0 / 90 Numbers Called")
-        self.lbl_global_summary.setStyleSheet(
-            f"background: {PALETTE['bg_card']}; border: 1px solid {PALETTE['border']}; "
-            f"color: {PALETTE['text_secondary']}; font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 8px;"
+        btn_reset = tk.Button(
+            nav_inner, text="Reset Game", font=("Segoe UI", 9, "bold"),
+            bg=PALETTE["bg_card_alt"], fg=PALETTE["coral"], relief="groove",
+            cursor="hand2", padx=10, pady=3,
+            command=self._on_reset_clicked
         )
-        nav_header.addWidget(self.lbl_global_summary)
+        btn_reset.pack(side="right")
 
-        # Header Quick Reset
-        btn_quick_reset = QPushButton("Reset Game")
-        btn_quick_reset.setStyleSheet(f"font-size: 11px; color: {PALETTE['coral']}; border: 1px solid {PALETTE['coral']};")
-        btn_quick_reset.clicked.connect(self._on_header_reset)
-        nav_header.addWidget(btn_quick_reset)
+    def _init_screens(self):
+        self.container = tk.Frame(self, bg=PALETTE["bg_body"])
+        self.container.pack(fill="both", expand=True)
 
-        root_layout.addLayout(nav_header)
+        self.screen_live = LiveStageScreen(self.container, self)
+        self.screen_sphere = DotSphereScreen(self.container, self)
+        self.screen_lucky = LuckyDrawScreen(self.container, self)
+        self.screen_verifier = ClaimVerifierScreen(self.container, self)
+        self.screen_studio = TicketStudioScreen(self.container, self)
+        self.screen_catalog = AudioCatalogScreen(self.container, self)
 
-        # 5 Tab Screens Container
-        self.tabs = QTabWidget()
-        self.tabs.setDocumentMode(True)
+        self.screens = [
+            self.screen_live,
+            self.screen_sphere,
+            self.screen_lucky,
+            self.screen_verifier,
+            self.screen_studio,
+            self.screen_catalog
+        ]
 
-        self.screen_caller = LiveCallerStageScreen(self.audio_player, self)
-        self.screen_sphere = ParticleSphereScreen(self.audio_player, self)
-        self.screen_raffle = LuckyDrawScreen(self.audio_player, self)
-        self.screen_verifier = ClaimVerifierScreen(self.audio_player, self)
-        self.screen_generator = TicketGeneratorScreen(self)
+        self.active_tab_idx = 0
+        self.switch_tab(0)
 
-        self.tabs.addTab(self.screen_caller, "🎙️ Live Caller Stage")
-        self.tabs.addTab(self.screen_sphere, "🔮 3D Audio Dot-Sphere")
-        self.tabs.addTab(self.screen_raffle, "🎰 Lucky Draw & Raffle")
-        self.tabs.addTab(self.screen_verifier, "🔍 Claim Verifier & Inspector")
-        self.tabs.addTab(self.screen_generator, "🎫 Ticket Generator Studio")
+    def switch_tab(self, index: int):
+        self.active_tab_idx = index
 
-        root_layout.addWidget(self.tabs, 1)
+        # Highlight active pill
+        for i, btn in enumerate(self.tab_buttons):
+            if i == index:
+                btn.config(bg=PALETTE["primary"], fg=PALETTE["text_white"])
+            else:
+                btn.config(bg=PALETTE["bg_card_alt"], fg=PALETTE["text_muted"])
 
-        # Bottom Status Bar
-        self.status_bar = QStatusBar()
-        self.status_bar.setStyleSheet(
-            f"background: {PALETTE['bg_card']}; color: {PALETTE['text_muted']}; "
-            f"font-size: 11px; border-top: 1px solid {PALETTE['border']};"
-        )
-        self.status_bar.showMessage("Musical Housie Offline Studio • Strict Non-Destructive Archival Engine Ready")
-        self.setStatusBar(self.status_bar)
+        # Display selected screen & manage preview audio
+        for i, scr in enumerate(self.screens):
+            if i == index:
+                scr.pack(fill="both", expand=True)
+                if i == 1:
+                    self.screen_sphere.start_loop()
+                elif i == 5:
+                    self.screen_catalog.sync_game_status()
+                else:
+                    self.screen_sphere.stop_loop()
+            else:
+                scr.pack_forget()
 
-    def _connect_signals(self):
-        # Cross-screen synchronization
-        self.screen_caller.number_called.connect(self._sync_state_on_number_called)
-        self.screen_caller.game_reset.connect(self._sync_state_on_reset)
-        self.screen_caller.open_dot_sphere_requested.connect(lambda: self.tabs.setCurrentIndex(1))
+        if index != 5 and hasattr(self, "screen_catalog"):
+            self.screen_catalog.stop_preview()
 
-        self.screen_sphere.return_to_caller_requested.connect(lambda: self.tabs.setCurrentIndex(0))
-
-        self.screen_generator.batch_generated.connect(self._on_batch_generated)
-        self.screen_verifier.tickets_loaded.connect(self.screen_raffle.set_registered_tickets)
-
-    def _sync_state_on_number_called(self, num: int):
-        called = self.screen_caller.called_numbers
-        count = len(called)
-        self.lbl_global_summary.setText(f"Active Session: {count} / 90 Numbers Called (Last: #{num:02d})")
-
-        # Sync with Screen 2, 3, 4
+    def sync_number_called(self, num: int):
+        called = self.screen_live.called_numbers
+        self.lbl_global_session.config(text=f"Session: {len(called)} / 90 Numbers Called (Last: #{num:02d})")
         self.screen_sphere.sync_track_info(num)
-        self.screen_raffle.set_called_numbers(called)
-        self.screen_verifier.set_called_numbers(called)
+        self.screen_lucky.called_numbers_ref = called
+        self.screen_verifier.called_numbers_ref = called
+        if self.screen_verifier.current_tickets:
+            self.screen_verifier.render_ticket_staggered()
+        if hasattr(self, "screen_catalog"):
+            self.screen_catalog.sync_game_status()
 
-    def _sync_state_on_reset(self):
-        self.lbl_global_summary.setText("Active Session: 0 / 90 Numbers Called")
-        self.screen_raffle.set_called_numbers([])
-        self.screen_verifier.set_called_numbers([])
+    def sync_reset(self):
+        self.lbl_global_session.config(text="Session: 0 / 90 Numbers Called")
+        self.screen_lucky.called_numbers_ref = []
+        self.screen_verifier.called_numbers_ref = []
+        if hasattr(self, "screen_catalog"):
+            self.screen_catalog.sync_game_status()
 
-    def _on_header_reset(self):
-        self.screen_caller.confirm_reset_game()
+    def sync_tickets_loaded(self, tickets: List[Dict[str, Any]]):
+        self.screen_lucky.registered_tickets_ref = tickets
 
-    def _on_batch_generated(self, html_path: str):
+    def sync_batch_generated(self, html_path: str):
         self.screen_verifier.reload_batch_registries()
-        self.status_bar.showMessage(f"Archived new batch: {Path(html_path).name}", 6000)
 
-    def keyPressEvent(self, event):
-        # Spacebar shortcut to draw next track on Screen 1
-        if event.key() == Qt.Key.Key_Space:
-            if self.tabs.currentWidget() == self.screen_caller:
-                self.screen_caller.draw_next_track()
-                event.accept()
-                return
-        super().keyPressEvent(event)
+    def _on_reset_clicked(self):
+        self.screen_live.reset_game()
 
-    def closeEvent(self, event):
-        self.audio_player.stop()
-        event.accept()
+    def _on_space_pressed(self, event):
+        if self.active_tab_idx == 0:
+            self.screen_live.draw_next_track()
 
 
-# ---------------------------------------------------------------------------
-# APPLICATION ENTRY POINT
-# ---------------------------------------------------------------------------
 def main():
-    app = QApplication(sys.argv)
-    app.setApplicationName("Musical Housie")
-    app.setStyle("Fusion")
-
-    window = MusicalHousieApp()
-    window.show()
-
-    sys.exit(app.exec())
+    app = MusicalHousieApp()
+    app.mainloop()
 
 
 if __name__ == "__main__":
     main()
+

@@ -519,6 +519,7 @@ def generate_housie_tickets(
     .song-number {{ font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 900; color: #be123c; line-height: 1; margin-bottom: 2px; }}
     .song-name {{ font-size: 8.5px; font-weight: 600; color: #0f172a; line-height: 1.1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }}
     .participant-slots {{ display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.88); border: 1.5px solid #f59e0b; border-radius: 8px; padding: 6px 16px; color: white; font-size: 11px; }}
+    .hide-top-slots {{ display: none !important; }}
   </style>
 </head>
 <body>
@@ -701,16 +702,52 @@ def generate_housie_tickets(
         f.write(html)
 
     # Save Layout Registry JSON for Game Day Verification
+    detailed_tickets = []
+    for s_idx, t in enumerate(tickets, start=1):
+        raw_tid = str(t.get("ticket_id", s_idx)).lstrip("#")
+        s_num = int(raw_tid) if raw_tid.isdigit() else s_idx
+        strips = t.get("strips", [])
+        if is_2_strip and len(strips) >= 2:
+            top_tid = f"{(s_num * 2 - 1):03d}"
+            bot_tid = f"{(s_num * 2):03d}"
+            detailed_tickets.append({
+                "ticket_id": top_tid,
+                "sheet": s_num,
+                "strip_pos": "Top Strip",
+                "paired_ticket_id": bot_tid,
+                "grid": strips[0],
+                "strips": [strips[0]]
+            })
+            detailed_tickets.append({
+                "ticket_id": bot_tid,
+                "sheet": s_num,
+                "strip_pos": "Bottom Strip",
+                "paired_ticket_id": top_tid,
+                "grid": strips[1],
+                "strips": [strips[1]]
+            })
+        elif strips:
+            tid = f"{s_num:03d}"
+            detailed_tickets.append({
+                "ticket_id": tid,
+                "sheet": s_num,
+                "strip_pos": "Single Strip",
+                "paired_ticket_id": None,
+                "grid": strips[0],
+                "strips": [strips[0]]
+            })
+
     registry_data = {
         "batch_name": clean_batch_name,
         "generated_at": datetime.now().isoformat(),
         "format_mode": format_mode,
         "print_mode": effective_print_mode,
         "total_sheets": num_sheets,
-        "total_tickets": len(tickets),
+        "total_tickets": len(detailed_tickets),
         "template_path": str(template_path) if template_path else "",
         "calibration": calibration,
-        "tickets": tickets
+        "tickets": detailed_tickets,
+        "sheets": tickets
     }
     with open(archive_registry, "w", encoding="utf-8") as rf:
         json.dump(registry_data, rf, indent=2)

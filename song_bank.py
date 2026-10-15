@@ -215,6 +215,7 @@ def find_audio_file(song_id: int, base_dir: Optional[Path] = None) -> Optional[s
     """
     Search for audio file for song_id.
     Checks:
+    - audio_config.json custom folder and mapped file_path
     - songs/<song_id>.mp3, songs/<song_id>.wav
     - assets/songs/<song_id>.mp3, assets/songs/<song_id>.wav
     - with zero padding: 01.mp3, etc.
@@ -222,6 +223,32 @@ def find_audio_file(song_id: int, base_dir: Optional[Path] = None) -> Optional[s
     """
     if base_dir is None:
         base_dir = Path(__file__).resolve().parent
+
+    # 1. Check audio_config.json if present
+    cfg_file = base_dir / "audio_config.json"
+    if cfg_file.exists():
+        try:
+            import json
+            with open(cfg_file, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+            # Check explicit song_cues file_path
+            cue_path = cfg.get("song_cues", {}).get(str(song_id), {}).get("file_path")
+            if cue_path and Path(cue_path).exists():
+                return str(Path(cue_path).resolve())
+
+            # Check custom audio folder
+            custom_folder = cfg.get("audio_folder_path")
+            if custom_folder and Path(custom_folder).is_dir():
+                cf_path = Path(custom_folder)
+                exts = [".mp3", ".wav", ".ogg", ".flac", ".m4a", ".aac"]
+                pats = [str(song_id), f"{song_id:02d}", f"track{song_id}", f"track_{song_id}", f"track {song_id}"]
+                for p in pats:
+                    for ext in exts:
+                        fp = cf_path / f"{p}{ext}"
+                        if fp.exists():
+                            return str(fp.resolve())
+        except Exception:
+            pass
 
     candidate_dirs = [
         base_dir / "songs",
@@ -242,3 +269,4 @@ def find_audio_file(song_id: int, base_dir: Optional[Path] = None) -> Optional[s
                     return str(p.resolve())
 
     return None
+

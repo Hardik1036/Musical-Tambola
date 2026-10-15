@@ -3,38 +3,56 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Musical Housie — Dynamic Animated Stage</title>
+  <title>Musical Housie (Tambola) — Master Motion Graphics Suite</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
 
   <style>
     :root {
-      /* Solid Light Palette */
+      /* Solid Light Foundation */
       --bg-body: #F4F7FC;
       --card-bg: #FFFFFF;
+      --card-alt: #F8FAFC;
       --border-color: #E2E8F4;
+      --border-focus: #C7D2FE;
       
       /* Vibrant Accents */
       --primary: #4F46E5;
+      --primary-hover: #4338CA;
       --primary-light: #EEF2FF;
+      --primary-text: #3730A3;
+      
       --emerald: #059669;
+      --emerald-dark: #065F46;
       --emerald-light: #ECFDF5;
+      --emerald-border: #6EE7B7;
+      
       --coral: #F43F5E;
+      --coral-dark: #9F1239;
       --coral-light: #FFF1F2;
+      --coral-border: #FDA4AF;
+      
       --amber: #D97706;
+      --amber-dark: #92400E;
       --amber-light: #FEF3C7;
+      --amber-border: #FCD34D;
       
       --text-main: #0F172A;
       --text-muted: #64748B;
-      --shadow-soft: 0 10px 30px rgba(79, 70, 229, 0.08);
-      --radius-lg: 24px;
-      --radius-md: 14px;
+      --text-dim: #94A3B8;
+      
+      --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.04);
+      --shadow-soft: 0 10px 30px rgba(79, 70, 229, 0.07);
+      --shadow-elevated: 0 20px 40px rgba(15, 23, 42, 0.08);
+      --radius-lg: 20px;
+      --radius-md: 12px;
+      --radius-sm: 8px;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
       background: var(--bg-body);
       color: var(--text-main);
       min-height: 100vh;
@@ -43,100 +61,213 @@
       overflow-x: hidden;
     }
 
-    /* Header Nav */
+    /* Top Sticky Navigation Pill Bar */
     header {
       background: var(--card-bg);
       border-bottom: 2px solid var(--border-color);
-      padding: 0.85rem 2.5rem;
+      padding: 0.75rem 2rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
       position: sticky;
       top: 0;
-      z-index: 50;
+      z-index: 100;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
 
     .brand {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 8px;
       font-family: 'Space Grotesk', sans-serif;
-      font-size: 1.35rem;
-      font-weight: 700;
+      font-size: 1.3rem;
+      font-weight: 800;
       color: var(--primary);
+      text-decoration: none;
+    }
+
+    .offline-tag {
+      background: var(--emerald-light);
+      color: var(--emerald-dark);
+      border: 1px solid var(--emerald-border);
+      font-size: 0.72rem;
+      font-weight: 800;
+      padding: 3px 10px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .nav-tabs {
       display: flex;
       background: var(--bg-body);
       border: 1px solid var(--border-color);
-      padding: 5px;
+      padding: 4px;
       border-radius: 40px;
-      gap: 8px;
+      gap: 4px;
     }
 
     .tab-btn {
       border: none;
       background: transparent;
-      padding: 8px 20px;
+      padding: 8px 16px;
       font-family: inherit;
       font-weight: 700;
-      font-size: 0.88rem;
+      font-size: 0.85rem;
       color: var(--text-muted);
       border-radius: 30px;
       cursor: pointer;
-      transition: all 0.25s ease;
+      transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
+    }
+
+    .tab-btn:hover {
+      color: var(--primary);
+      background: rgba(79, 70, 229, 0.04);
     }
 
     .tab-btn.active {
       background: var(--card-bg);
       color: var(--primary);
-      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.12);
+      box-shadow: 0 4px 14px rgba(79, 70, 229, 0.15);
     }
 
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .session-badge {
+      font-size: 0.82rem;
+      font-weight: 700;
+      padding: 6px 12px;
+      background: var(--card-alt);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      color: var(--text-muted);
+    }
+
+    .btn-reset {
+      background: var(--card-alt);
+      border: 1px solid var(--coral-border);
+      color: var(--coral);
+      padding: 6px 14px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-reset:hover {
+      background: var(--coral-light);
+    }
+
+    /* Main Container */
     main {
       flex: 1;
-      max-width: 1500px;
+      max-width: 1560px;
       margin: 0 auto;
       width: 100%;
-      padding: 2rem;
+      padding: 1.25rem 2rem;
     }
 
     .screen {
       display: none;
-      animation: fadeIn 0.4s ease forwards;
+      animation: fadeIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
     }
     .screen.active { display: block; }
 
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(12px); }
+      from { opacity: 0; transform: translateY(8px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
-    /* ========================================================
-       SCREEN 1: CALLER STAGE WITH 3D POPPING & ROLLING BALL
-    ======================================================== */
-    .stage-layout {
-      display: grid;
-      grid-template-columns: 460px 1fr;
-      gap: 2rem;
-    }
-
+    /* Common Card Styling */
     .card {
       background: var(--card-bg);
       border: 1.5px solid var(--border-color);
       border-radius: var(--radius-lg);
-      padding: 2rem;
+      padding: 1.25rem;
       box-shadow: var(--shadow-soft);
       position: relative;
     }
 
-    /* Arena for the Rolling Ball */
+    .card-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 10px 20px;
+      border-radius: var(--radius-md);
+      font-family: inherit;
+      font-size: 0.92rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    .btn:active { transform: scale(0.98); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%);
+      color: #FFFFFF;
+      box-shadow: 0 6px 16px rgba(79, 70, 229, 0.28);
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #4338CA 0%, #4F46E5 100%);
+      box-shadow: 0 8px 22px rgba(79, 70, 229, 0.38);
+    }
+
+    .btn-outline {
+      background: var(--card-bg);
+      border: 1.5px solid var(--border-color);
+      color: var(--text-main);
+    }
+    .btn-outline:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: var(--primary-light);
+    }
+
+    .btn-emerald {
+      background: var(--emerald-light);
+      border: 1.5px solid var(--emerald-border);
+      color: var(--emerald-dark);
+    }
+    .btn-emerald:hover { background: #D1FAE5; }
+
+    /* ========================================================
+       SCREEN 1: LIVE CALLER STAGE
+    ======================================================== */
+    .stage-layout {
+      display: grid;
+      grid-template-columns: 460px 1fr;
+      gap: 1.5rem;
+    }
+
+    /* Ball Chute Arena */
     .ball-chute-arena {
-      height: 260px;
+      height: 240px;
       background: radial-gradient(circle at 50% 120%, #E0E7FF 0%, #F8FAFC 80%);
       border-radius: var(--radius-md);
       position: relative;
@@ -145,16 +276,15 @@
       align-items: center;
       justify-content: center;
       border: 1.5px dashed #CBD5E1;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1rem;
     }
 
-    /* 3D Ball Graphic */
     .lotto-ball {
-      width: 140px;
-      height: 140px;
+      width: 130px;
+      height: 130px;
       border-radius: 50%;
       background: radial-gradient(circle at 35% 30%, #FFFFFF 5%, #FF7849 40%, #E11D48 95%);
-      box-shadow: 0 20px 35px rgba(225, 29, 72, 0.35), inset -8px -8px 18px rgba(0, 0, 0, 0.25);
+      box-shadow: 0 16px 30px rgba(225, 29, 72, 0.35), inset -6px -6px 16px rgba(0, 0, 0, 0.25);
       position: absolute;
       display: flex;
       align-items: center;
@@ -166,8 +296,8 @@
     }
 
     .lotto-ball-inner {
-      width: 68px;
-      height: 68px;
+      width: 62px;
+      height: 62px;
       background: #FFFFFF;
       border-radius: 50%;
       box-shadow: inset 0 2px 5px rgba(0,0,0,0.25);
@@ -175,185 +305,594 @@
       align-items: center;
       justify-content: center;
       font-family: 'Space Grotesk', sans-serif;
-      font-size: 2.2rem;
+      font-size: 2rem;
       font-weight: 800;
       color: #0F172A;
     }
 
-    /* Keyframe Animations for Pop, Drop, and Roll */
     .ball-pop-and-roll {
-      animation: popAndRoll 1.4s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+      animation: popAndRoll 1.3s cubic-bezier(0.25, 1, 0.5, 1) forwards;
     }
 
     @keyframes popAndRoll {
-      0% {
-        transform: translateY(-260px) scale(0.2) rotate(-360deg);
-        opacity: 0;
-      }
-      40% {
-        transform: translateY(20px) scale(1.15) rotate(180deg);
-        opacity: 1;
-      }
-      65% {
-        transform: translateY(-18px) scale(0.95) rotate(320deg);
-      }
-      85% {
-        transform: translateY(6px) scale(1.02) rotate(350deg);
-      }
-      100% {
-        transform: translateY(0) scale(1) rotate(360deg);
-      }
+      0% { transform: translateY(-240px) scale(0.2) rotate(-360deg); opacity: 0; }
+      40% { transform: translateY(18px) scale(1.15) rotate(180deg); opacity: 1; }
+      65% { transform: translateY(-16px) scale(0.96) rotate(320deg); }
+      85% { transform: translateY(4px) scale(1.02) rotate(350deg); }
+      100% { transform: translateY(0) scale(1) rotate(360deg); }
     }
 
-    .song-announcement {
-      text-align: center;
-      min-height: 80px;
+    /* Hero Card & Audio Deck */
+    .hero-song-card {
+      background: var(--card-alt);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 1.1rem 1.25rem;
+      margin-bottom: 0.85rem;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.02);
     }
 
-    .song-title-hero {
-      font-size: 1.45rem;
+    .hero-pillar-tag {
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .hero-song-title {
+      font-size: 1.35rem;
       font-weight: 800;
       color: var(--text-main);
-      margin-bottom: 6px;
+      margin-bottom: 4px;
+      line-height: 1.25;
     }
 
-    .song-sub-hero {
-      font-size: 0.95rem;
+    .hero-song-sub {
+      font-size: 0.88rem;
       color: var(--text-muted);
       font-weight: 600;
     }
 
-    .btn {
-      width: 100%;
-      padding: 14px 24px;
+    /* ========================================================
+       SHARED AUDIO SCRUBBER & PLAYBACK CONTROLS
+    ======================================================== */
+    .scrubber-deck {
+      background: var(--card-bg);
+      border: 1.5px solid var(--border-color);
       border-radius: var(--radius-md);
-      font-family: inherit;
-      font-size: 1rem;
-      font-weight: 800;
-      cursor: pointer;
-      border: none;
+      padding: 0.85rem 1rem;
+      margin-bottom: 0.85rem;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .scrubber-deck:hover {
+      border-color: var(--border-focus);
+      box-shadow: var(--shadow-soft);
+    }
+    .scrubber-deck-glass {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      border: 1.5px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1.2rem 1.5rem;
+      box-shadow: var(--shadow-soft);
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      margin-top: 1.25rem;
+    }
+
+    .audio-header-row {
       display: flex;
       align-items: center;
-      justify-content: center;
+      justify-content: space-between;
       gap: 10px;
-      transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    .audio-status-text {
+      font-size: 0.86rem;
+      font-weight: 700;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-dim);
+      display: inline-block;
+      flex-shrink: 0;
+    }
+    .status-dot.playing {
+      background: var(--emerald);
+      box-shadow: 0 0 8px rgba(5, 150, 105, 0.8);
+      animation: pulseDot 1.2s infinite;
+    }
+    @keyframes pulseDot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.7; }
     }
 
-    .btn-draw {
-      background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+    /* Mini Spectrum Analyzer Equalizer */
+    .mini-eq {
+      display: flex;
+      align-items: flex-end;
+      gap: 2.5px;
+      height: 16px;
+      padding: 0 4px;
+    }
+    .eq-bar {
+      width: 3px;
+      background: var(--primary);
+      border-radius: 2px;
+      min-height: 3px;
+      height: 3px;
+      transition: height 0.08s ease;
+    }
+
+    /* Timeline & Scrubber Slider */
+    .scrubber-timeline-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+    }
+    .scrubber-time {
+      font-family: 'Space Grotesk', monospace;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      min-width: 44px;
+      text-align: center;
+    }
+    .scrubber-track-container {
+      position: relative;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      height: 24px;
+    }
+    .scrubber-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 7px;
+      background: #E2E8F0;
+      border-radius: 999px;
+      outline: none;
+      cursor: pointer;
+      position: relative;
+      z-index: 2;
+      transition: background 0.15s;
+    }
+    .scrubber-slider:hover {
+      background: #CBD5E1;
+    }
+    .scrubber-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--primary);
+      border: 2px solid #FFFFFF;
+      box-shadow: 0 2px 8px rgba(79, 70, 229, 0.45);
+      cursor: grab;
+      transition: transform 0.15s, background 0.15s;
+    }
+    .scrubber-slider::-webkit-slider-thumb:active {
+      cursor: grabbing;
+      transform: scale(1.3);
+      background: var(--coral);
+    }
+    .scrubber-slider::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--primary);
+      border: 2px solid #FFFFFF;
+      box-shadow: 0 2px 8px rgba(79, 70, 229, 0.45);
+      cursor: grab;
+    }
+
+    /* Emerald Start-Cue Marker Pin */
+    .cue-pin {
+      position: absolute;
+      top: 4px;
+      width: 4px;
+      height: 16px;
+      background: var(--emerald);
+      border-radius: 2px;
+      box-shadow: 0 0 8px rgba(5, 150, 105, 0.9);
+      pointer-events: none;
+      transform: translateX(-50%);
+      z-index: 3;
+      transition: left 0.2s ease;
+    }
+    .cue-pin-badge {
+      position: absolute;
+      top: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--emerald);
       color: #FFFFFF;
-      box-shadow: 0 8px 20px rgba(79, 70, 229, 0.35);
-      margin-top: 1rem;
-    }
-    .btn-draw:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 26px rgba(79, 70, 229, 0.45);
+      font-size: 0.65rem;
+      font-weight: 800;
+      padding: 1px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+      box-shadow: 0 2px 6px rgba(5, 150, 105, 0.35);
+      pointer-events: none;
     }
 
-    .btn-live-scene {
-      background: var(--emerald-light);
-      color: var(--emerald);
-      border: 1.5px solid #A7F3D0;
-      margin-top: 10px;
+    /* Buttons & Transport Controls */
+    .audio-controls-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
     }
-    .btn-live-scene:hover {
+    .audio-transport-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .audio-ctrl-btn {
+      background: var(--card-alt);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 6px 11px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+    }
+    .audio-ctrl-btn:hover {
+      background: #E2E8F0;
+      transform: translateY(-1px);
+    }
+    .audio-ctrl-btn.primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #FFFFFF;
+      box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+    }
+    .audio-ctrl-btn.primary:hover {
+      background: var(--primary-hover);
+    }
+    .audio-ctrl-btn.emerald {
+      background: var(--emerald-light);
+      border-color: var(--emerald-border);
+      color: var(--emerald-dark);
+    }
+    .audio-ctrl-btn.emerald:hover {
       background: #D1FAE5;
     }
+    .audio-ctrl-btn.danger {
+      color: var(--coral);
+    }
+    .audio-ctrl-btn.danger:hover {
+      background: var(--coral-light);
+      border-color: var(--coral-border);
+    }
 
-    /* 90-Board Calling Grid */
-    .board-header {
+    /* Volume Controls */
+    .audio-volume-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .volume-btn {
+      background: none;
+      border: none;
+      font-size: 1rem;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+    }
+    .volume-btn:hover {
+      background: #E2E8F0;
+    }
+    .volume-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 75px;
+      height: 5px;
+      background: #CBD5E1;
+      border-radius: 999px;
+      outline: none;
+      cursor: pointer;
+    }
+    .volume-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: var(--text-main);
+      cursor: pointer;
+    }
+    .volume-readout {
+      font-family: 'Space Grotesk', monospace;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      min-width: 32px;
+    }
+
+
+    /* Recent Chips Row */
+    .chips-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    .chip-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--card-alt);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .chip-pill.filled {
+      background: var(--primary-light);
+      border-color: var(--border-focus);
+      color: var(--primary-text);
+      font-weight: 800;
+    }
+
+    /* Master 10x9 Calling Matrix */
+    .matrix-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 1rem;
+      margin-bottom: 0.85rem;
     }
 
-    .grid-90 {
-      display: grid;
-      grid-template-columns: repeat(9, 1fr);
+    .pillar-legend {
+      display: flex;
       gap: 8px;
     }
-
-    .grid-ball {
-      aspect-ratio: 1.15;
-      background: #F8FAFC;
-      border: 1.5px solid var(--border-color);
+    .pillar-pill {
+      font-size: 0.75rem;
+      font-weight: 800;
+      padding: 3px 10px;
       border-radius: 12px;
+    }
+
+    .grid-10x9 {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      gap: 6px;
+    }
+
+    .grid-cell {
+      min-height: 68px;
+      background: #FFFFFF;
+      border: 1.5px solid var(--border-color);
+      border-radius: 10px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      font-size: 0.95rem;
+      justify-content: flex-start;
+      padding: 6px 4px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+      overflow: hidden;
+      text-align: center;
+    }
+    .grid-cell:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.12);
+    }
+
+    .cell-top-badge {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: var(--text-dim);
+      margin-bottom: 3px;
+      line-height: 1;
+    }
+
+    .cell-song-name {
+      font-size: 0.72rem;
       font-weight: 700;
-      color: #94A3B8;
-      transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+      line-height: 1.2;
+      color: var(--text-main);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      word-break: break-word;
     }
 
-    .grid-ball.called {
+    .grid-cell.called {
       background: #ECFDF5;
-      border-color: #34D399;
-      color: var(--emerald);
-      transform: scale(0.96);
+      border-color: #10B981;
+      transform: scale(0.97);
+    }
+    .grid-cell.called .cell-top-badge {
+      color: #059669;
+    }
+    .grid-cell.called .cell-song-name {
+      color: #065F46;
     }
 
-    .grid-ball.active-call {
+    .grid-cell.active-call {
       background: linear-gradient(135deg, #FFEDD5 0%, #FEE2E2 100%);
-      border-color: #F87171;
-      color: #DC2626;
-      transform: scale(1.12);
-      box-shadow: 0 8px 18px rgba(239, 68, 68, 0.25);
+      border-color: #F43F5E;
+      transform: scale(1.08);
+      box-shadow: 0 8px 20px rgba(244, 63, 94, 0.28);
       animation: pulseCell 1.2s infinite alternate;
       z-index: 5;
     }
+    .grid-cell.active-call .cell-top-badge {
+      color: #E11D48;
+    }
+    .grid-cell.active-call .cell-song-name {
+      color: #9F1239;
+      font-weight: 800;
+    }
 
     @keyframes pulseCell {
-      from { transform: scale(1.08); }
-      to { transform: scale(1.15); }
+      from { transform: scale(1.04); }
+      to { transform: scale(1.10); }
     }
 
     /* ========================================================
-       SCREEN 2: REACTIVE "BALL OF DOTS" SOUNDSPHERE SCENE
+       SCREEN 2: 3D AUDIO DOT-SPHERE ENHANCED
     ======================================================== */
     .soundsphere-wrapper {
       background: var(--card-bg);
       border: 1.5px solid var(--border-color);
       border-radius: var(--radius-lg);
-      padding: 2.5rem;
-      text-align: center;
+      padding: 1.75rem;
       box-shadow: var(--shadow-soft);
       position: relative;
-      overflow: hidden;
     }
 
+    .soundsphere-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
     .soundsphere-info {
-      position: absolute;
-      top: 2rem;
-      left: 2.5rem;
       text-align: left;
-      z-index: 10;
+    }
+    .soundsphere-metrics {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .metric-badge {
+      background: var(--card-alt);
+      border: 1px solid var(--border-color);
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.78rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .canvas-container {
+      position: relative;
+      width: 100%;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background: radial-gradient(circle at center, #FFFFFF 0%, #F1F5FD 70%, #E2E8F4 100%);
+      box-shadow: inset 0 2px 10px rgba(15, 23, 42, 0.04);
+      border: 1px solid var(--border-color);
     }
 
     #dotsCanvas {
       width: 100%;
-      height: 480px;
-      border-radius: var(--radius-md);
-      background: radial-gradient(circle at center, #FFFFFF 0%, #EEF2FF 100%);
+      height: 520px;
+      display: block;
+      cursor: grab;
+      user-select: none;
+      touch-action: none;
+    }
+    #dotsCanvas:active {
+      cursor: grabbing;
     }
 
-    .soundsphere-controls {
-      display: flex;
-      justify-content: center;
-      gap: 16px;
-      margin-top: 1.5rem;
+    /* On-Canvas Floating Toast HUD */
+    .sphere-toast {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(15, 23, 42, 0.88);
+      color: #FFFFFF;
+      padding: 8px 18px;
+      border-radius: 999px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.92rem;
+      font-weight: 800;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      opacity: 0;
+      transform: translateY(-8px) scale(0.95);
+      pointer-events: none;
+      transition: opacity 0.22s ease, transform 0.22s ease;
+      z-index: 20;
     }
+    .sphere-toast.show {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    /* On-Canvas Gesture HUD Legend */
+    .sphere-gesture-legend {
+      position: absolute;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border-color);
+      border-radius: 999px;
+      padding: 6px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+      pointer-events: none;
+      z-index: 10;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 95%;
+    }
+    .gesture-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      color: var(--text-main);
+    }
+
 
     /* ========================================================
-       SCREEN 3: LUCKY DRAW & SLOT ROLLER
+       SCREEN 3: LUCKY DRAW SLOT ROLLER
     ======================================================== */
     .raffle-grid {
       display: grid;
       grid-template-columns: 480px 1fr;
-      gap: 2rem;
+      gap: 1.5rem;
     }
 
     .slot-machine-display {
@@ -394,443 +933,2267 @@
     }
 
     /* ========================================================
-       SCREEN 4: CLAIM VERIFIER LIVE TICKET
-    ======================================================== */
-    .ticket-board-3x9 {
-      display: grid;
-      grid-template-columns: repeat(9, 1fr);
-      grid-template-rows: repeat(3, 85px);
-      gap: 8px;
-      background: #F1F5F9;
-      padding: 12px;
-      border-radius: var(--radius-md);
-      margin-top: 1.5rem;
+       SCREEN 4: CLAIM VERIFIER (DUAL 2-STRIP PLAYER SHEET)
+     ======================================================== */
+    .verifier-header-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 1.25rem;
     }
 
-    .t-cell {
+    .verifier-controls-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .input-field {
+      padding: 8px 14px;
+      border-radius: var(--radius-md);
+      border: 1.5px solid var(--border-color);
+      font-family: inherit;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .input-field:focus { border-color: var(--primary); }
+
+    .select-field {
+      padding: 8px 12px;
+      border-radius: var(--radius-md);
+      border: 1.5px solid var(--border-color);
+      font-family: inherit;
+      font-size: 0.88rem;
+      outline: none;
+      background: var(--card-bg);
+      cursor: pointer;
+    }
+    .select-field:focus { border-color: var(--primary); }
+
+    /* 4 Prominent Metric Badges */
+    .metric-grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 1.25rem;
+    }
+
+    .metric-card {
+      background: var(--card-bg);
+      border: 1.5px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      box-shadow: var(--shadow-sm);
+    }
+    .metric-tag {
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .metric-value {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 2px;
+    }
+    .metric-sub {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-dim);
+    }
+
+    /* Verdict Banner & Chips */
+    .verdict-banner {
+      background: var(--card-bg);
+      border: 1.5px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 12px 18px;
+      margin-bottom: 1.25rem;
+      transition: all 0.3s;
+    }
+    .verdict-banner.qualified {
+      background: var(--emerald-light);
+      border-color: var(--emerald-border);
+    }
+
+    .verdict-chips-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .v-chip {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: var(--card-alt);
+      color: var(--text-dim);
+    }
+    .v-chip.active {
+      background: var(--emerald-light);
+      border-color: var(--emerald-border);
+      color: var(--emerald-dark);
+      font-weight: 800;
+    }
+
+    /* 3x9 Ticket Strip Grid */
+    .strip-card {
+      background: var(--card-bg);
+      border: 1.5px solid var(--border-color);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      margin-bottom: 1rem;
+      box-shadow: var(--shadow-sm);
+    }
+    .strip-card.queried {
+      border-color: var(--primary);
+      box-shadow: 0 4px 16px rgba(79, 70, 229, 0.12);
+    }
+
+    .strip-header {
+      background: var(--card-alt);
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .strip-card.queried .strip-header {
+      background: var(--primary-light);
+    }
+
+    .strip-grid-3x9 {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      grid-template-rows: repeat(3, 80px);
+      gap: 6px;
+      padding: 10px;
+      background: #F8FAFC;
+    }
+
+    .cell-box {
       background: #FFFFFF;
-      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      font-size: 0.82rem;
-      font-weight: 700;
-      border: 1.5px solid var(--border-color);
-      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      text-align: center;
+      padding: 4px;
+      position: relative;
     }
 
-    .t-cell.empty {
-      background: #F8FAFC;
-      border: 1px dashed #CBD5E1;
-      opacity: 0.5;
+    .cell-box.blank {
+      background: #F1F5F9;
+      border-style: dashed;
+      opacity: 0.6;
     }
 
-    .t-cell.hit {
+    .cell-box.drawn {
       background: #ECFDF5;
-      border-color: #10B981;
-      color: #047857;
-      transform: scale(1.04);
-      box-shadow: 0 6px 14px rgba(16, 185, 129, 0.18);
+      border: 1.5px solid #059669;
+      color: #065F46;
+      box-shadow: 0 2px 8px rgba(5, 150, 105, 0.15);
     }
 
-    .t-badge {
-      font-size: 0.65rem;
-      background: #10B981;
-      color: #FFF;
-      padding: 2px 6px;
-      border-radius: 10px;
-      margin-top: 4px;
+    .cell-box.latest-drawn {
+      border: 2px solid var(--coral);
+      box-shadow: 0 4px 12px rgba(244, 63, 94, 0.25);
     }
+
+    .cell-num {
+      font-size: 0.95rem;
+      font-weight: 800;
+    }
+    .cell-title {
+      font-size: 0.74rem;
+      font-weight: 700;
+      line-height: 1.15;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 95%;
+    }
+    .cell-badge {
+      font-size: 0.62rem;
+      font-weight: 800;
+      padding: 1px 5px;
+      border-radius: 4px;
+      margin-top: 3px;
+    }
+    .cell-badge.drawn {
+      background: var(--emerald);
+      color: #FFF;
+    }
+    .cell-badge.latest {
+      background: var(--coral);
+      color: #FFF;
+    }
+    .cell-badge.pending {
+      color: var(--text-dim);
+    }
+
+    /* ========================================================
+       SCREEN 5: TICKET STUDIO
+    ======================================================== */
+    .studio-layout {
+      display: grid;
+      grid-template-columns: 460px 1fr;
+      gap: 1.5rem;
+    }
+
+    /* ========================================================
+       SCREEN 6: AUDIO CATALOG & START-TIME STUDIO
+    ======================================================== */
+    .catalog-layout {
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 1.5rem;
+    }
+
+    .catalog-table-wrap {
+      max-height: 620px;
+      overflow-y: auto;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+    }
+
+    .catalog-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.85rem;
+    }
+
+    .catalog-table th {
+      background: var(--card-alt);
+      padding: 10px 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      border-bottom: 2px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+
+    .catalog-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .catalog-table tr:hover {
+      background: var(--primary-light);
+      cursor: pointer;
+    }
+
+    .catalog-table tr.selected {
+      background: #E0E7FF;
+      font-weight: 700;
+    }
+
+    .status-pill {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 12px;
+      display: inline-block;
+    }
+    .status-pill.ready { background: #ECFDF5; color: #065F46; }
+    .status-pill.missing { background: #FFF1F2; color: #9F1239; }
   </style>
 </head>
 <body>
 
-  <!-- App Header -->
+  <!-- Top Navigation Pill Bar -->
   <header>
-    <div class="brand">
-      <span>♫</span>
-      <span>Musical Housie Stage</span>
+    <div class="brand-group">
+      <a href="/" class="brand">
+        <span>🎵</span>
+        <span>MUSICAL HOUSIE</span>
+      </a>
+      <span class="offline-tag">🟢 OFFLINE MASTER STUDIO</span>
     </div>
 
     <nav class="nav-tabs">
-      <button class="tab-btn active" onclick="navigate('stage')">🎯 Ball Roller & Stage</button>
-      <button class="tab-btn" onclick="navigate('sphere')">🔮 Audio Dot Sphere</button>
-      <button class="tab-btn" onclick="navigate('raffle')">🎰 Lucky Slot Draw</button>
-      <button class="tab-btn" onclick="navigate('verifier')">🔍 Claim Verifier</button>
+      <button class="tab-btn active" onclick="switchTab('stage')">🎯 Live Stage</button>
+      <button class="tab-btn" onclick="switchTab('sphere')">🔮 3D Dot-Sphere</button>
+      <button class="tab-btn" onclick="switchTab('raffle')">🎰 Lucky Draw</button>
+      <button class="tab-btn" onclick="switchTab('verifier')">🔍 Claim Verifier</button>
+      <button class="tab-btn" onclick="switchTab('studio')">🎫 Ticket Studio</button>
+      <button class="tab-btn" onclick="switchTab('catalog')">🎵 Audio Catalog</button>
     </nav>
+
+    <div class="header-actions">
+      <span id="globalSessionBadge" class="session-badge">Session: 0 / 90 Numbers Called</span>
+      <button class="btn-reset" onclick="confirmResetGame()">Reset Game</button>
+    </div>
   </header>
 
   <main>
 
     <!-- ========================================================
-         SCREEN 1: CALLER STAGE WITH POPPING & ROLLING BALL
+         SCREEN 1: LIVE CALLER STAGE
     ======================================================== -->
     <section id="screen-stage" class="screen active">
       <div class="stage-layout">
         
-        <!-- Animated Host Calling Chute -->
-        <div class="card">
-          <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem;">
-            LIVE BALL DROP CHUTE
-          </div>
+        <!-- Left Calling Chute & Audio Deck -->
+        <div>
+          <div class="card">
+            <div class="card-title">
+              <span>LIVE BALL DROP CHUTE</span>
+              <span id="stagePillarBadge" class="pillar-pill" style="background: var(--primary-light); color: var(--primary);">READY</span>
+            </div>
 
-          <div class="ball-chute-arena">
-            <!-- 3D Popping Ball -->
-            <div id="heroBall" class="lotto-ball" onclick="drawNextTrack()">
-              <div class="lotto-ball-inner">
-                <span id="heroBallNum">--</span>
+            <div class="ball-chute-arena">
+              <div id="heroBall" class="lotto-ball" onclick="drawNextSong()">
+                <div class="lotto-ball-inner">
+                  <span id="heroBallNum">--</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Hero Song Details -->
+            <div class="hero-song-card">
+              <div id="heroSongPillar" class="hero-pillar-tag">READY TO COMMENCE GAME</div>
+              <div id="heroSongTitle" class="hero-song-title">Press "Draw Next Track"</div>
+              <div id="heroSongSub" class="hero-song-sub">90 Evergreen Indian Songs • Full Decade Mapping</div>
+            </div>
+
+            <!-- Audio Scrubber & Playback Deck (Screen 1 Live Stage) -->
+            <div class="scrubber-deck">
+              <div class="audio-header-row">
+                <div class="audio-status-text" title="Active Song Audio Playback">
+                  <span id="stageStatusDot" class="status-dot"></span>
+                  <span id="audioDeckStatus">Audio: Ready</span>
+                </div>
+                <div class="mini-eq" id="stageMiniEq">
+                  <div class="eq-bar"></div>
+                  <div class="eq-bar"></div>
+                  <div class="eq-bar"></div>
+                  <div class="eq-bar"></div>
+                  <div class="eq-bar"></div>
+                  <div class="eq-bar"></div>
+                </div>
+              </div>
+
+              <!-- Draggable Seek Slider & Start-Cue Indicator -->
+              <div class="scrubber-timeline-row">
+                <span id="stageTimeCurrent" class="scrubber-time">00:00</span>
+                <div class="scrubber-track-container">
+                  <input type="range" id="stageSeekSlider" class="scrubber-slider" min="0" max="100" value="0" step="0.1"
+                         oninput="onScrubInput(this.value)" onchange="onScrubChange(this.value)" />
+                  <div id="stageCuePin" class="cue-pin" style="display: none;">
+                    <div id="stageCueBadge" class="cue-pin-badge">📍 Cue</div>
+                  </div>
+                </div>
+                <span id="stageTimeTotal" class="scrubber-time">00:00</span>
+              </div>
+
+              <!-- Transport & Volume Controls -->
+              <div class="audio-controls-row">
+                <div class="audio-transport-group">
+                  <button class="audio-ctrl-btn emerald" onclick="jumpToStartCue()" title="⏮ Jump to Configured Start Time">
+                    <span>⏮</span> Cue
+                  </button>
+                  <button class="audio-ctrl-btn" onclick="seekAudioDelta(-5)" title="⏪ Rewind 5s">
+                    <span>⏪</span> -5s
+                  </button>
+                  <button id="stagePlayPauseBtn" class="audio-ctrl-btn primary" onclick="togglePauseAudio()" title="Play / Pause Audio">
+                    <span id="stagePlayPauseIcon">⏯</span> <span id="stagePlayPauseText">Play</span>
+                  </button>
+                  <button class="audio-ctrl-btn" onclick="seekAudioDelta(5)" title="⏩ Skip Forward 5s">
+                    <span>⏩</span> +5s
+                  </button>
+                  <button class="audio-ctrl-btn" onclick="replayAudio()" title="🔁 Replay from Beginning">
+                    <span>🔁</span>
+                  </button>
+                  <button class="audio-ctrl-btn danger" onclick="stopAudio()" title="⏹ Stop Playback">
+                    <span>⏹</span>
+                  </button>
+                </div>
+
+                <div class="audio-volume-group">
+                  <button id="stageMuteBtn" class="volume-btn" onclick="toggleMuteAudio()" title="Mute / Unmute">🔊</button>
+                  <input type="range" id="stageVolumeSlider" class="volume-slider" min="0" max="1" step="0.01" value="1"
+                         oninput="setAudioVolume(this.value)" title="Volume Slider" />
+                  <span id="stageVolumeReadout" class="volume-readout">100%</span>
+                </div>
+              </div>
+
+              <audio id="mainAudioPlayer" preload="auto" style="display: none;"></audio>
+            </div>
+
+            <button class="btn btn-primary" style="width: 100%; padding: 14px; font-size: 1.05rem;" onclick="drawNextSong()">
+              🎲 DRAW NEXT TRACK (SPACE)
+            </button>
+
+            <!-- Last 5 Chips -->
+            <div style="margin-top: 1rem;">
+              <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Last 5 Drawn Songs:</span>
+              <div id="recentChipsRow" class="chips-row">
+                <div class="chip-pill">—</div>
+                <div class="chip-pill">—</div>
+                <div class="chip-pill">—</div>
+                <div class="chip-pill">—</div>
+                <div class="chip-pill">—</div>
               </div>
             </div>
           </div>
-
-          <div class="song-announcement">
-            <div id="heroSongTitle" class="song-title-hero">Ready to Drop Ball</div>
-            <div id="heroSongSub" class="song-sub-hero">Click button below to trigger ball roll and song!</div>
-          </div>
-
-          <button class="btn btn-draw" onclick="drawNextTrack()">
-            🎲 ROLL & DROP NEXT NUMBER
-          </button>
-          
-          <button class="btn btn-live-scene" onclick="navigate('sphere')">
-            🔮 View Live Audio Dot-Sphere Screen →
-          </button>
         </div>
 
-        <!-- Master 90 Grid -->
+        <!-- Right 10x9 Calling Board -->
         <div class="card">
-          <div class="board-header">
-            <h3 style="font-size: 1.2rem; font-weight: 800;">Master 1–90 Live Matrix</h3>
-            <span id="callCounter" style="font-size: 0.9rem; font-weight: 700; color: var(--primary);">Played: 0 / 90</span>
+          <div class="matrix-header">
+            <h3 style="font-size: 1.15rem; font-weight: 800;">MASTER CALLING BOARD (1–90)</h3>
+            <div class="pillar-legend">
+              <span class="pillar-pill" style="background: #EEF2FF; color: #4F46E5;">Satyam (1–29)</span>
+              <span class="pillar-pill" style="background: #ECFDF5; color: #059669;">Shivam (30–59)</span>
+              <span class="pillar-pill" style="background: #FEF3C7; color: #D97706;">Sundaram (60–90)</span>
+            </div>
           </div>
-          <div id="boardGrid" class="grid-90"></div>
+
+          <div id="callingGrid10x9" class="grid-10x9"></div>
         </div>
 
       </div>
     </section>
 
     <!-- ========================================================
-         SCREEN 2: "BALL OF DOTS" DYNAMIC PARTICLE AUDIO SPHERE
+         SCREEN 2: 3D AUDIO DOT-SPHERE
     ======================================================== -->
     <section id="screen-sphere" class="screen">
       <div class="soundsphere-wrapper">
-        <div class="soundsphere-info">
-          <h2 id="sphereSongTitle" style="font-size: 1.6rem; font-weight: 800; color: var(--primary);">Now Playing Track</h2>
-          <p id="sphereSongSub" style="color: var(--text-muted); font-size: 0.95rem;">Interactive 3D particle audio sphere reacting to sound</p>
+        <div class="soundsphere-header">
+          <div class="soundsphere-info">
+            <div id="spherePillar" class="hero-pillar-tag">FIBONACCI PARTICLE LATTICE • 3D FFT RESONATOR</div>
+            <h2 id="sphereSongTitle" style="font-size: 1.65rem; font-weight: 800; color: var(--primary); margin: 4px 0;">
+              Interactive Sound Sphere
+            </h2>
+            <p id="sphereSongSub" style="color: var(--text-muted); font-size: 0.95rem;">
+              320-point 3D particle sphere reacting to real-time FFT bass, mid & treble harmonics
+            </p>
+          </div>
+          
+          <div class="soundsphere-metrics">
+            <div class="metric-badge">
+              <span id="sphereBpmDot" class="status-dot"></span>
+              <span id="sphereBeatStatus">Beat: Active Resonance</span>
+            </div>
+            <div class="metric-badge">
+              <span id="sphereFftSourceBadge">FFT: AnalyserNode (256)</span>
+            </div>
+            <button class="btn btn-outline" style="padding: 6px 14px; font-size: 0.82rem;" onclick="switchTab('stage')">
+              ← Calling Board
+            </button>
+          </div>
         </div>
 
-        <!-- 3D Interactive Canvas -->
-        <canvas id="dotsCanvas"></canvas>
+        <!-- 3D Canvas with Gesture Support, Floating Toast HUD & Legend -->
+        <div class="canvas-container" id="sphereCanvasContainer">
+          <div id="sphereToast" class="sphere-toast">⏩ +5.0s</div>
 
-        <div class="soundsphere-controls">
-          <button class="btn btn-draw" style="width: auto; padding: 12px 30px;" onclick="navigate('stage')">
-            ← Back to Calling Board
-          </button>
-          <button class="btn btn-live-scene" style="width: auto; padding: 12px 30px;" onclick="toggleAudioSpeed()">
-            ⚡ Modulate Beat Energy
-          </button>
+          <canvas id="dotsCanvas"></canvas>
+
+          <div class="sphere-gesture-legend">
+            <span class="gesture-pill">🖱️ Drag: Orbit</span>
+            <span>•</span>
+            <span class="gesture-pill">🌀 Scroll: Zoom (0.6x–2.4x)</span>
+            <span>•</span>
+            <span class="gesture-pill">👆 2x Click: Play/Burst</span>
+            <span>•</span>
+            <span class="gesture-pill">↔️ Shift+Drag: Seek ±5s</span>
+            <span>•</span>
+            <span class="gesture-pill">⌨️ Space: Play/Pause</span>
+            <span>•</span>
+            <span class="gesture-pill">⌨️ Arrows: Seek/Vol</span>
+            <span>•</span>
+            <span class="gesture-pill">⌨️ R: Start Cue</span>
+          </div>
         </div>
+
+        <!-- Glassmorphic Playback & Scrubber Deck (Screen 2 3D Dot-Sphere) -->
+        <div class="scrubber-deck-glass">
+          <div class="audio-header-row">
+            <div class="audio-status-text">
+              <span id="sphereStatusDot" class="status-dot"></span>
+              <span id="sphereDeckStatus" style="font-size: 0.92rem;">Audio: Ready</span>
+            </div>
+            <div class="mini-eq" id="sphereMiniEq">
+              <div class="eq-bar"></div>
+              <div class="eq-bar"></div>
+              <div class="eq-bar"></div>
+              <div class="eq-bar"></div>
+              <div class="eq-bar"></div>
+              <div class="eq-bar"></div>
+              <div class="eq-bar"></div>
+              <div class="eq-bar"></div>
+            </div>
+          </div>
+
+          <!-- Draggable Seek Slider & Start-Cue Indicator -->
+          <div class="scrubber-timeline-row">
+            <span id="sphereTimeCurrent" class="scrubber-time">00:00</span>
+            <div class="scrubber-track-container">
+              <input type="range" id="sphereSeekSlider" class="scrubber-slider" min="0" max="100" value="0" step="0.1"
+                     oninput="onScrubInput(this.value)" onchange="onScrubChange(this.value)" />
+              <div id="sphereCuePin" class="cue-pin" style="display: none;">
+                <div id="sphereCueBadge" class="cue-pin-badge">📍 Cue</div>
+              </div>
+            </div>
+            <span id="sphereTimeTotal" class="scrubber-time">00:00</span>
+          </div>
+
+          <!-- Transport & Volume Controls Row -->
+          <div class="audio-controls-row">
+            <div class="audio-transport-group">
+              <button class="audio-ctrl-btn emerald" onclick="jumpToStartCue()" title="⏮ Jump to Configured Start Cue">
+                <span>⏮</span> Start Cue
+              </button>
+              <button class="audio-ctrl-btn" onclick="seekAudioDelta(-5)" title="⏪ Seek Backward -5s">
+                <span>⏪</span> -5s
+              </button>
+              <button id="spherePlayPauseBtn" class="audio-ctrl-btn primary" onclick="togglePauseAudio()" style="padding: 7px 16px;" title="Play / Pause">
+                <span id="spherePlayPauseIcon">⏯</span> <span id="spherePlayPauseText">Play</span>
+              </button>
+              <button class="audio-ctrl-btn" onclick="seekAudioDelta(5)" title="⏩ Seek Forward +5s">
+                <span>⏩</span> +5s
+              </button>
+              <button class="audio-ctrl-btn" onclick="replayAudio()" title="🔁 Replay Track">
+                <span>🔁</span> Replay
+              </button>
+              <button class="audio-ctrl-btn danger" onclick="stopAudio()" title="⏹ Stop Audio">
+                <span>⏹</span> Stop
+              </button>
+              <button class="audio-ctrl-btn" onclick="triggerSphereShockwave()" title="⚡ Trigger Manual Energy Pulse">
+                <span>⚡</span> Pulse
+              </button>
+            </div>
+
+            <div class="audio-volume-group">
+              <button id="sphereMuteBtn" class="volume-btn" onclick="toggleMuteAudio()" title="Mute / Unmute">🔊</button>
+              <input type="range" id="sphereVolumeSlider" class="volume-slider" min="0" max="1" step="0.01" value="1"
+                     oninput="setAudioVolume(this.value)" title="Volume Slider" />
+              <span id="sphereVolumeReadout" class="volume-readout">100%</span>
+            </div>
+          </div>
+        </div>
+
       </div>
     </section>
 
     <!-- ========================================================
-         SCREEN 3: LUCKY DRAW WITH SPINNING DRUM
+         SCREEN 3: LUCKY DRAW SLOT ROLLER
     ======================================================== -->
     <section id="screen-raffle" class="screen">
       <div class="raffle-grid">
         <div class="card" style="text-align: center;">
-          <h3 style="font-size: 1.25rem; font-weight: 800;">Bonus Lucky Draw</h3>
-          <p style="color: var(--text-muted); font-size: 0.88rem; margin-top: 4px;">Pulls instant winners from called tracks</p>
+          <h3 style="font-size: 1.25rem; font-weight: 800;">Mechanical Slot Lucky Draw</h3>
+          <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">Pulls instant winners from called tracks or custom range</p>
 
           <div class="slot-machine-display">
             <div id="drum1" class="slot-digit-drum">0</div>
             <div id="drum2" class="slot-digit-drum">0</div>
           </div>
 
-          <div id="raffleSongText" style="font-weight: 700; color: var(--primary); margin-bottom: 1.5rem; min-height: 24px;">
+          <div id="raffleResultText" style="font-weight: 800; font-size: 1.15rem; color: var(--primary); margin-bottom: 1.25rem; min-height: 28px;">
             Ready to Spin
           </div>
 
-          <button class="btn btn-draw" style="background: linear-gradient(135deg, #059669 0%, #10B981 100%);" onclick="spinLuckyDraw()">
+          <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 1.5rem;">
+            <select id="rafflePoolType" class="select-field">
+              <option value="Active Called Songs">Pool: Active Called Songs</option>
+              <option value="All Numbers (1-90)">Pool: All Numbers (1–90)</option>
+            </select>
+            <input type="text" id="rafflePrizeName" class="input-field" placeholder="Prize Name" value="Early Bird Hamper" style="width: 180px;" />
+          </div>
+
+          <button class="btn btn-primary" style="padding: 12px 30px; font-size: 1rem;" onclick="spinSlotMachine()">
             🎰 SPIN LUCKY DRUM
           </button>
         </div>
 
         <div class="card">
-          <h4 style="margin-bottom: 1rem;">Winners Announcement Stream</h4>
-          <div id="winnerStream" style="display: flex; flex-direction: column; gap: 10px;">
-            <div style="color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 2rem;">No draws executed yet.</div>
+          <div class="card-title">
+            <span>Lucky Draw Audit Log</span>
+            <button class="btn-reset" style="padding: 2px 10px; font-size: 0.75rem;" onclick="clearRaffleAudit()">Clear History</button>
+          </div>
+          <div id="raffleAuditStream" style="display: flex; flex-direction: column; gap: 8px; max-height: 400px; overflow-y: auto;">
+            <div style="color: var(--text-dim); text-align: center; padding: 2rem;">No lucky draw winners yet.</div>
           </div>
         </div>
       </div>
     </section>
 
     <!-- ========================================================
-         SCREEN 4: CLAIM VERIFIER LIVE 3x9 TICKET
+         SCREEN 4: CLAIM VERIFIER (DUAL 2-STRIP PLAYER SHEET)
     ======================================================== -->
     <section id="screen-verifier" class="screen">
       <div class="card">
-        <h3 style="font-size: 1.25rem; font-weight: 800;">Instant Ticket Claim Inspector</h3>
-        <p style="color: var(--text-muted); font-size: 0.88rem;">Real-time automated matching across the player's 3×9 grid</p>
-
-        <div style="display: flex; gap: 12px; margin-top: 1.25rem;">
-          <input type="text" id="ticketSearch" value="042" placeholder="Ticket ID" style="padding: 12px 18px; border-radius: 12px; border: 1.5px solid var(--border-color); font-family: inherit; font-size: 0.95rem; width: 220px;" />
-          <button class="btn btn-draw" style="width: auto; padding: 0 24px;" onclick="renderTicket()">
-            🔍 Cross-Check Ticket
-          </button>
+        
+        <!-- Header Controls Bar -->
+        <div class="verifier-header-bar">
+          <div>
+            <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--primary);">🔍 CLAIM VERIFIER • 2-STRIP PLAYER SHEET INSPECTOR</h3>
+            <p style="color: var(--text-muted); font-size: 0.85rem;">Type any Ticket ID (Odd/Top or Even/Bottom) to pull up that player's entire 2-strip sheet</p>
+          </div>
+          <span id="verifierBatchBadge" class="status-pill ready" style="font-size: 0.82rem; padding: 6px 14px;">
+            Scanning archives...
+          </span>
         </div>
 
-        <div id="claimVerdict" style="margin-top: 1.25rem; padding: 14px 20px; border-radius: 12px; background: #ECFDF5; border: 1.5px solid #6EE7B7; color: #065F46; font-weight: 700; display: none;">
-          ✔ Claim Status: 4/5 marked in Top Line!
+        <!-- Controls Row -->
+        <div class="verifier-controls-row" style="margin-bottom: 1.25rem;">
+          <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted);">Batch Registry:</label>
+          <select id="verifierBatchSelect" class="select-field" style="min-width: 240px;" onchange="onBatchSelected()">
+            <option value="">Loading batches...</option>
+          </select>
+          <button class="btn btn-outline" style="padding: 7px 14px;" onclick="loadArchiveBatches()">🔄 Refresh</button>
+
+          <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+            <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted);">Ticket / Sheet #:</label>
+            <input type="text" id="verifierTicketInput" class="input-field" placeholder="e.g. 42 or 041" style="width: 140px; font-weight: 800;" onkeydown="if(event.key==='Enter') verifyTicketSearch()" />
+            <button class="btn btn-primary" style="padding: 7px 18px;" onclick="verifyTicketSearch()">🔍 Inspect</button>
+            <button class="btn btn-outline" style="padding: 7px 12px;" onclick="stepSheet(-1)">◀ Prev</button>
+            <button class="btn btn-outline" style="padding: 7px 12px;" onclick="stepSheet(1)">Next ▶</button>
+            <label style="font-size: 0.82rem; font-weight: 700; margin-left: 8px; color: var(--primary); cursor: pointer;">
+              <input type="checkbox" id="chkDualView" checked onchange="renderActiveSheet()" /> Show Both Strips
+            </label>
+          </div>
         </div>
 
-        <div id="ticketGrid" class="ticket-board-3x9"></div>
+        <!-- 4 Prominent Live Metric Cards -->
+        <div class="metric-grid-4">
+          <div class="metric-card">
+            <div class="metric-tag">🎵 GAME SONGS DRAWN</div>
+            <div id="metricGameDrawn" class="metric-value" style="color: var(--primary);">0 / 90 Drawn</div>
+            <div id="metricGameRemaining" class="metric-sub">90 Songs Remaining</div>
+          </div>
+          <div class="metric-card">
+            <div id="metricStrip1Tag" class="metric-tag">🎫 STRIP 1 (#001)</div>
+            <div id="metricStrip1Hits" class="metric-value" style="color: var(--emerald);">0 / 15 Hits</div>
+            <div id="metricStrip1Status" class="metric-sub">Pending</div>
+          </div>
+          <div class="metric-card">
+            <div id="metricStrip2Tag" class="metric-tag">🎫 STRIP 2 (#002)</div>
+            <div id="metricStrip2Hits" class="metric-value" style="color: var(--emerald);">0 / 15 Hits</div>
+            <div id="metricStrip2Status" class="metric-sub">Pending</div>
+          </div>
+          <div class="metric-card">
+            <div id="metricSheetTag" class="metric-tag">🏆 SHEET #1 COMBINED</div>
+            <div id="metricSheetHits" class="metric-value" style="color: var(--amber);">0 / 30 Hits</div>
+            <div id="metricSheetStatus" class="metric-sub">0.0% Match</div>
+          </div>
+        </div>
+
+        <!-- Real-Time Automated Claim Verdict Banner -->
+        <div id="verdictBanner" class="verdict-banner">
+          <div id="verdictTitle" style="font-size: 1.05rem; font-weight: 800; color: var(--text-main);">WAITING FOR TICKET INSPECTION</div>
+          <div id="verdictSub" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 2px;">Enter any ticket number above to inspect patterns.</div>
+          <div class="verdict-chips-row">
+            <span id="chip_s1_e5" class="v-chip">S1 Early 5: —</span>
+            <span id="chip_s1_l1" class="v-chip">S1 Top Line: —</span>
+            <span id="chip_s1_l2" class="v-chip">S1 Mid Line: —</span>
+            <span id="chip_s1_l3" class="v-chip">S1 Bot Line: —</span>
+            <span id="chip_s1_crn" class="v-chip">S1 Corners: —</span>
+            <span id="chip_s1_fh" class="v-chip">S1 Full House: —</span>
+            <span id="chip_s2_e5" class="v-chip">S2 Early 5: —</span>
+            <span id="chip_s2_l1" class="v-chip">S2 Top Line: —</span>
+            <span id="chip_s2_l2" class="v-chip">S2 Mid Line: —</span>
+            <span id="chip_s2_l3" class="v-chip">S2 Bot Line: —</span>
+            <span id="chip_s2_crn" class="v-chip">S2 Corners: —</span>
+            <span id="chip_s2_fh" class="v-chip">S2 Full House: —</span>
+            <span id="chip_sheet_house" class="v-chip">Sheet House (30/30): —</span>
+          </div>
+        </div>
+
+        <!-- Rendered Strips Container -->
+        <div id="verifierStripsContainer"></div>
+
+      </div>
+    </section>
+
+    <!-- ========================================================
+         SCREEN 5: TICKET STUDIO
+    ======================================================== -->
+    <section id="screen-studio" class="screen">
+      <div class="studio-layout">
+        <div class="card">
+          <div class="card-title">
+            <span>🎫 Ticket Batch Studio</span>
+            <span class="status-pill ready">🛡️ Non-Destructive Guard</span>
+          </div>
+
+          <form id="genTicketForm" onsubmit="generateTickets(event)">
+            <div style="margin-bottom: 1rem;">
+              <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted);">Batch / Event Name:</label>
+              <input type="text" id="genBatchName" class="input-field" style="width: 100%; margin-top: 4px;" value="Musical_Housie_Gala" required />
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+              <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted);">Background Template:</label>
+              <select id="genTemplateSelect" class="select-field" style="width: 100%; margin-top: 4px;">
+                <option value="None">None (Clean Minimalist)</option>
+                <option value="Garba_Night">Garba Night Festive Template</option>
+                <option value="Festive">Festive Musical Housie</option>
+              </select>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.25rem;">
+              <div>
+                <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted);">Sheets Count:</label>
+                <input type="number" id="genSheetsCount" class="input-field" style="width: 100%; margin-top: 4px;" value="50" min="1" max="500" />
+              </div>
+              <div>
+                <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted);">Format Mode:</label>
+                <select id="genFormatMode" class="select-field" style="width: 100%; margin-top: 4px;">
+                  <option value="2-strip">2-Strip Landscape (A4)</option>
+                  <option value="1-strip">1-Strip Landscape</option>
+                </select>
+              </div>
+            </div>
+
+            <button type="submit" id="btnGenSubmit" class="btn btn-primary" style="width: 100%; padding: 14px; font-size: 1rem;">
+              🚀 GENERATE & ARCHIVE HOUSIE TICKETS
+            </button>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <span>Generated Printable Sheets Archive</span>
+            <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem;" onclick="loadArchiveBatches()">Refresh</button>
+          </div>
+          <div id="archivesTableList" style="max-height: 480px; overflow-y: auto;">
+            <div style="color: var(--text-dim); text-align: center; padding: 2rem;">Loading archives...</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         SCREEN 6: AUDIO CATALOG & START-TIME STUDIO
+    ======================================================== -->
+    <section id="screen-catalog" class="screen">
+      <!-- Top Controls Row -->
+      <div class="card" style="margin-bottom: 1rem; padding: 1rem 1.5rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted);">Custom Songs Folder:</label>
+            <input type="text" id="catFolderPath" class="input-field" style="width: 320px;" placeholder="e.g. E:\Songs or songs/" />
+            <button class="btn btn-primary" style="padding: 7px 14px;" onclick="saveAndRescanFolder()">📂 Scan Directory</button>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <input type="text" id="catSearchInput" class="input-field" placeholder="🔍 Search track or artist..." style="width: 220px;" oninput="filterCatalogTable()" />
+            <button class="btn btn-outline" style="padding: 7px 12px;" onclick="setCatFilter('all')">All (90)</button>
+            <button class="btn btn-outline" style="padding: 7px 12px;" onclick="setCatFilter('Satyam')">Satyam</button>
+            <button class="btn btn-outline" style="padding: 7px 12px;" onclick="setCatFilter('Shivam')">Shivam</button>
+            <button class="btn btn-outline" style="padding: 7px 12px;" onclick="setCatFilter('Sundaram')">Sundaram</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="catalog-layout">
+        <!-- 90 Songs Table -->
+        <div class="card" style="padding: 0;">
+          <div class="catalog-table-wrap">
+            <table class="catalog-table">
+              <thead>
+                <tr>
+                  <th style="width: 60px;">#</th>
+                  <th style="width: 140px;">Pillar</th>
+                  <th>Song Title</th>
+                  <th style="width: 110px;">Start Cue</th>
+                  <th style="width: 100px;">Duration</th>
+                  <th style="width: 110px;">File Status</th>
+                  <th style="width: 100px;">Game Status</th>
+                </tr>
+              </thead>
+              <tbody id="catalogTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Right Preview & Start-Time Calibration Deck -->
+        <div class="card">
+          <div class="card-title">
+            <span>Audio Preview & Start Cue</span>
+            <span id="deckStatusPill" class="status-pill ready">Ready</span>
+          </div>
+
+          <div style="text-align: center; padding: 1.5rem 0;">
+            <div id="deckTrackNum" style="font-size: 2.2rem; font-weight: 800; color: var(--primary);">#01</div>
+            <div id="deckTrackPillar" class="hero-pillar-tag" style="margin-top: 4px;">SATYAM (COL 1)</div>
+            <div id="deckTrackTitle" style="font-size: 1.25rem; font-weight: 800; color: var(--text-main); margin-top: 6px;">Khaike Paan Banaras Wala</div>
+            <div id="deckTrackSub" style="font-size: 0.85rem; color: var(--text-muted);">Bollywood Evergreen Hit</div>
+          </div>
+
+          <!-- Cue Edit Form -->
+          <div style="background: var(--card-alt); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.25rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+              <div>
+                <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted);">Start Time (MM:SS or sec):</label>
+                <input type="text" id="deckStartTime" class="input-field" style="width: 100%; margin-top: 4px;" value="00:00" />
+              </div>
+              <div>
+                <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted);">Duration (seconds):</label>
+                <input type="number" id="deckDuration" class="input-field" style="width: 100%; margin-top: 4px;" value="0" min="0" />
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-primary" style="flex: 1; padding: 8px;" onclick="saveSelectedCue()">💾 Save Start Cue</button>
+              <button class="btn btn-emerald" style="flex: 1; padding: 8px;" onclick="testSelectedStartCue()">▶️ Test from Start Cue</button>
+            </div>
+          </div>
+
+          <audio id="catalogAudioPlayer" controls style="width: 100%; margin-top: 6px;"></audio>
+        </div>
       </div>
     </section>
 
   </main>
 
+  <!-- ========================================================
+       APPLICATION JAVASCRIPT
+  ======================================================== -->
   <script>
-    /* ========================================================
-       MASTER 90 SONG MOCK BANK
-    ======================================================== */
-    const TRACK_BANK = {
-      1: "Chunari Chunari", 4: "Ek Do Teen", 11: "Kala Chashma", 18: "Kajra Re",
-      22: "Mane Tera", 28: "Solid Body", 31: "Chogada", 42: "Deva Deva",
-      45: "Tu Cheez Badi", 50: "Zingaat", 62: "Proper Patola", 75: "Lutt Putt Gaya",
-      82: "Joru Ka Ghulam", 90: "Balam Pichkari"
+    // State management
+    let gameState = {
+      calledNumbers: [],
+      lastCall: null,
+      songsDict: {},
+      audioConfig: {},
+      archives: []
     };
 
-    let calledTracks = [];
-    let activeTrack = null;
+    let activeTabId = 'stage';
+    let selectedSongId = 1;
+    let catalogSongs = [];
+    let activeCatFilter = 'all';
 
-    /* Build 90 Grid */
-    const gridEl = document.getElementById('boardGrid');
-    for (let i = 1; i <= 90; i++) {
-      const cell = document.createElement('div');
-      cell.className = 'grid-ball';
-      cell.id = `cell-${i}`;
-      cell.innerText = i;
-      gridEl.appendChild(cell);
-    }
+    // Verifier state
+    let verifierCurrentSheet = 1;
+    let verifierCurrentBatch = '';
+    let verifierBatchData = null;
 
-    /* Screen Tab Switcher */
-    function navigate(screenId) {
+    // -------------------------------------------------------------
+    // NAVIGATION & TAB SWITCHING
+    // -------------------------------------------------------------
+    function switchTab(tabId) {
+      activeTabId = tabId;
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
       document.querySelectorAll('.screen').forEach(scr => scr.classList.remove('active'));
-      
-      event?.currentTarget?.classList.add('active');
-      document.getElementById(`screen-${screenId}`).classList.add('active');
 
-      if (screenId === 'sphere') {
-        resizeCanvas();
+      const targetBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick')?.includes(tabId));
+      if (targetBtn) targetBtn.classList.add('active');
+
+      const targetScreen = document.getElementById(`screen-${tabId}`);
+      if (targetScreen) targetScreen.classList.add('active');
+
+      if (tabId === 'sphere') {
+        resizeDotsCanvas();
+      } else if (tabId === 'verifier') {
+        loadArchiveBatches();
+      } else if (tabId === 'catalog') {
+        loadCatalogData();
       }
     }
 
-    /* ========================================================
-       POPPING & ROLLING BALL CALLER ENGINE
-    ======================================================== */
-    function drawNextTrack() {
-      const remaining = Array.from({length: 90}, (_, i) => i + 1).filter(n => !calledTracks.includes(n));
-      if (!remaining.length) return alert("All 90 numbers have been called!");
+    // Keyboard spacebar shortcut
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && activeTabId === 'stage' && e.target.tagName !== 'INPUT') {
+        e.preventDefault();
+        drawNextSong();
+      }
+    });
 
-      const nextNum = remaining[Math.floor(Math.random() * remaining.length)];
-      
-      // Update Previous Grid cell
-      if (activeTrack) {
-        const prev = document.getElementById(`cell-${activeTrack}`);
-        prev.classList.remove('active-call');
-        prev.classList.add('called');
+    // -------------------------------------------------------------
+    // INITIALIZATION & STATE SYNC
+    // -------------------------------------------------------------
+    async function initApp() {
+      await loadSongsDictionary();
+      await fetchGameState();
+      await loadArchiveBatches();
+      initDotsSphere();
+    }
+
+    async function loadSongsDictionary() {
+      try {
+        const res = await fetch('/api/songs');
+        const data = await res.json();
+        gameState.songsDict = data;
+        build10x9Grid();
+      } catch (err) {
+        console.error("Error loading songs dictionary:", err);
+      }
+    }
+
+    async function fetchGameState() {
+      try {
+        const res = await fetch('/api/state');
+        const data = await res.json();
+        gameState.calledNumbers = data.called_numbers || [];
+        gameState.lastCall = data.last_call || null;
+        if (data.songs) {
+          gameState.songsDict = data.songs;
+        }
+
+        updateGlobalBadges();
+        updateBoardMatrix();
+
+        if (gameState.lastCall) {
+          updateHeroDisplay(gameState.lastCall.song_id, gameState.lastCall.song);
+        }
+      } catch (err) {
+        console.error("Error fetching game state:", err);
+      }
+    }
+
+    function updateGlobalBadges() {
+      const count = gameState.calledNumbers.length;
+      document.getElementById('globalSessionBadge').innerText = `Session: ${count} / 90 Numbers Called`;
+      document.getElementById('metricGameDrawn').innerText = `${count} / 90 Drawn`;
+      document.getElementById('metricGameRemaining').innerText = `${90 - count} Songs Remaining`;
+    }
+
+    // -------------------------------------------------------------
+    // SCREEN 1: 10x9 CALLING BOARD & DRAW ACTION
+    // -------------------------------------------------------------
+    function build10x9Grid() {
+      const grid = document.getElementById('callingGrid10x9');
+      grid.innerHTML = '';
+      for (let i = 1; i <= 90; i++) {
+        const song = gameState.songsDict[i] || {};
+        const title = song.title || `Song #${i}`;
+        const cell = document.createElement('div');
+        cell.className = 'grid-cell';
+        cell.id = `cell-${i}`;
+        cell.onclick = () => manualCallSong(i);
+        cell.innerHTML = `
+          <div class="cell-top-badge">#${String(i).padStart(2, '0')}</div>
+          <div class="cell-song-name" title="${title}">${title}</div>
+        `;
+        grid.appendChild(cell);
+      }
+    }
+
+    function updateBoardMatrix() {
+      const calledSet = new Set(gameState.calledNumbers);
+      const lastId = gameState.lastCall?.song_id;
+
+      for (let i = 1; i <= 90; i++) {
+        const cell = document.getElementById(`cell-${i}`);
+        if (!cell) continue;
+
+        cell.className = 'grid-cell';
+        if (calledSet.has(i)) {
+          cell.classList.add('called');
+        }
+        if (i === lastId) {
+          cell.classList.add('active-call');
+        }
       }
 
-      activeTrack = nextNum;
-      calledTracks.push(nextNum);
+      // Update recent 5 chips with real song names
+      const recent = gameState.calledNumbers.slice(-5).reverse();
+      const chipsContainer = document.getElementById('recentChipsRow');
+      chipsContainer.innerHTML = '';
 
-      // Trigger Pop & Roll Animation
-      const ball = document.getElementById('heroBall');
-      ball.classList.remove('ball-pop-and-roll');
-      void ball.offsetWidth; // Trigger reflow
-      ball.classList.add('ball-pop-and-roll');
-
-      document.getElementById('heroBallNum').innerText = String(nextNum).padStart(2, '0');
-      
-      const songName = TRACK_BANK[nextNum] || `Bollywood Track #${nextNum}`;
-      document.getElementById('heroSongTitle').innerText = songName;
-      document.getElementById('heroSongSub').innerText = `Track #${nextNum} • Now playing synced audio clip`;
-
-      // Update Sphere Header
-      document.getElementById('sphereSongTitle').innerText = songName;
-      document.getElementById('sphereSongSub').innerText = `Track #${nextNum} audio frequencies visualizing in real-time`;
-
-      // Update Matrix
-      const currentCell = document.getElementById(`cell-${nextNum}`);
-      currentCell.classList.add('active-call');
-      document.getElementById('callCounter').innerText = `Played: ${calledTracks.length} / 90`;
+      for (let i = 0; i < 5; i++) {
+        const pill = document.createElement('div');
+        pill.className = 'chip-pill';
+        if (i < recent.length) {
+          const num = recent[i];
+          const song = gameState.songsDict[num] || {};
+          const title = song.title || `Song #${num}`;
+          pill.classList.add('filled');
+          pill.innerHTML = `<strong>#${String(num).padStart(2, '0')}</strong> <span>${title}</span>`;
+        } else {
+          pill.innerHTML = `<span>—</span>`;
+        }
+        chipsContainer.appendChild(pill);
+      }
     }
 
-    /* ========================================================
-       "BALL OF DOTS" 3D PARTICLE AUDIO SPHERE (CANVAS)
-    ======================================================== */
-    const canvas = document.getElementById('dotsCanvas');
-    const ctx = canvas.getContext('2d');
+    async function drawNextSong() {
+      try {
+        const res = await fetch('/api/call/random', { method: 'POST' });
+        if (!res.ok) {
+          const err = await res.json();
+          alert(err.detail || "All numbers have been drawn!");
+          return;
+        }
+        const data = await res.json();
+        const num = data.song_id;
+        const song = data.song || gameState.songsDict[num];
 
-    let points = [];
-    const NUM_POINTS = 380;
-    const SPHERE_RADIUS = 160;
-    let angleX = 0;
-    let angleY = 0;
-    let beatEnergy = 1.0;
+        // Trigger Ball Pop Animation
+        const ball = document.getElementById('heroBall');
+        ball.classList.remove('ball-pop-and-roll');
+        void ball.offsetWidth;
+        ball.classList.add('ball-pop-and-roll');
 
-    function resizeCanvas() {
-      canvas.width = canvas.parentElement.clientWidth - 80;
-      canvas.height = 480;
+        document.getElementById('heroBallNum').innerText = String(num).padStart(2, '0');
+
+        updateHeroDisplay(num, song);
+        await fetchGameState();
+
+        // Play audio from configured start time
+        playSongAudio(num);
+
+      } catch (err) {
+        console.error("Error drawing song:", err);
+      }
     }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
 
-    // Generate Points on a Sphere (Fibonacci Lattice)
-    for (let i = 0; i < NUM_POINTS; i++) {
-      const phi = Math.acos(-1 + (2 * i) / NUM_POINTS);
-      const theta = Math.sqrt(NUM_POINTS * Math.PI) * phi;
+    async function manualCallSong(songId) {
+      if (gameState.calledNumbers.includes(songId)) return;
+      try {
+        const res = await fetch(`/api/call/${songId}`, { method: 'POST' });
+        if (res.ok) {
+          const data = await res.json();
+          const song = data.song || gameState.songsDict[songId];
+          updateHeroDisplay(songId, song);
+          await fetchGameState();
+          playSongAudio(songId);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
 
-      points.push({
-        x: SPHERE_RADIUS * Math.cos(theta) * Math.sin(phi),
-        y: SPHERE_RADIUS * Math.sin(theta) * Math.sin(phi),
-        z: SPHERE_RADIUS * Math.cos(phi),
-        origX: SPHERE_RADIUS * Math.cos(theta) * Math.sin(phi),
-        origY: SPHERE_RADIUS * Math.sin(theta) * Math.sin(phi),
-        origZ: SPHERE_RADIUS * Math.cos(phi),
+    function updateHeroDisplay(num, song) {
+      const songObj = song || gameState.songsDict[num] || {};
+      const songTitle = songObj.title || `Song #${num}`;
+      const hindi = songObj.hindi ? ` • ${songObj.hindi}` : '';
+      const pillar = songObj.pillar || (num <= 29 ? "Satyam (1–29)" : (num <= 59 ? "Shivam (30–59)" : "Sundaram (60–90)"));
+      const pillarName = songObj.pillar_name || (num <= 29 ? "SATYAM" : (num <= 59 ? "SHIVAM" : "SUNDARAM"));
+
+      document.getElementById('stagePillarBadge').innerText = pillarName.toUpperCase();
+      document.getElementById('heroSongPillar').innerText = `${pillar.toUpperCase()} • CALL #${gameState.calledNumbers.length || 1}`;
+      document.getElementById('heroSongTitle').innerText = songTitle;
+      document.getElementById('heroSongSub').innerText = `#${String(num).padStart(2, '0')} • ${pillar}${hindi}`;
+
+      // Update 3D Sphere screen header
+      document.getElementById('spherePillar').innerText = `${pillar.toUpperCase()} • ACTIVE TRACK`;
+      document.getElementById('sphereSongTitle').innerText = `#${String(num).padStart(2, '0')} — ${songTitle}`;
+      document.getElementById('sphereSongSub').innerText = `${pillar}${hindi} • Audio frequency lattice`;
+    }
+
+    // =============================================================
+    // AUDIO ENGINE & REAL-TIME WEB AUDIO API FFT ANALYSER
+    // =============================================================
+    let audioCtx = null;
+    let analyserNode = null;
+    let audioSourceNode = null;
+    let freqDataArray = null;
+    let currentActiveSongId = null;
+    let currentActiveStartCue = 0.0;
+    let isUserScrubbing = false;
+    let audioVolumeLevel = 1.0;
+    let isAudioMuted = false;
+    let prevVolumeBeforeMute = 1.0;
+
+    function initWebAudio() {
+      if (audioCtx) {
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume().catch(() => {});
+        }
+        return;
+      }
+      try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return;
+        audioCtx = new AudioContextClass();
+        analyserNode = audioCtx.createAnalyser();
+        analyserNode.fftSize = 256;
+        analyserNode.smoothingTimeConstant = 0.8;
+
+        const player = document.getElementById('mainAudioPlayer');
+        player.crossOrigin = "anonymous";
+        audioSourceNode = audioCtx.createMediaElementSource(player);
+        audioSourceNode.connect(analyserNode);
+        analyserNode.connect(audioCtx.destination);
+        freqDataArray = new Uint8Array(analyserNode.frequencyBinCount); // 128 bins
+
+        const sourceBadge = document.getElementById('sphereFftSourceBadge');
+        if (sourceBadge) sourceBadge.innerText = "FFT: WebAudio AnalyserNode (256)";
+      } catch (e) {
+        console.warn("Web Audio API Analyser initialization:", e);
+      }
+    }
+
+    // Resume AudioContext on any user interaction
+    ['click', 'keydown', 'touchstart'].forEach(evt => {
+      document.addEventListener(evt, () => {
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume().catch(() => {});
+        }
+      }, { once: false, passive: true });
+    });
+
+    // Helper: Format seconds to MM:SS
+    function formatTime(sec) {
+      if (!sec || isNaN(sec) || sec < 0) return "00:00";
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    // Playback functions
+    async function playSongAudio(songId) {
+      currentActiveSongId = songId;
+      initWebAudio();
+
+      const player = document.getElementById('mainAudioPlayer');
+      const songObj = gameState.songsDict[songId] || {};
+      const title = songObj.title || `Song #${songId}`;
+      const startSec = songObj.start_time || 0.0;
+      currentActiveStartCue = startSec;
+
+      player.src = `/api/audio/${songId}`;
+      player.load();
+
+      updateAudioStatusHUD(`Loading — ${title} (#${String(songId).padStart(2, '0')})`, false);
+
+      player.onloadedmetadata = () => {
+        const dur = player.duration || 0;
+        updateScrubberDuration(dur);
+        updateCueMarkerPositions(startSec, dur);
+
+        if (startSec > 0 && startSec < dur) {
+          player.currentTime = startSec;
+        }
+        player.play().then(() => {
+          updateAudioStatusHUD(`Playing — ${title} (#${String(songId).padStart(2, '0')})`, true);
+          updatePlayPauseButtonUI(true);
+        }).catch(err => {
+          updateAudioStatusHUD(`Ready — ${title} (Tap Play)`, false);
+          updatePlayPauseButtonUI(false);
+        });
+      };
+
+      player.ontimeupdate = () => {
+        if (!isUserScrubbing) {
+          const cur = player.currentTime || 0;
+          const dur = player.duration || 100;
+          updateScrubberCurrentTime(cur, dur);
+        }
+      };
+
+      player.onplay = () => {
+        initWebAudio();
+        updateAudioStatusHUD(`Playing — ${title} (#${String(songId).padStart(2, '0')})`, true);
+        updatePlayPauseButtonUI(true);
+      };
+
+      player.onpause = () => {
+        updateAudioStatusHUD(`Paused — ${title} (#${String(songId).padStart(2, '0')})`, false);
+        updatePlayPauseButtonUI(false);
+      };
+
+      player.onended = () => {
+        updateAudioStatusHUD(`Finished — ${title} (#${String(songId).padStart(2, '0')})`, false);
+        updatePlayPauseButtonUI(false);
+      };
+    }
+
+    function togglePauseAudio() {
+      const player = document.getElementById('mainAudioPlayer');
+      initWebAudio();
+      if (!player.src || player.src === window.location.href) {
+        if (gameState.lastCalledSong) {
+          playSongAudio(gameState.lastCalledSong);
+          return;
+        }
+      }
+      if (player.paused) {
+        player.play().catch(() => {});
+        showSphereToast("▶ Play");
+      } else {
+        player.pause();
+        showSphereToast("⏸ Pause");
+      }
+    }
+
+    function replayAudio() {
+      const player = document.getElementById('mainAudioPlayer');
+      initWebAudio();
+      player.currentTime = 0;
+      player.play().catch(() => {});
+      showSphereToast("🔁 Replay");
+    }
+
+    function jumpToStartCue() {
+      const player = document.getElementById('mainAudioPlayer');
+      initWebAudio();
+      const target = currentActiveStartCue || 0;
+      player.currentTime = target;
+      player.play().catch(() => {});
+      showSphereToast(`⏮ Start Cue (${formatTime(target)})`);
+    }
+
+    function stopAudio() {
+      const player = document.getElementById('mainAudioPlayer');
+      player.pause();
+      player.currentTime = 0;
+      updateAudioStatusHUD("Audio: Stopped", false);
+      updatePlayPauseButtonUI(false);
+      updateScrubberCurrentTime(0, player.duration || 100);
+      showSphereToast("⏹ Stopped");
+    }
+
+    function seekAudioDelta(deltaSec) {
+      const player = document.getElementById('mainAudioPlayer');
+      initWebAudio();
+      const dur = player.duration || 100;
+      const target = Math.max(0, Math.min(dur, (player.currentTime || 0) + deltaSec));
+      player.currentTime = target;
+      updateScrubberCurrentTime(target, dur);
+      showSphereToast(deltaSec >= 0 ? `⏩ +${deltaSec.toFixed(1)}s` : `⏪ ${deltaSec.toFixed(1)}s`);
+      fetch('/api/audio/seek', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentTime: target })
+      }).catch(() => {});
+    }
+
+    // Scrubber drag handlers
+    function onScrubInput(val) {
+      isUserScrubbing = true;
+      const sec = parseFloat(val);
+      const str = formatTime(sec);
+      const cur1 = document.getElementById('stageTimeCurrent');
+      const cur2 = document.getElementById('sphereTimeCurrent');
+      if (cur1) cur1.innerText = str;
+      if (cur2) cur2.innerText = str;
+    }
+
+    function onScrubChange(val) {
+      const player = document.getElementById('mainAudioPlayer');
+      initWebAudio();
+      const sec = parseFloat(val);
+      player.currentTime = sec;
+      isUserScrubbing = false;
+      showSphereToast(`⏱ ${formatTime(sec)}`);
+      fetch('/api/audio/seek', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentTime: sec })
+      }).catch(() => {});
+    }
+
+    // Volume controls
+    function setAudioVolume(val) {
+      const player = document.getElementById('mainAudioPlayer');
+      audioVolumeLevel = Math.max(0, Math.min(1, parseFloat(val)));
+      player.volume = audioVolumeLevel;
+      isAudioMuted = (audioVolumeLevel === 0);
+      updateVolumeUI();
+      showSphereToast(`🔊 ${Math.round(audioVolumeLevel * 100)}%`);
+    }
+
+    function adjustVolumeDelta(delta) {
+      setAudioVolume(audioVolumeLevel + delta);
+    }
+
+    function toggleMuteAudio() {
+      const player = document.getElementById('mainAudioPlayer');
+      if (isAudioMuted || player.volume === 0) {
+        player.volume = prevVolumeBeforeMute > 0 ? prevVolumeBeforeMute : 0.8;
+        audioVolumeLevel = player.volume;
+        isAudioMuted = false;
+        showSphereToast(`🔊 Unmuted (${Math.round(audioVolumeLevel * 100)}%)`);
+      } else {
+        prevVolumeBeforeMute = player.volume;
+        player.volume = 0;
+        audioVolumeLevel = 0;
+        isAudioMuted = true;
+        showSphereToast("🔇 Muted");
+      }
+      updateVolumeUI();
+    }
+
+    function updateVolumeUI() {
+      const pct = Math.round(audioVolumeLevel * 100);
+      const icon = isAudioMuted || audioVolumeLevel === 0 ? "🔇" : (audioVolumeLevel < 0.5 ? "🔉" : "🔊");
+
+      const v1 = document.getElementById('stageVolumeSlider');
+      const v2 = document.getElementById('sphereVolumeSlider');
+      const r1 = document.getElementById('stageVolumeReadout');
+      const r2 = document.getElementById('sphereVolumeReadout');
+      const m1 = document.getElementById('stageMuteBtn');
+      const m2 = document.getElementById('sphereMuteBtn');
+
+      if (v1) v1.value = audioVolumeLevel;
+      if (v2) v2.value = audioVolumeLevel;
+      if (r1) r1.innerText = `${pct}%`;
+      if (r2) r2.innerText = `${pct}%`;
+      if (m1) m1.innerText = icon;
+      if (m2) m2.innerText = icon;
+    }
+
+    function updateAudioStatusHUD(statusText, isPlaying) {
+      const s1 = document.getElementById('audioDeckStatus');
+      const s2 = document.getElementById('sphereDeckStatus');
+      const dot1 = document.getElementById('stageStatusDot');
+      const dot2 = document.getElementById('sphereStatusDot');
+      const bpmDot = document.getElementById('sphereBpmDot');
+
+      if (s1) s1.innerText = statusText;
+      if (s2) s2.innerText = statusText;
+
+      [dot1, dot2, bpmDot].forEach(dot => {
+        if (dot) {
+          if (isPlaying) dot.classList.add('playing');
+          else dot.classList.remove('playing');
+        }
       });
     }
 
-    function toggleAudioSpeed() {
-      beatEnergy = beatEnergy === 1.0 ? 1.8 : 1.0;
+    function updatePlayPauseButtonUI(isPlaying) {
+      const icon1 = document.getElementById('stagePlayPauseIcon');
+      const txt1 = document.getElementById('stagePlayPauseText');
+      const icon2 = document.getElementById('spherePlayPauseIcon');
+      const txt2 = document.getElementById('spherePlayPauseText');
+
+      const iconStr = isPlaying ? "⏸" : "⏯";
+      const textStr = isPlaying ? "Pause" : "Play";
+
+      if (icon1) icon1.innerText = iconStr;
+      if (txt1) txt1.innerText = textStr;
+      if (icon2) icon2.innerText = iconStr;
+      if (txt2) txt2.innerText = textStr;
     }
 
-    // Render 3D Rotating & Pulsing Sphere
-    function renderSphere() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    function updateScrubberDuration(dur) {
+      const s1 = document.getElementById('stageSeekSlider');
+      const s2 = document.getElementById('sphereSeekSlider');
+      const t1 = document.getElementById('stageTimeTotal');
+      const t2 = document.getElementById('sphereTimeTotal');
+      const durStr = formatTime(dur);
 
-      const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
+      if (s1) s1.max = dur;
+      if (s2) s2.max = dur;
+      if (t1) t1.innerText = durStr;
+      if (t2) t2.innerText = durStr;
+    }
 
-      // Simulated sound wave pulse amplitude
-      const wave = Math.sin(Date.now() * 0.005 * beatEnergy) * 18 * beatEnergy;
+    function updateScrubberCurrentTime(cur, dur) {
+      const s1 = document.getElementById('stageSeekSlider');
+      const s2 = document.getElementById('sphereSeekSlider');
+      const t1 = document.getElementById('stageTimeCurrent');
+      const t2 = document.getElementById('sphereTimeCurrent');
+      const curStr = formatTime(cur);
 
-      angleX += 0.004 * beatEnergy;
-      angleY += 0.006 * beatEnergy;
+      if (s1) s1.value = cur;
+      if (s2) s2.value = cur;
+      if (t1) t1.innerText = curStr;
+      if (t2) t2.innerText = curStr;
+    }
 
-      points.forEach(p => {
-        // Pulse with simulated audio
-        const rFactor = 1 + wave / SPHERE_RADIUS;
-        let x = p.origX * rFactor;
-        let y = p.origY * rFactor;
-        let z = p.origZ * rFactor;
+    function updateCueMarkerPositions(cueSec, totalDur) {
+      const pin1 = document.getElementById('stageCuePin');
+      const pin2 = document.getElementById('sphereCuePin');
+      const badge1 = document.getElementById('stageCueBadge');
+      const badge2 = document.getElementById('sphereCueBadge');
 
-        // Rotation around Y
-        let rotY_x = x * Math.cos(angleY) + z * Math.sin(angleY);
-        let rotY_z = -x * Math.sin(angleY) + z * Math.cos(angleY);
+      if (!cueSec || cueSec <= 0 || !totalDur || totalDur <= 0) {
+        if (pin1) pin1.style.display = 'none';
+        if (pin2) pin2.style.display = 'none';
+        return;
+      }
+      const pct = Math.min(98, Math.max(2, (cueSec / totalDur) * 100));
+      const cueStr = `📍 Cue: ${formatTime(cueSec)}`;
 
-        // Rotation around X
-        let rotX_y = y * Math.cos(angleX) - rotY_z * Math.sin(angleX);
-        let rotX_z = y * Math.sin(angleX) + rotY_z * Math.cos(angleX);
+      if (pin1) {
+        pin1.style.display = 'block';
+        pin1.style.left = `${pct}%`;
+        if (badge1) badge1.innerText = cueStr;
+      }
+      if (pin2) {
+        pin2.style.display = 'block';
+        pin2.style.left = `${pct}%`;
+        if (badge2) badge2.innerText = cueStr;
+      }
+    }
 
-        // Perspective Projection
-        const fov = 340;
-        const scale = fov / (fov + rotX_z);
-        const projX = rotY_x * scale + cx;
-        const projY = rotX_y * scale + cy;
-        const alpha = Math.max(0.15, (rotX_z + SPHERE_RADIUS) / (2 * SPHERE_RADIUS));
+    // Mini EQ visualizer animation
+    function updateMiniEqualizers(bands) {
+      const b = bands.bass;
+      const m = bands.mid;
+      const tr = bands.treble;
 
-        ctx.beginPath();
-        ctx.arc(projX, projY, Math.max(1, 4 * scale), 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(79, 70, 229, ${alpha})`;
-        ctx.fill();
+      const heights = [
+        Math.max(3, b * 16),
+        Math.max(3, (b * 0.7 + m * 0.3) * 16),
+        Math.max(3, m * 16),
+        Math.max(3, (m * 0.6 + tr * 0.4) * 16),
+        Math.max(3, tr * 16),
+        Math.max(3, (tr * 0.8 + b * 0.2) * 16),
+        Math.max(3, m * 14),
+        Math.max(3, b * 15)
+      ];
+
+      const stageBars = document.querySelectorAll('#stageMiniEq .eq-bar');
+      const sphereBars = document.querySelectorAll('#sphereMiniEq .eq-bar');
+
+      stageBars.forEach((bar, idx) => {
+        bar.style.height = `${heights[idx % heights.length]}px`;
+        if (b > 0.65) bar.style.background = 'var(--coral)';
+        else bar.style.background = 'var(--primary)';
+      });
+      sphereBars.forEach((bar, idx) => {
+        bar.style.height = `${heights[idx % heights.length]}px`;
+        if (b > 0.65) bar.style.background = 'var(--coral)';
+        else bar.style.background = 'var(--primary)';
+      });
+    }
+
+    // Real-Time Audio Frequency Bands Extractor
+    let prevBassLevel = 0.0;
+    function getAudioFrequencyBands() {
+      const player = document.getElementById('mainAudioPlayer');
+      const isPlaying = player && !player.paused;
+
+      if (analyserNode && audioCtx && audioCtx.state === 'running' && isPlaying && freqDataArray) {
+        analyserNode.getByteFrequencyData(freqDataArray);
+
+        // Bass: Bins 0-10
+        let bSum = 0;
+        for (let i = 0; i <= 10; i++) bSum += freqDataArray[i];
+        const bass = bSum / (11 * 255);
+
+        // Mid: Bins 11-50
+        let mSum = 0;
+        for (let i = 11; i <= 50; i++) mSum += freqDataArray[i];
+        const mid = mSum / (40 * 255);
+
+        // Treble: Bins 51-127
+        let trSum = 0;
+        for (let i = 51; i < 128; i++) trSum += freqDataArray[i];
+        const treble = trSum / (77 * 255);
+
+        return { bass, mid, treble, isReal: true };
+      }
+
+      // Fallback Rhythmic Audio Simulation when paused or not streaming Web Audio
+      const t = Date.now() * 0.001;
+      if (isPlaying) {
+        const beatPhase = (t * 2.06) % 1.0;
+        const bSim = Math.pow(Math.max(0, 1.0 - beatPhase * 2.5), 2.2) * 0.82 + Math.sin(t * 4.12) * 0.12;
+        const mSim = (Math.sin(t * 6.2) * 0.5 + 0.5) * 0.55;
+        const trSim = (Math.sin(t * 12.8) * 0.5 + 0.5) * 0.42;
+        return { bass: Math.max(0, bSim), mid: mSim, treble: trSim, isReal: false };
+      } else {
+        const idle = (Math.sin(t * 1.6) * 0.5 + 0.5) * 0.09;
+        return { bass: idle, mid: idle * 0.8, treble: idle * 0.5, isReal: false };
+      }
+    }
+
+    async function confirmResetGame() {
+      if (!confirm("Are you sure you want to reset the current game session?")) return;
+      await fetch('/api/reset', { method: 'POST' });
+      await fetchGameState();
+    }
+
+    // =============================================================
+    // SCREEN 2: 3D AUDIO DOT-SPHERE INTERACTION & PARTICLE ENGINE
+    // =============================================================
+    let sphereCanvas, sphereCtx;
+    let spherePoints = [];
+    const NUM_DOTS = 320;
+    const BASE_SPHERE_RAD = 165;
+    let sphereAngleX = 0.25;
+    let sphereAngleY = 0.0;
+    let velocityX = 0.003;
+    let velocityY = 0.002;
+    let currentZoom = 1.0;
+    let targetZoom = 1.0;
+
+    // Gesture State
+    let isPointerDragging = false;
+    let dragStartX = 0, dragStartY = 0;
+    let lastPointerX = 0, lastPointerY = 0;
+    let isShiftSeekMode = false;
+    let seekAccumulator = 0;
+
+    // Shockwaves & Burst Particles
+    let shockwaves = [];
+
+    // Toast Timer
+    let toastTimeout = null;
+
+    function showSphereToast(message) {
+      const toast = document.getElementById('sphereToast');
+      if (!toast) return;
+      toast.innerText = message;
+      toast.classList.add('show');
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 1200);
+    }
+
+    function initDotsSphere() {
+      sphereCanvas = document.getElementById('dotsCanvas');
+      if (!sphereCanvas) return;
+      sphereCtx = sphereCanvas.getContext('2d');
+      resizeDotsCanvas();
+
+      // Build 320-point Fibonacci Lattice on unit sphere
+      spherePoints = [];
+      for (let i = 0; i < NUM_DOTS; i++) {
+        const phi = Math.acos(-1 + (2 * i) / NUM_DOTS);
+        const theta = Math.sqrt(NUM_DOTS * Math.PI) * phi;
+        spherePoints.push({
+          nx: Math.cos(theta) * Math.sin(phi),
+          ny: Math.sin(theta) * Math.sin(phi),
+          nz: Math.cos(phi),
+          theta: theta,
+          phi: phi
+        });
+      }
+
+      setupSphereGestureControls();
+      requestAnimationFrame(renderDotsSphere);
+    }
+
+    function resizeDotsCanvas() {
+      if (!sphereCanvas) return;
+      const container = document.getElementById('sphereCanvasContainer');
+      const w = container ? container.clientWidth : (sphereCanvas.parentElement ? sphereCanvas.parentElement.clientWidth - 50 : 800);
+      sphereCanvas.width = Math.max(320, w);
+      sphereCanvas.height = 520;
+    }
+    window.addEventListener('resize', resizeDotsCanvas);
+
+    function triggerSphereShockwave() {
+      const R = BASE_SPHERE_RAD * currentZoom;
+      shockwaves.push({
+        radius: R * 0.8,
+        maxRadius: R * 2.3,
+        opacity: 1.0,
+        width: 3.5,
+        color: '#F43F5E'
+      });
+      showSphereToast("⚡ Beat Pulse Shockwave");
+    }
+
+    function setupSphereGestureControls() {
+      if (!sphereCanvas) return;
+
+      // Pointer / Mouse / Touch Dragging
+      sphereCanvas.addEventListener('pointerdown', (e) => {
+        isPointerDragging = true;
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+        lastPointerX = e.clientX;
+        lastPointerY = e.clientY;
+        seekAccumulator = 0;
+
+        // Check if Shift is held or click in bottom 22% of canvas (horizontal scrub zone)
+        const rect = sphereCanvas.getBoundingClientRect();
+        const clickY = e.clientY - rect.top;
+        if (e.shiftKey || clickY > rect.height * 0.78) {
+          isShiftSeekMode = true;
+        } else {
+          isShiftSeekMode = false;
+        }
+
+        try { sphereCanvas.setPointerCapture(e.pointerId); } catch (_) {}
       });
 
-      requestAnimationFrame(renderSphere);
-    }
-    renderSphere();
+      sphereCanvas.addEventListener('pointermove', (e) => {
+        if (!isPointerDragging) return;
+        const dx = e.clientX - lastPointerX;
+        const dy = e.clientY - lastPointerY;
 
-    /* ========================================================
-       SLOT ROLLER / LUCKY DRAW
-    ======================================================== */
-    function spinLuckyDraw() {
+        if (isShiftSeekMode) {
+          seekAccumulator += dx * 0.08;
+          const sign = seekAccumulator >= 0 ? "+" : "";
+          showSphereToast(`↔️ Scrub: ${sign}${seekAccumulator.toFixed(1)}s`);
+        } else {
+          sphereAngleY += dx * 0.007;
+          sphereAngleX += dy * 0.007;
+          velocityX = dx * 0.005;
+          velocityY = dy * 0.005;
+        }
+
+        lastPointerX = e.clientX;
+        lastPointerY = e.clientY;
+      });
+
+      const handlePointerUp = (e) => {
+        if (!isPointerDragging) return;
+        if (isShiftSeekMode && Math.abs(seekAccumulator) > 0.4) {
+          seekAudioDelta(seekAccumulator);
+        }
+        isPointerDragging = false;
+        isShiftSeekMode = false;
+        seekAccumulator = 0;
+        try { sphereCanvas.releasePointerCapture(e.pointerId); } catch (_) {}
+      };
+
+      sphereCanvas.addEventListener('pointerup', handlePointerUp);
+      sphereCanvas.addEventListener('pointercancel', handlePointerUp);
+
+      // Mouse Wheel Zoom
+      sphereCanvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? -0.12 : 0.12;
+        targetZoom = Math.max(0.6, Math.min(2.4, targetZoom + delta));
+        showSphereToast(`🔍 Zoom: ${targetZoom.toFixed(1)}x`);
+      }, { passive: false });
+
+      // Double Click -> Play/Pause & Burst
+      sphereCanvas.addEventListener('dblclick', (e) => {
+        e.preventDefault();
+        togglePauseAudio();
+        triggerSphereShockwave();
+      });
+
+      // Global Keyboard Controls (When on Dot-Sphere screen or general shortcuts)
+      window.addEventListener('keydown', (e) => {
+        const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+        if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+
+        if (e.code === 'Space') {
+          e.preventDefault();
+          togglePauseAudio();
+        } else if (e.code === 'ArrowLeft') {
+          e.preventDefault();
+          seekAudioDelta(-5);
+        } else if (e.code === 'ArrowRight') {
+          e.preventDefault();
+          seekAudioDelta(5);
+        } else if (e.code === 'ArrowUp') {
+          e.preventDefault();
+          adjustVolumeDelta(0.1);
+        } else if (e.code === 'ArrowDown') {
+          e.preventDefault();
+          adjustVolumeDelta(-0.1);
+        } else if (e.code === 'KeyR') {
+          e.preventDefault();
+          jumpToStartCue();
+        }
+      });
+    }
+
+    function renderDotsSphere() {
+      if (!sphereCtx || !sphereCanvas) return;
+      sphereCtx.clearRect(0, 0, sphereCanvas.width, sphereCanvas.height);
+
+      const cx = sphereCanvas.width / 2;
+      const cy = sphereCanvas.height / 2;
+      const bands = getAudioFrequencyBands();
+
+      // Mini EQ bar updates
+      updateMiniEqualizers(bands);
+
+      // Spring Interpolate Zoom Scale
+      currentZoom += (targetZoom - currentZoom) * 0.12;
+
+      // Angular momentum & Inertia
+      if (!isPointerDragging) {
+        sphereAngleY += velocityX;
+        sphereAngleX += velocityY;
+        velocityX *= 0.95;
+        velocityY *= 0.95;
+
+        // Gentle ambient rotation
+        sphereAngleY += 0.003;
+        sphereAngleX += 0.0015;
+      }
+
+      // Check for Bass Drop Shockwave Trigger
+      if (bands.bass > 0.64 && (bands.bass - prevBassLevel) > 0.18) {
+        const R = BASE_SPHERE_RAD * currentZoom;
+        shockwaves.push({
+          radius: R,
+          maxRadius: R * (1.7 + bands.bass * 0.6),
+          opacity: 0.95,
+          width: 3.5,
+          color: bands.bass > 0.78 ? '#F43F5E' : '#EC4899'
+        });
+      }
+      prevBassLevel = bands.bass;
+
+      // 1. Render Expanding Shockwaves
+      for (let i = shockwaves.length - 1; i >= 0; i--) {
+        const sw = shockwaves[i];
+        sw.radius += (sw.maxRadius - sw.radius) * 0.14 + 1.8;
+        sw.opacity *= 0.90;
+
+        if (sw.opacity < 0.04 || sw.radius >= sw.maxRadius * 0.98) {
+          shockwaves.splice(i, 1);
+          continue;
+        }
+
+        sphereCtx.save();
+        sphereCtx.beginPath();
+        sphereCtx.arc(cx, cy, sw.radius, 0, Math.PI * 2);
+        sphereCtx.strokeStyle = sw.color;
+        sphereCtx.globalAlpha = sw.opacity;
+        sphereCtx.lineWidth = sw.width;
+        sphereCtx.shadowColor = sw.color;
+        sphereCtx.shadowBlur = 14;
+        sphereCtx.stroke();
+        sphereCtx.restore();
+      }
+
+      // 2. Calculate Radial Expansion from Bass & 3D Harmonics from Mid/Treble
+      const R_active = (BASE_SPHERE_RAD * currentZoom) + (bands.bass * 78);
+      const now = Date.now() * 0.001;
+
+      // 3. Transform and project 320 Fibonacci lattice dots
+      const projected = [];
+
+      for (let i = 0; i < spherePoints.length; i++) {
+        const p = spherePoints[i];
+
+        // Mid-range surface harmonic wave ripples across dots
+        const midWave = Math.sin(p.theta * 4 + now * 3.5) * Math.cos(p.phi * 3 + now * 2) * (bands.mid * 38);
+        // Treble shimmer
+        const trebleShimmer = Math.sin(p.theta * 10 + now * 8) * (bands.treble * 16);
+        const r = R_active + midWave + trebleShimmer;
+
+        let x = p.nx * r;
+        let y = p.ny * r;
+        let z = p.nz * r;
+
+        // Rotate Y
+        let cosY = Math.cos(sphereAngleY), sinY = Math.sin(sphereAngleY);
+        let rx1 = x * cosY + z * sinY;
+        let rz1 = -x * sinY + z * cosY;
+
+        // Rotate X
+        let cosX = Math.cos(sphereAngleX), sinX = Math.sin(sphereAngleX);
+        let ry2 = y * cosX - rz1 * sinX;
+        let rz2 = y * sinX + rz1 * cosX;
+
+        // Perspective projection
+        const fov = 380;
+        const scale = fov / (fov + rz2);
+        const projX = rx1 * scale + cx;
+        const projY = ry2 * scale + cy;
+
+        // Depth alpha: Front dots are brighter, rear dots fade
+        const depthNorm = Math.max(0, Math.min(1, (rz2 + BASE_SPHERE_RAD) / (2 * BASE_SPHERE_RAD)));
+        const alpha = Math.max(0.18, depthNorm * 0.85);
+
+        projected.push({
+          x: projX,
+          y: projY,
+          z: rz2,
+          scale: scale,
+          alpha: alpha,
+          depthNorm: depthNorm
+        });
+      }
+
+      // Sort by Z for proper depth rendering
+      projected.sort((a, b) => a.z - b.z);
+
+      // Color interpolation: Indigo #4F46E5 -> Vibrant Magenta #EC4899 / Coral #F43F5E on peak beats
+      const beatColorShift = Math.min(1, bands.bass * 0.8 + bands.treble * 0.35);
+      const rColor = Math.round(79 + (236 - 79) * beatColorShift);
+      const gColor = Math.round(70 + (72 - 70) * beatColorShift);
+      const bColor = Math.round(229 + (153 - 229) * beatColorShift);
+
+      // 4. Draw Dots
+      for (let i = 0; i < projected.length; i++) {
+        const d = projected[i];
+        const dotRadius = Math.max(1.5, (3.2 + bands.treble * 4.8) * d.scale);
+
+        sphereCtx.beginPath();
+        sphereCtx.arc(d.x, d.y, dotRadius, 0, Math.PI * 2);
+        sphereCtx.fillStyle = `rgba(${rColor}, ${gColor}, ${bColor}, ${d.alpha})`;
+        sphereCtx.fill();
+
+        // Glow ring for top-amplitude dots on heavy bass
+        if (bands.bass > 0.55 && d.depthNorm > 0.75 && i % 4 === 0) {
+          sphereCtx.beginPath();
+          sphereCtx.arc(d.x, d.y, dotRadius * 2.2, 0, Math.PI * 2);
+          sphereCtx.fillStyle = `rgba(${rColor}, ${gColor}, ${bColor}, 0.25)`;
+          sphereCtx.fill();
+        }
+      }
+
+      requestAnimationFrame(renderDotsSphere);
+    }
+
+
+    // -------------------------------------------------------------
+    // SCREEN 3: LUCKY DRAW SLOT ROLLER
+    // -------------------------------------------------------------
+    async function spinSlotMachine() {
       const drum1 = document.getElementById('drum1');
       const drum2 = document.getElementById('drum2');
       drum1.classList.add('rolling');
       drum2.classList.add('rolling');
 
+      const poolType = document.getElementById('rafflePoolType').value;
+      const prize = document.getElementById('rafflePrizeName').value || "Lucky Draw";
+
       let spins = 0;
-      const spinInterval = setInterval(() => {
+      const interval = setInterval(async () => {
         drum1.innerText = Math.floor(Math.random() * 10);
         drum2.innerText = Math.floor(Math.random() * 10);
         spins++;
 
         if (spins > 16) {
-          clearInterval(spinInterval);
+          clearInterval(interval);
           drum1.classList.remove('rolling');
           drum2.classList.remove('rolling');
 
-          const winner = calledTracks.length ? calledTracks[Math.floor(Math.random() * calledTracks.length)] : Math.floor(Math.random() * 90) + 1;
-          const tens = Math.floor(winner / 10);
-          const ones = winner % 10;
+          let pool = gameState.calledNumbers.length ? gameState.calledNumbers : Array.from({length: 90}, (_, i) => i + 1);
+          if (poolType.includes('All')) pool = Array.from({length: 90}, (_, i) => i + 1);
 
-          drum1.innerText = tens;
-          drum2.innerText = ones;
+          const winner = pool[Math.floor(Math.random() * pool.length)];
+          drum1.innerText = Math.floor(winner / 10);
+          drum2.innerText = winner % 10;
 
-          const winnerName = TRACK_BANK[winner] || `Bonus Track #${winner}`;
-          document.getElementById('raffleSongText').innerText = `Winner: #${winner} - ${winnerName}`;
+          const songObj = gameState.songsDict[winner] || {};
+          const songTitle = songObj.title || `Song #${winner}`;
+          document.getElementById('raffleResultText').innerText = `🎉 WINNER: #${String(winner).padStart(2, '0')} — ${songTitle}!`;
 
-          const stream = document.getElementById('winnerStream');
-          if (stream.innerText.includes('No draws')) stream.innerHTML = '';
-          const card = document.createElement('div');
-          card.style.padding = '12px 16px';
-          card.style.background = '#F8FAFC';
-          card.style.borderRadius = '12px';
-          card.style.border = '1px solid var(--border-color)';
-          card.innerHTML = `<strong>Ticket Winner #${winner}</strong> — <span style="color: var(--primary);">${winnerName}</span>`;
-          stream.prepend(card);
+          // Add to stream
+          const stream = document.getElementById('raffleAuditStream');
+          if (stream.innerText.includes('No lucky draw')) stream.innerHTML = '';
+          const row = document.createElement('div');
+          row.style.padding = '10px 14px';
+          row.style.background = 'var(--card-alt)';
+          row.style.border = '1px solid var(--border-color)';
+          row.style.borderRadius = '10px';
+          row.innerHTML = `<strong>#${String(winner).padStart(2, '0')} — ${songTitle}</strong> <span style="float: right; color: var(--emerald-dark); font-weight: 700;">${prize}</span>`;
+          stream.prepend(row);
         }
       }, 70);
     }
 
-    /* ========================================================
-       CLAIM VERIFIER 3x9 TICKET RENDER
-    ======================================================== */
-    function renderTicket() {
-      const grid = document.getElementById('ticketGrid');
-      grid.innerHTML = '';
-      document.getElementById('claimVerdict').style.display = 'block';
+    function clearRaffleAudit() {
+      document.getElementById('raffleAuditStream').innerHTML = '<div style="color: var(--text-dim); text-align: center; padding: 2rem;">No lucky draw winners yet.</div>';
+    }
 
-      const sampleData = [
-        [1, null, 11, null, null, 42, null, 75, null],
-        [null, 4, null, 22, null, null, 62, null, 90],
-        [null, null, 18, 28, 45, null, null, 82, null]
-      ];
+    // -------------------------------------------------------------
+    // SCREEN 4: CLAIM VERIFIER (DUAL 2-STRIP PLAYER SHEET)
+    // -------------------------------------------------------------
+    async function loadArchiveBatches() {
+      try {
+        const res = await fetch('/api/archives');
+        const archives = await res.json();
+        gameState.archives = archives;
 
-      sampleData.forEach(row => {
-        row.forEach(val => {
+        const sel = document.getElementById('verifierBatchSelect');
+        sel.innerHTML = '';
+
+        archives.forEach((b, idx) => {
+          const opt = document.createElement('option');
+          opt.value = b.batch_name;
+          opt.innerText = `${b.batch_name} (${b.total_sheets} Sheets)`;
+          sel.appendChild(opt);
+        });
+
+        if (archives.length > 0) {
+          verifierCurrentBatch = archives[0].batch_name;
+          sel.value = verifierCurrentBatch;
+          document.getElementById('verifierBatchBadge').innerText = `Loaded: ${archives[0].total_tickets} Tickets (${archives[0].total_sheets} Sheets)`;
+          await inspectSheet(verifierCurrentBatch, "1");
+        }
+
+        // Also update Screen 5 list
+        updateStudioArchivesList(archives);
+
+      } catch (err) {
+        console.error("Error loading archives:", err);
+      }
+    }
+
+    async function onBatchSelected() {
+      verifierCurrentBatch = document.getElementById('verifierBatchSelect').value;
+      const arc = gameState.archives.find(a => a.batch_name === verifierCurrentBatch);
+      if (arc) {
+        document.getElementById('verifierBatchBadge').innerText = `Loaded: ${arc.total_tickets} Tickets (${arc.total_sheets} Sheets)`;
+      }
+      await inspectSheet(verifierCurrentBatch, "1");
+    }
+
+    async function verifyTicketSearch() {
+      const q = document.getElementById('verifierTicketInput').value.trim();
+      if (!q) return alert("Please enter a Ticket ID or Sheet Number.");
+      await inspectSheet(verifierCurrentBatch, q);
+    }
+
+    async function stepSheet(delta) {
+      verifierCurrentSheet = Math.max(1, verifierCurrentSheet + delta);
+      await inspectSheet(verifierCurrentBatch, String(verifierCurrentSheet));
+    }
+
+    async function inspectSheet(batchName, query) {
+      if (!batchName) return;
+      try {
+        const res = await fetch(`/api/verify-sheet/${encodeURIComponent(batchName)}/${encodeURIComponent(query)}`);
+        if (!res.ok) {
+          const err = await res.json();
+          alert(err.detail || "Ticket / Sheet not found!");
+          return;
+        }
+        const data = await res.json();
+        verifierBatchData = data;
+        verifierCurrentSheet = data.sheet_num;
+        renderActiveSheet();
+      } catch (err) {
+        console.error("Error inspecting sheet:", err);
+      }
+    }
+
+    function renderActiveSheet() {
+      if (!verifierBatchData) return;
+      const data = verifierBatchData;
+      const showDual = document.getElementById('chkDualView').checked;
+
+      // Update 4 Prominent Stat Cards
+      document.getElementById('metricGameDrawn').innerText = `${data.total_game_drawn} / 90 Drawn`;
+      document.getElementById('metricGameRemaining').innerText = `${data.total_game_remaining} Songs Remaining`;
+
+      const topT = data.top_ticket;
+      const botT = data.bottom_ticket;
+
+      // Metric 2: Strip 1
+      if (topT && topT.eval) {
+        document.getElementById('metricStrip1Tag').innerText = `🎫 STRIP 1 (#${topT.ticket_id})`;
+        document.getElementById('metricStrip1Hits').innerText = `${topT.eval.total_hits} / ${topT.eval.total_nums} Hits`;
+        document.getElementById('metricStrip1Status').innerText = topT.eval.patterns.length ? topT.eval.patterns.join(', ') : `${topT.eval.total_nums - topT.eval.total_hits} Left`;
+      }
+
+      // Metric 3: Strip 2
+      if (botT && botT.eval) {
+        document.getElementById('metricStrip2Tag').innerText = `🎫 STRIP 2 (#${botT.ticket_id})`;
+        document.getElementById('metricStrip2Hits').innerText = `${botT.eval.total_hits} / ${botT.eval.total_nums} Hits`;
+        document.getElementById('metricStrip2Status').innerText = botT.eval.patterns.length ? botT.eval.patterns.join(', ') : `${botT.eval.total_nums - botT.eval.total_hits} Left`;
+      } else {
+        document.getElementById('metricStrip2Tag').innerText = `🎫 STRIP 2 (None)`;
+        document.getElementById('metricStrip2Hits').innerText = `—`;
+        document.getElementById('metricStrip2Status').innerText = `Single Strip Mode`;
+      }
+
+      // Metric 4: Combined Sheet Total
+      const pct = data.combined_total > 0 ? (data.combined_hits / data.combined_total * 100).toFixed(1) : "0.0";
+      document.getElementById('metricSheetTag').innerText = `🏆 SHEET #${data.sheet_num} COMBINED`;
+      document.getElementById('metricSheetHits').innerText = `${data.combined_hits} / ${data.combined_total} Hits`;
+      document.getElementById('metricSheetStatus').innerText = data.sheet_house_ok ? "🌟 SHEET HOUSE QUALIFIED!" : `${pct}% Sheet Match`;
+
+      // Verdict Banner & Chips
+      const allPatterns = [];
+      if (data.sheet_house_ok) allPatterns.push(`SHEET HOUSE (30/30)`);
+      if (topT?.eval?.patterns) allPatterns.push(...topT.eval.patterns.map(p => `Strip 1 ${p}`));
+      if (botT?.eval?.patterns) allPatterns.push(...botT.eval.patterns.map(p => `Strip 2 ${p}`));
+
+      const banner = document.getElementById('verdictBanner');
+      if (allPatterns.length > 0) {
+        banner.className = 'verdict-banner qualified';
+        document.getElementById('verdictTitle').innerText = `🎉 BOGEY VALIDATED: ${allPatterns.slice(0, 3).join(', ')} QUALIFIED!`;
+        document.getElementById('verdictSub').innerText = `Sheet #${data.sheet_num} meets winning criteria (${data.combined_hits}/${data.combined_total} songs verified).`;
+      } else {
+        banner.className = 'verdict-banner';
+        document.getElementById('verdictTitle').innerText = `⏳ CLAIM PENDING • Sheet #${data.sheet_num}`;
+        document.getElementById('verdictSub').innerText = `Current match: ${data.combined_hits} of ${data.combined_total} songs drawn. Review cells below.`;
+      }
+
+      // Update chips
+      updateVerdictChips(topT?.eval, botT?.eval, data.sheet_house_ok);
+
+      // Render Visual Strips
+      const container = document.getElementById('verifierStripsContainer');
+      container.innerHTML = '';
+
+      const isBottomFocused = (botT && String(data.focused_ticket_id).replace('#','') === String(botT.ticket_id).replace('#',''));
+
+      if (topT && (showDual || !isBottomFocused)) {
+        container.appendChild(createStripDOM(topT, !isBottomFocused, data.sheet_num));
+      }
+      if (botT && (showDual || isBottomFocused)) {
+        container.appendChild(createStripDOM(botT, isBottomFocused, data.sheet_num));
+      }
+    }
+
+    function createStripDOM(ticketObj, isQueried, sheetNum) {
+      const card = document.createElement('div');
+      card.className = `strip-card ${isQueried ? 'queried' : ''}`;
+
+      const hdr = document.createElement('div');
+      hdr.className = 'strip-header';
+      hdr.innerHTML = `
+        <span style="font-weight: 800; font-size: 0.95rem; color: ${isQueried ? 'var(--primary)' : 'var(--text-main)'};">
+          🎫 ${ticketObj.strip_pos.toUpperCase()} • TICKET #${ticketObj.ticket_id} (PLAYER SHEET #${sheetNum})
+        </span>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <span class="status-pill ready">${ticketObj.eval?.total_hits || 0}/15 Hits</span>
+          <span style="font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 4px; background: ${isQueried ? 'var(--primary)' : 'var(--card-alt)'}; color: ${isQueried ? '#FFF' : 'var(--text-muted)'};">
+            ${isQueried ? '★ QUERIED TICKET' : 'COMPANION STRIP'}
+          </span>
+        </div>
+      `;
+      card.appendChild(hdr);
+
+      const grid = document.createElement('div');
+      grid.className = 'strip-grid-3x9';
+
+      ticketObj.grid.forEach(row => {
+        row.forEach(cell => {
           const div = document.createElement('div');
-          if (!val) {
-            div.className = 't-cell empty';
+          if (!cell) {
+            div.className = 'cell-box blank';
+            div.innerHTML = `<span>—</span>`;
           } else {
-            const isHit = calledTracks.includes(val);
-            div.className = `t-cell ${isHit ? 'hit' : ''}`;
+            const isHit = cell.is_hit;
+            const isLatest = cell.is_latest;
+            const displayTitle = cell.title || gameState.songsDict[cell.id]?.title || `Song #${cell.id}`;
+            div.className = `cell-box ${isHit ? 'drawn' : ''} ${isLatest ? 'latest-drawn' : ''}`;
             div.innerHTML = `
-              <div>#${val}</div>
-              <div style="font-size:0.65rem; opacity:0.8;">${TRACK_BANK[val] || 'Song'}</div>
-              ${isHit ? '<span class="t-badge">CALLED</span>' : ''}
+              <div class="cell-num">#${String(cell.id).padStart(2, '0')}</div>
+              <div class="cell-title" title="${displayTitle}">${displayTitle}</div>
+              ${isLatest ? `<span class="cell-badge latest">★ LATEST #${cell.order}</span>` :
+                (isHit ? `<span class="cell-badge drawn">✔ CALL #${cell.order}</span>` :
+                `<span class="cell-badge pending">⏳ PENDING</span>`)}
             `;
           }
           grid.appendChild(div);
         });
       });
+
+      card.appendChild(grid);
+      return card;
     }
 
-    // Auto-init ticket view
-    renderTicket();
+    function updateVerdictChips(ev1, ev2, sheetHouse) {
+      const setChip = (id, label, isOk) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.className = `v-chip ${isOk ? 'active' : ''}`;
+        el.innerText = `${label} ${isOk ? '✔' : '—'}`;
+      };
+
+      setChip('chip_s1_e5', 'S1 Early 5', ev1?.early5);
+      setChip('chip_s1_l1', 'S1 Top Line', ev1?.r1);
+      setChip('chip_s1_l2', 'S1 Mid Line', ev1?.r2);
+      setChip('chip_s1_l3', 'S1 Bot Line', ev1?.r3);
+      setChip('chip_s1_crn', 'S1 Corners', ev1?.corners);
+      setChip('chip_s1_fh', 'S1 Full House', ev1?.full_house);
+
+      setChip('chip_s2_e5', 'S2 Early 5', ev2?.early5);
+      setChip('chip_s2_l1', 'S2 Top Line', ev2?.r1);
+      setChip('chip_s2_l2', 'S2 Mid Line', ev2?.r2);
+      setChip('chip_s2_l3', 'S2 Bot Line', ev2?.r3);
+      setChip('chip_s2_crn', 'S2 Corners', ev2?.corners);
+      setChip('chip_s2_fh', 'S2 Full House', ev2?.full_house);
+
+      setChip('chip_sheet_house', 'Sheet House (30/30)', sheetHouse);
+    }
+
+    // -------------------------------------------------------------
+    // SCREEN 5: TICKET STUDIO
+    // -------------------------------------------------------------
+    async function generateTickets(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnGenSubmit');
+      btn.innerText = "⏳ Generating & Archiving Tickets...";
+      btn.disabled = true;
+
+      const fd = new FormData();
+      fd.append("batch_name", document.getElementById('genBatchName').value);
+      fd.append("count", document.getElementById('genSheetsCount').value);
+      fd.append("mode", document.getElementById('genFormatMode').value);
+      fd.append("preset_id", document.getElementById('genTemplateSelect').value.toLowerCase());
+
+      try {
+        const res = await fetch('/api/generate-tickets', { method: 'POST', body: fd });
+        if (res.ok) {
+          alert("Tickets generated successfully without overwriting any prior batches!");
+          await loadArchiveBatches();
+        } else {
+          alert("Failed to generate tickets.");
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        btn.innerText = "🚀 GENERATE & ARCHIVE HOUSIE TICKETS";
+        btn.disabled = false;
+      }
+    }
+
+    function updateStudioArchivesList(archives) {
+      const container = document.getElementById('archivesTableList');
+      if (!archives.length) {
+        container.innerHTML = '<div style="color: var(--text-dim); text-align: center; padding: 2rem;">No archives found.</div>';
+        return;
+      }
+      container.innerHTML = archives.map(a => `
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border-color);">
+          <div>
+            <div style="font-weight: 700;">${a.batch_name}</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">${a.total_sheets} Sheets (${a.total_tickets} Tickets)</div>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <a href="/archive/${encodeURIComponent(a.batch_name)}" target="_blank" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem; text-decoration: none;">
+              🌐 Open HTML
+            </a>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // -------------------------------------------------------------
+    // SCREEN 6: AUDIO CATALOG & START-TIME STUDIO
+    // -------------------------------------------------------------
+    async function loadCatalogData() {
+      try {
+        const cfgRes = await fetch('/api/audio-config');
+        const cfg = await cfgRes.json();
+        gameState.audioConfig = cfg;
+        document.getElementById('catFolderPath').value = cfg.audio_folder_path || '';
+
+        const catRes = await fetch('/api/catalog');
+        catalogSongs = await catRes.json();
+        renderCatalogTable();
+        selectCatalogSong(1);
+      } catch (err) {
+        console.error("Error loading catalog:", err);
+      }
+    }
+
+    function setCatFilter(filterKey) {
+      activeCatFilter = filterKey;
+      renderCatalogTable();
+    }
+
+    function filterCatalogTable() {
+      renderCatalogTable();
+    }
+
+    function renderCatalogTable() {
+      const q = document.getElementById('catSearchInput').value.toLowerCase();
+      const tbody = document.getElementById('catalogTableBody');
+      tbody.innerHTML = '';
+
+      catalogSongs.forEach(s => {
+        if (activeCatFilter !== 'all' && s.pillar !== activeCatFilter) return;
+        if (q && !s.title.toLowerCase().includes(q) && !s.artist.toLowerCase().includes(q) && !String(s.number).includes(q)) return;
+
+        const tr = document.createElement('tr');
+        tr.className = (s.number === selectedSongId) ? 'selected' : '';
+        tr.onclick = () => selectCatalogSong(s.number);
+        tr.innerHTML = `
+          <td><strong>#${String(s.number).padStart(2, '0')}</strong></td>
+          <td><span class="pillar-pill" style="font-size: 0.7rem; background: var(--card-alt);">${s.pillar} (Col ${s.column})</span></td>
+          <td><strong>${s.title}</strong><div style="font-size: 0.72rem; color: var(--text-muted);">${s.artist || ''}</div></td>
+          <td><code>${s.start_time_fmt}</code></td>
+          <td>${s.duration > 0 ? s.duration + 's' : 'Full'}</td>
+          <td><span class="status-pill ${s.has_audio ? 'ready' : 'missing'}">${s.has_audio ? '✅ Ready' : '❌ Missing'}</span></td>
+          <td><span class="status-pill ${s.is_called ? 'ready' : 'missing'}">${s.is_called ? 'Called ✔' : 'Pending ⏳'}</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function selectCatalogSong(songId) {
+      selectedSongId = songId;
+      const s = catalogSongs.find(item => item.number === songId) || gameState.songsDict[songId];
+      if (!s) return;
+
+      document.querySelectorAll('.catalog-table tr').forEach(r => r.classList.remove('selected'));
+      const activeRow = Array.from(document.querySelectorAll('.catalog-table tr')).find(r => r.children[0]?.innerText.includes(`#${String(songId).padStart(2, '0')}`));
+      if (activeRow) activeRow.classList.add('selected');
+
+      document.getElementById('deckTrackNum').innerText = `#${String(songId).padStart(2, '0')}`;
+      document.getElementById('deckTrackPillar').innerText = `${s.pillar_name ? s.pillar_name.toUpperCase() : (s.pillar || 'SATYAM')} (COL ${s.column || 1})`;
+      document.getElementById('deckTrackTitle').innerText = s.title;
+      document.getElementById('deckTrackSub').innerText = s.hindi ? `${s.hindi}` : (s.artist ? `Artist: ${s.artist}` : "Bollywood Evergreen Hit");
+      document.getElementById('deckStartTime').value = s.start_time_fmt || "00:00";
+      document.getElementById('deckDuration').value = s.duration || 0;
+      document.getElementById('deckStatusPill').className = `status-pill ${s.has_audio ? 'ready' : 'missing'}`;
+      document.getElementById('deckStatusPill').innerText = s.has_audio ? 'Audio Ready' : 'Audio Missing';
+
+      const player = document.getElementById('catalogAudioPlayer');
+      player.src = `/api/audio/${songId}`;
+    }
+
+    async function saveSelectedCue() {
+      const startTime = document.getElementById('deckStartTime').value.trim();
+      const dur = parseFloat(document.getElementById('deckDuration').value) || 0;
+
+      try {
+        const res = await fetch('/api/catalog/save-cue', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            song_id: selectedSongId,
+            start_time: startTime,
+            duration: dur
+          })
+        });
+        if (res.ok) {
+          alert(`Saved start cue for Song #${selectedSongId}!`);
+          await loadCatalogData();
+          await loadSongsDictionary();
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function testSelectedStartCue() {
+      const player = document.getElementById('catalogAudioPlayer');
+      const startVal = document.getElementById('deckStartTime').value.trim();
+
+      let sec = 0;
+      if (startVal.includes(':')) {
+        const parts = startVal.split(':');
+        sec = parseInt(parts[0]) * 60 + parseFloat(parts[1] || 0);
+      } else {
+        sec = parseFloat(startVal) || 0;
+      }
+
+      player.currentTime = sec;
+      player.play();
+    }
+
+    async function saveAndRescanFolder() {
+      const folder = document.getElementById('catFolderPath').value.trim();
+      if (!folder) return alert("Please specify a folder path.");
+
+      try {
+        await fetch('/api/audio-config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ audio_folder_path: folder })
+        });
+        const res = await fetch('/api/audio-config/rescan', { method: 'POST' });
+        const data = await res.json();
+        alert(`Directory scanned! Found ${data.matched_count} matching audio files.`);
+        await loadCatalogData();
+        await loadSongsDictionary();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // Initialize application on window load
+    window.onload = initApp;
   </script>
 </body>
 </html>

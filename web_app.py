@@ -2589,6 +2589,30 @@ INDEX_HTML = """<!DOCTYPE html>
       }
     }
 
+    // Expose functions globally to window
+    window.switchTab = switchTab;
+    window.drawNextRandom = drawNextRandom;
+    window.drawNextSong = drawNextRandom;
+    window.manualCall = manualCall;
+    window.undoCall = undoCall;
+    window.resetGame = resetGame;
+    window.confirmResetGame = resetGame;
+    window.togglePlayPause = togglePlayPause;
+    window.replayAudio = replayAudio;
+    window.replaySong = replayAudio;
+    window.stopAudio = stopAudio;
+    window.stopSong = stopAudio;
+    window.checkTicket = checkTicket;
+    window.verifyTicket = checkTicket;
+    window.verifyTicketSearch = checkTicket;
+    window.spinLuckyDraw = spinLuckyDraw;
+    window.spinSlotMachine = spinLuckyDraw;
+    window.generateTickets = generateTickets;
+    window.recordClaim = recordClaim;
+    window.clearLuckyHistory = clearLuckyHistory;
+    window.uploadCatalogFile = uploadCatalogFile;
+    window.resetDefaultCatalog = resetDefaultCatalog;
+
     // Init
     fetchState();
     loadArchivedBatchesTable();

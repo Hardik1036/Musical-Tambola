@@ -2134,7 +2134,6 @@
       if (player.readyState >= 1) {
         onCanPlay();
       }
-    }
 
       player.ontimeupdate = () => {
         if (!isUserScrubbing) {
@@ -3241,6 +3240,38 @@
         console.error(err);
       }
     }
+
+    // Expose all functions to global window scope for inline HTML handlers
+    window.switchTab = switchTab;
+    window.drawNextSong = drawNextSong;
+    window.confirmResetGame = confirmResetGame;
+    window.togglePauseAudio = togglePauseAudio;
+    window.replayAudio = replayAudio;
+    window.replaySong = replayAudio;
+    window.stopAudio = stopAudio;
+    window.stopSong = stopAudio;
+    window.jumpToStartCue = jumpToStartCue;
+    window.seekAudioDelta = seekAudioDelta;
+    window.setAudioVolume = setAudioVolume;
+    window.toggleMuteAudio = toggleMuteAudio;
+    window.onScrubInput = onScrubInput;
+    window.onScrubChange = onScrubChange;
+    window.triggerSphereShockwave = triggerSphereShockwave;
+    window.spinSlotMachine = spinSlotMachine;
+    window.spinLuckyDraw = spinSlotMachine;
+    window.clearRaffleAudit = clearRaffleAudit;
+    window.loadArchiveBatches = loadArchiveBatches;
+    window.onBatchSelected = onBatchSelected;
+    window.verifyTicketSearch = verifyTicketSearch;
+    window.verifyTicket = verifyTicketSearch;
+    window.stepSheet = stepSheet;
+    window.renderActiveSheet = renderActiveSheet;
+    window.generateTickets = generateTickets;
+    window.filterCatalogTable = filterCatalogTable;
+    window.setCatFilter = setCatFilter;
+    window.saveSelectedCue = saveSelectedCue;
+    window.testSelectedStartCue = testSelectedStartCue;
+    window.saveAndRescanFolder = saveAndRescanFolder;
 
     // Initialize application on window load
     window.onload = initApp;

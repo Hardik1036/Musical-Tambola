@@ -1671,108 +1671,7 @@
           <div id="verdictBreakdownPills" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;"></div>
         </div>
 
-        <!-- =======================================================
-             FEATURE 3: ⚙️ HOST RULE SELECTOR & CUSTOM OFFER BUILDER
-        ======================================================= -->
-        <div style="margin: 1.25rem 0; display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px;">
-          
-          <!-- Sub-Panel 1: Host Selectable Rule Checkboxes (On-Demand) -->
-          <div style="background: var(--card-alt); border: 1.5px solid var(--border-color); border-radius: 12px; padding: 14px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-              <span style="font-size: 0.88rem; font-weight: 800; color: var(--text-main);">⚙️ Active Claim Rules (On-Demand)</span>
-              <div style="display: flex; gap: 6px;">
-                <button class="btn-outline" style="padding: 2px 8px; font-size: 0.72rem;" onclick="toggleAllHostRules(true)">All</button>
-                <button class="btn-outline" style="padding: 2px 8px; font-size: 0.72rem;" onclick="toggleAllHostRules(false)">None</button>
-              </div>
-            </div>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.82rem; font-weight: 600;">
-              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                <input type="checkbox" id="ruleEarlyN" onchange="recalculateHostRules()" />
-                Early <input type="number" id="ruleEarlyNCount" value="5" min="1" max="15" style="width: 44px; padding: 2px 4px; font-weight: 800; border: 1px solid var(--border-color); border-radius: 4px;" oninput="recalculateHostRules()" /> Songs
-              </label>
-              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                <input type="checkbox" id="ruleTopLine" onchange="recalculateHostRules()" /> Top Line
-              </label>
-              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                <input type="checkbox" id="ruleMidLine" onchange="recalculateHostRules()" /> Middle Line
-              </label>
-              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                <input type="checkbox" id="ruleBotLine" onchange="recalculateHostRules()" /> Bottom Line
-              </label>
-              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                <input type="checkbox" id="ruleCorners" onchange="recalculateHostRules()" /> Four Corners
-              </label>
-              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                <input type="checkbox" id="ruleStripFH" onchange="recalculateHostRules()" /> Full Strip House (15/15)
-              </label>
-              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                <input type="checkbox" id="ruleSheetFH" onchange="recalculateHostRules()" /> 2-Strip Sheet House (30/30)
-              </label>
-              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                <input type="checkbox" id="rulePillar" onchange="recalculateHostRules()" /> Complete Pillar (Satyam/Shivam/Sundaram)
-              </label>
-            </div>
-            <div id="activeRulesStatusBadge" style="margin-top: 10px; font-size: 0.78rem; font-weight: 700; color: var(--text-muted);">
-              No rules checked — raw statistics active.
-            </div>
-          </div>
 
-          <!-- Sub-Panel 2: Custom Offer / Custom Claim Rule Builder -->
-          <div style="background: var(--card-alt); border: 1.5px solid var(--border-color); border-radius: 12px; padding: 14px;">
-            <div style="font-size: 0.88rem; font-weight: 800; color: var(--text-main); margin-bottom: 8px;">
-              🎁 Custom Offer / Custom Rule Creator
-            </div>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
-              <div>
-                <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); display: block;">Offer / Claim Name:</label>
-                <input type="text" id="customOfferName" class="input-field" style="width: 100%; font-size: 0.82rem; padding: 5px 8px;" placeholder="e.g. Couple Special Bonus" value="Couple Special Bonus" oninput="updateCustomOfferStatus()" />
-              </div>
-              <div>
-                <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); display: block;">Prize / Reward:</label>
-                <input type="text" id="customOfferPrize" class="input-field" style="width: 100%; font-size: 0.82rem; padding: 5px 8px;" placeholder="e.g. ₹500 Hamper / Silver Coin" value="₹500 Cash Prize" />
-              </div>
-            </div>
-
-            <div style="margin-bottom: 8px;">
-              <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 2px;">Condition Type:</label>
-              <select id="customOfferConditionType" class="select-field" style="width: 100%; font-size: 0.82rem; padding: 5px 8px;" onchange="onCustomConditionTypeChanged()">
-                <option value="override">Manual Host Discretion (Host Approval Override)</option>
-                <option value="min_strip">Minimum N Songs Marked on Any Strip</option>
-                <option value="min_sheet">Minimum N Songs Marked on Full Sheet</option>
-                <option value="specific_songs">Specific Song Numbers Marked</option>
-              </select>
-            </div>
-
-            <!-- Dynamic condition parameter inputs -->
-            <div id="condParamBox" style="display: none; margin-bottom: 8px;">
-              <div id="condBoxMin" style="display: none; align-items: center; gap: 6px;">
-                <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted);">Required Songs Count:</label>
-                <input type="number" id="customOfferMinCount" class="input-field" style="width: 60px; padding: 4px;" value="7" min="1" max="30" oninput="updateCustomOfferStatus()" />
-              </div>
-              <div id="condBoxSongs" style="display: none;">
-                <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); display: block;">Specific Song Numbers (comma/space separated):</label>
-                <input type="text" id="customOfferSongNums" class="input-field" style="width: 100%; font-size: 0.82rem; padding: 4px 8px;" placeholder="e.g. 11, 25, 42" oninput="updateCustomOfferStatus()" />
-              </div>
-            </div>
-
-            <!-- Live Condition Status -->
-            <div id="customOfferStatusBadge" style="font-size: 0.78rem; font-weight: 700; color: var(--emerald-dark); margin-bottom: 10px;">
-              Ready for Host Approval
-            </div>
-
-            <!-- Approval Actions -->
-            <div style="display: flex; gap: 8px;">
-              <button class="btn btn-primary" style="flex: 1; padding: 7px; font-size: 0.82rem;" onclick="approveCustomOfferClaim(true)">
-                ✅ Approve Claim
-              </button>
-              <button class="btn btn-outline" style="padding: 7px 12px; font-size: 0.82rem; color: var(--coral);" onclick="approveCustomOfferClaim(false)">
-                ❌ Reject
-              </button>
-            </div>
-          </div>
-        </div>
 
         <!-- Rendered Strips Container -->
         <div id="verifierStripsContainer"></div>
@@ -3538,124 +3437,40 @@
         `;
       }
 
-      // Read active host-selected rules
-      const activeRules = [];
-      const passedRules = [];
-
-      // 1. Early N
-      if (document.getElementById('ruleEarlyN').checked) {
-        const count = parseInt(document.getElementById('ruleEarlyNCount').value) || 5;
-        const ruleName = `Early ${count} Songs`;
-        activeRules.push(ruleName);
-        const s1Ok = ev1 && ev1.total_hits >= count;
-        const s2Ok = ev2 && ev2.total_hits >= count;
-        if (s1Ok || s2Ok) {
-          passedRules.push(`${ruleName} (${s1Ok ? 'Strip 1' : 'Strip 2'})`);
-        }
-      }
-
-      // 2. Top Line
-      if (document.getElementById('ruleTopLine').checked) {
-        activeRules.push("Top Line");
-        if (ev1 && ev1.r1) passedRules.push("Top Line (Strip 1)");
-        if (ev2 && ev2.r1) passedRules.push("Top Line (Strip 2)");
-      }
-
-      // 3. Middle Line
-      if (document.getElementById('ruleMidLine').checked) {
-        activeRules.push("Middle Line");
-        if (ev1 && ev1.r2) passedRules.push("Middle Line (Strip 1)");
-        if (ev2 && ev2.r2) passedRules.push("Middle Line (Strip 2)");
-      }
-
-      // 4. Bottom Line
-      if (document.getElementById('ruleBotLine').checked) {
-        activeRules.push("Bottom Line");
-        if (ev1 && ev1.r3) passedRules.push("Bottom Line (Strip 1)");
-        if (ev2 && ev2.r3) passedRules.push("Bottom Line (Strip 2)");
-      }
-
-      // 5. Four Corners
-      if (document.getElementById('ruleCorners').checked) {
-        activeRules.push("Four Corners");
-        if (ev1 && ev1.corners) passedRules.push("Four Corners (Strip 1)");
-        if (ev2 && ev2.corners) passedRules.push("Four Corners (Strip 2)");
-      }
-
-      // 6. Full Strip House (15/15)
-      if (document.getElementById('ruleStripFH').checked) {
-        activeRules.push("Full Strip House (15/15)");
-        if (ev1 && ev1.full_house) passedRules.push("Full Strip House (Strip 1)");
-        if (ev2 && ev2.full_house) passedRules.push("Full Strip House (Strip 2)");
-      }
-
-      // 7. 2-Strip Sheet House (30/30)
-      if (document.getElementById('ruleSheetFH').checked) {
-        activeRules.push("Sheet House (30/30)");
-        if (data.sheet_house_ok) passedRules.push("Sheet House (30/30 Complete)");
-      }
-
-      // 8. Complete Pillar (Satyam / Shivam / Sundaram)
-      if (document.getElementById('rulePillar').checked) {
-        activeRules.push("Pillars");
-        if (ev1 && (ev1.satyam_ok || ev1.shivam_ok || ev1.sundaram_ok)) {
-          const names = [];
-          if (ev1.satyam_ok) names.push("Satyam");
-          if (ev1.shivam_ok) names.push("Shivam");
-          if (ev1.sundaram_ok) names.push("Sundaram");
-          passedRules.push(`Strip 1 Pillar (${names.join(', ')})`);
-        }
-        if (ev2 && (ev2.satyam_ok || ev2.shivam_ok || ev2.sundaram_ok)) {
-          const names = [];
-          if (ev2.satyam_ok) names.push("Satyam");
-          if (ev2.shivam_ok) names.push("Shivam");
-          if (ev2.sundaram_ok) names.push("Sundaram");
-          passedRules.push(`Strip 2 Pillar (${names.join(', ')})`);
-        }
-      }
-
-      // Update Verdict Banner according to Host selection (No default rules forced!)
+      // Update Verdict Banner
       const banner = document.getElementById('verdictBanner');
       const title = document.getElementById('verdictTitle');
       const sub = document.getElementById('verdictSub');
-      const statusBadge = document.getElementById('activeRulesStatusBadge');
 
-      if (activeRules.length === 0) {
+      if (banner && title && sub) {
         banner.className = 'verdict-banner';
-        title.innerText = `📊 RAW VERIFICATION MODE • Sheet #${data.sheet_num} (Ticket #${data.focused_ticket_id})`;
-        sub.innerText = `No default rules forced. Toggle active rules above or approve custom claims below based on your event's rules.`;
-        if (statusBadge) statusBadge.innerText = "No rules checked — raw statistics active.";
-      } else {
-        if (statusBadge) statusBadge.innerText = `Active rules (${activeRules.length}): ${activeRules.join(', ')}`;
-        if (passedRules.length > 0) {
-          banner.className = 'verdict-banner qualified';
-          title.innerText = `🎉 HOST RULE MATCH: ${passedRules.join(' • ')}`;
-          sub.innerText = `Ticket #${data.focused_ticket_id} meets the host-selected winning rule(s)!`;
-        } else {
-          banner.className = 'verdict-banner';
-          title.innerText = `⏳ PENDING • Selected Rules Not Yet Satisfied`;
-          sub.innerText = `Checking against: ${activeRules.join(', ')}. Review raw song matches below.`;
-        }
+        title.innerText = `📊 Sheet #${data.sheet_num} (Ticket #${data.focused_ticket_id})`;
+        sub.innerText = `Raw hit counts and marked songs shown below.`;
       }
     }
 
     function onCustomConditionTypeChanged() {
-      const type = document.getElementById('customOfferConditionType').value;
+      const typeEl = document.getElementById('customOfferConditionType');
+      if (!typeEl) return;
+      const type = typeEl.value;
       const box = document.getElementById('condParamBox');
       const boxMin = document.getElementById('condBoxMin');
       const boxSongs = document.getElementById('condBoxSongs');
 
-      if (type === 'override') {
-        box.style.display = 'none';
-      } else if (type === 'min_strip' || type === 'min_sheet') {
-        box.style.display = 'block';
-        boxMin.style.display = 'flex';
-        boxSongs.style.display = 'none';
-        document.getElementById('customOfferMinCount').value = type === 'min_strip' ? 7 : 14;
-      } else if (type === 'specific_songs') {
-        box.style.display = 'block';
-        boxMin.style.display = 'none';
-        boxSongs.style.display = 'block';
+      if (box && boxMin && boxSongs) {
+        if (type === 'override') {
+          box.style.display = 'none';
+        } else if (type === 'min_strip' || type === 'min_sheet') {
+          box.style.display = 'block';
+          boxMin.style.display = 'flex';
+          boxSongs.style.display = 'none';
+          const minEl = document.getElementById('customOfferMinCount');
+          if (minEl) minEl.value = type === 'min_strip' ? 7 : 14;
+        } else if (type === 'specific_songs') {
+          box.style.display = 'block';
+          boxMin.style.display = 'none';
+          boxSongs.style.display = 'block';
+        }
       }
       updateCustomOfferStatus();
     }
@@ -3664,8 +3479,11 @@
       const badge = document.getElementById('customOfferStatusBadge');
       if (!badge) return;
 
-      const type = document.getElementById('customOfferConditionType').value;
-      const offerName = (document.getElementById('customOfferName').value || "Custom Offer").trim();
+      const typeEl = document.getElementById('customOfferConditionType');
+      if (!typeEl) return;
+      const type = typeEl.value;
+      const nameEl = document.getElementById('customOfferName');
+      const offerName = (nameEl ? nameEl.value : "Custom Offer").trim() || "Custom Offer";
 
       if (!verifierBatchData) {
         badge.innerHTML = `<span style="color: var(--text-muted);">Inspect a ticket to verify "${offerName}" condition.</span>`;
@@ -3682,19 +3500,19 @@
       if (type === 'override') {
         badge.innerHTML = `<span style="color: var(--primary);">Manual Host Approval: You decide whether to award "${offerName}".</span>`;
       } else if (type === 'min_strip') {
-        const req = parseInt(document.getElementById('customOfferMinCount').value) || 7;
+        const req = parseInt(document.getElementById('customOfferMinCount')?.value) || 7;
         const passed = maxStripHits >= req;
         badge.innerHTML = passed
           ? `<span style="color: var(--emerald-dark);">✔ QUALIFIED: Best Strip has ${maxStripHits}/${req} required songs drawn!</span>`
           : `<span style="color: var(--coral);">⏳ PENDING: Best Strip has ${maxStripHits}/${req} required songs drawn.</span>`;
       } else if (type === 'min_sheet') {
-        const req = parseInt(document.getElementById('customOfferMinCount').value) || 14;
+        const req = parseInt(document.getElementById('customOfferMinCount')?.value) || 14;
         const passed = data.combined_hits >= req;
         badge.innerHTML = passed
           ? `<span style="color: var(--emerald-dark);">✔ QUALIFIED: Full Sheet has ${data.combined_hits}/${req} required songs drawn!</span>`
           : `<span style="color: var(--coral);">⏳ PENDING: Full Sheet has ${data.combined_hits}/${req} required songs drawn.</span>`;
       } else if (type === 'specific_songs') {
-        const rawSongs = document.getElementById('customOfferSongNums').value;
+        const rawSongs = document.getElementById('customOfferSongNums')?.value || "";
         const songNums = rawSongs.split(/[\s,;]+/).map(s => parseInt(s.trim())).filter(n => !isNaN(n) && n > 0);
         if (songNums.length === 0) {
           badge.innerHTML = `<span style="color: var(--text-muted);">Enter target song numbers above (e.g. 11, 25, 42).</span>`;
@@ -3716,8 +3534,8 @@
       }
 
       const data = verifierBatchData;
-      const offerName = (document.getElementById('customOfferName').value || "Host Custom Claim").trim();
-      const prize = (document.getElementById('customOfferPrize').value || "Custom Prize").trim();
+      const offerName = (document.getElementById('customOfferName')?.value || "Host Custom Claim").trim();
+      const prize = (document.getElementById('customOfferPrize')?.value || "Custom Prize").trim();
       const condType = document.getElementById('customOfferConditionType').value;
       let condSummary = "Manual Host Decision";
 

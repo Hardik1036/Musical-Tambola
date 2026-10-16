@@ -2268,7 +2268,7 @@ class ClaimVerifierScreen(tk.Frame):
         # -------------------------------------------------------------
         host_controls_frame = tk.Frame(self, bg=PALETTE["bg_card"], bd=1, relief="solid")
         host_controls_frame.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
-        host_controls_frame.pack(fill="x", padx=20, pady=(0, 8))
+        # host_controls_frame.pack(fill="x", padx=20, pady=(0, 8))
 
         hc_inner = tk.Frame(host_controls_frame, bg=PALETTE["bg_card"], padx=14, pady=8)
         hc_inner.pack(fill="x")

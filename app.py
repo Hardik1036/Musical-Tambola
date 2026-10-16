@@ -17,9 +17,88 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
-import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
-from PIL import Image, ImageTk
+# Headless & platform environment guards
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
+os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
+
+# Guard Tkinter imports for headless / cloud container environments
+try:
+    import tkinter as tk
+    from tkinter import ttk, filedialog, messagebox
+    TKINTER_AVAILABLE = True
+except (ImportError, ModuleNotFoundError):
+    TKINTER_AVAILABLE = False
+
+    class _DummyWidget:
+        def __init__(self, *args, **kwargs):
+            pass
+        def get(self, *args, **kwargs):
+            return ""
+        def set(self, *args, **kwargs):
+            pass
+        def pack(self, *args, **kwargs):
+            pass
+        def grid(self, *args, **kwargs):
+            pass
+        def place(self, *args, **kwargs):
+            pass
+        def configure(self, *args, **kwargs):
+            pass
+        config = configure
+        def bind(self, *args, **kwargs):
+            pass
+        def unbind(self, *args, **kwargs):
+            pass
+        def destroy(self):
+            pass
+        def winfo_toplevel(self):
+            return self
+        def winfo_screenwidth(self):
+            return 1920
+        def winfo_screenheight(self):
+            return 1080
+        def mainloop(self):
+            pass
+        def __call__(self, *args, **kwargs):
+            return self
+
+    class _DummyTkMeta(type):
+        def __getattr__(cls, name):
+            return _DummyWidget
+
+    class _DummyTkModule(metaclass=_DummyTkMeta):
+        Tk = _DummyWidget
+        Frame = _DummyWidget
+        Canvas = _DummyWidget
+        Toplevel = _DummyWidget
+        Button = _DummyWidget
+        Label = _DummyWidget
+        Entry = _DummyWidget
+        Checkbutton = _DummyWidget
+        Radiobutton = _DummyWidget
+        StringVar = _DummyWidget
+        IntVar = _DummyWidget
+        DoubleVar = _DummyWidget
+        BooleanVar = _DummyWidget
+        Menu = _DummyWidget
+        Scrollbar = _DummyWidget
+        Text = _DummyWidget
+        Event = object
+        def __getattr__(self, name):
+            return _DummyWidget
+
+    tk = _DummyTkModule()
+    ttk = _DummyTkModule()
+    messagebox = _DummyTkModule()
+    filedialog = _DummyTkModule()
+
+# Guard PIL ImageTk import (ImageTk internally imports _tkinter)
+try:
+    from PIL import Image, ImageTk
+except (ImportError, ModuleNotFoundError):
+    from PIL import Image
+    ImageTk = None
 
 # Base directories
 BASE_DIR = Path(__file__).resolve().parent
@@ -34,7 +113,8 @@ from generator.generate_housie_tickets import generate_housie_tickets, sanitize_
 # Initialize audio
 try:
     import pygame
-    pygame.mixer.init()
+    if not pygame.mixer.get_init():
+        pygame.mixer.init()
     HAS_AUDIO = True
 except Exception as e:
     HAS_AUDIO = False

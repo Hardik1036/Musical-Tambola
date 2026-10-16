@@ -8,16 +8,20 @@ import logging
 from pathlib import Path
 from typing import Optional, Tuple
 
-import pygame
+os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
+os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 
 logger = logging.getLogger("tambola.audio")
 
-# Initialize pygame mixer once
+# Initialize pygame mixer safely
+PYGAME_AVAILABLE = False
 try:
+    import pygame
     if not pygame.mixer.get_init():
         pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=2048)
+    PYGAME_AVAILABLE = True
 except Exception as e:
-    logger.error(f"Failed to initialize pygame mixer: {e}")
+    logger.warning(f"Pygame mixer not available (running in headless/fallback mode): {e}")
 
 
 class AudioPlayer:

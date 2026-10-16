@@ -1496,40 +1496,107 @@
     <!-- ========================================================
          SCREEN 3: LUCKY DRAW SLOT ROLLER
     ======================================================== -->
+    <!-- ========================================================
+         SCREEN 3: LUCKY DRAW (TIE-BREAKER & WHOLE-BATCH)
+    ======================================================== -->
     <section id="screen-raffle" class="screen">
       <div class="raffle-grid">
         <div class="card" style="text-align: center;">
-          <h3 style="font-size: 1.25rem; font-weight: 800;">Mechanical Slot Lucky Draw</h3>
-          <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">Pulls instant winners from called tracks or custom range</p>
+          <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--text-main);">🎰 Mechanical Slot Lucky Draw</h3>
+          <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">Provably Fair Tie-Breakers & Batch Raffle Roller</p>
 
+          <!-- Mode Selector Tabs -->
+          <div style="display: flex; gap: 8px; justify-content: center; margin: 16px 0 12px 0; flex-wrap: wrap;">
+            <button id="btnRaffleModeA" class="tab-btn active" style="padding: 7px 16px; border-radius: 20px; font-size: 0.82rem;" onclick="setRaffleMode('A')">
+              🤝 Tie-Breaker Draw (Enter Specific Ticket Nos.)
+            </button>
+            <button id="btnRaffleModeB" class="tab-btn" style="padding: 7px 16px; border-radius: 20px; font-size: 0.82rem;" onclick="setRaffleMode('B')">
+              🎟️ Whole-Set Lucky Ticket Draw (No-Repeat)
+            </button>
+          </div>
+
+          <!-- Slot Machine 3-Drum Display -->
           <div class="slot-machine-display">
             <div id="drum1" class="slot-digit-drum">0</div>
             <div id="drum2" class="slot-digit-drum">0</div>
+            <div id="drum3" class="slot-digit-drum">0</div>
           </div>
 
           <div id="raffleResultText" style="font-weight: 800; font-size: 1.15rem; color: var(--primary); margin-bottom: 1.25rem; min-height: 28px;">
             Ready to Spin
           </div>
 
-          <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 1.5rem;">
-            <select id="rafflePoolType" class="select-field">
-              <option value="Active Called Songs">Pool: Active Called Songs</option>
-              <option value="All Numbers (1-90)">Pool: All Numbers (1–90)</option>
-            </select>
-            <input type="text" id="rafflePrizeName" class="input-field" placeholder="Prize Name" value="Early Bird Hamper" style="width: 180px;" />
+          <!-- MODE A PANEL: Custom Tie-Breaker by Specific Ticket Numbers -->
+          <div id="panelRaffleModeA" style="text-align: left; background: var(--card-alt); border: 1px solid var(--border-color); border-radius: 12px; padding: 14px; margin-bottom: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-main);">Candidate Ticket Numbers (tied players):</label>
+              <span id="tieCandidatesCountBadge" class="status-pill ready" style="font-size: 0.72rem; padding: 2px 8px;">0 Candidates Entered</span>
+            </div>
+            <textarea id="tieCandidatesInput" class="input-field" rows="2" style="width: 100%; resize: vertical; font-family: monospace; font-size: 0.88rem; font-weight: 700;" placeholder="e.g. 014, 042, 108, 155 or 14 42 108" oninput="updateTieCandidatesCount()"></textarea>
+            
+            <div style="display: grid; grid-template-columns: 1fr 140px; gap: 10px; margin-top: 10px;">
+              <div>
+                <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 3px;">Prize / Reason:</label>
+                <input type="text" id="tiePrizeName" class="input-field" style="width: 100%;" value="Top Line Tie-Breaker" placeholder="Prize / Claim Category" />
+              </div>
+              <div>
+                <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 3px;">Winners (N):</label>
+                <input type="number" id="tieWinnersCount" class="input-field" style="width: 100%; font-weight: 700;" value="1" min="1" max="10" />
+              </div>
+            </div>
+
+            <button class="btn btn-primary" style="width: 100%; margin-top: 12px; padding: 11px; font-size: 0.95rem;" onclick="spinTieBreaker()">
+              🎲 PICK TIE-BREAKER WINNER
+            </button>
           </div>
 
-          <button class="btn btn-primary" style="padding: 12px 30px; font-size: 1rem;" onclick="spinSlotMachine()">
-            🎰 SPIN LUCKY DRUM
-          </button>
+          <!-- MODE B PANEL: Whole-Batch Lucky Ticket Finder (Strict No-Repeat) -->
+          <div id="panelRaffleModeB" style="display: none; text-align: left; background: var(--card-alt); border: 1px solid var(--border-color); border-radius: 12px; padding: 14px; margin-bottom: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-main);">Select Ticket Batch Pool:</label>
+              <span id="wholeSetEligibleBadge" class="status-pill ready" style="font-size: 0.72rem; padding: 2px 8px;">Remaining: -- / --</span>
+            </div>
+
+            <select id="wholeSetBatchSelect" class="select-field" style="width: 100%; margin-bottom: 8px;" onchange="onWholeBatchSelected()">
+              <option value="">Select ticket batch from archive...</option>
+            </select>
+
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;">
+              <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); cursor: pointer;">
+                <input type="checkbox" id="chkCustomTicketRange" onchange="toggleCustomTicketRange()" /> Or Custom Ticket Range:
+              </label>
+              <input type="number" id="customRangeStart" class="input-field" style="width: 75px; font-size: 0.82rem;" value="1" min="1" disabled placeholder="Start" oninput="updateRangeStats()" />
+              <span style="color: var(--text-muted); font-size: 0.8rem;">to</span>
+              <input type="number" id="customRangeEnd" class="input-field" style="width: 75px; font-size: 0.82rem;" value="100" min="1" disabled placeholder="End" oninput="updateRangeStats()" />
+            </div>
+
+            <div style="margin-bottom: 10px;">
+              <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 3px;">Round Prize / Label:</label>
+              <input type="text" id="wholeSetPrizeName" class="input-field" style="width: 100%;" value="Round 1: Bumper Lucky Draw" placeholder="Prize Label" />
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 12px;">
+              <button class="btn btn-primary" style="padding: 11px; font-size: 0.95rem;" onclick="spinWholeBatchLucky()">
+                🎰 DRAW LUCKY TICKET (NO-REPEAT)
+              </button>
+              <button class="btn btn-outline" style="padding: 11px 14px; font-size: 0.82rem; color: var(--coral);" onclick="resetWholeBatchPool()" title="Clear already-drawn set so all tickets become eligible again">
+                🔄 Reset Pool
+              </button>
+            </div>
+          </div>
+
         </div>
 
+        <!-- Audit History Log -->
         <div class="card">
           <div class="card-title">
-            <span>Lucky Draw Audit Log</span>
-            <button class="btn-reset" style="padding: 2px 10px; font-size: 0.75rem;" onclick="clearRaffleAudit()">Clear History</button>
+            <span>📋 Lucky Draw Audit Log</span>
+            <div style="display: flex; gap: 6px;">
+              <button class="btn-outline" style="padding: 3px 8px; font-size: 0.75rem;" onclick="exportLuckyAuditCSV()">📥 Export CSV</button>
+              <button class="btn-reset" style="padding: 3px 8px; font-size: 0.75rem;" onclick="clearRaffleAudit()">Clear History</button>
+            </div>
           </div>
-          <div id="raffleAuditStream" style="display: flex; flex-direction: column; gap: 8px; max-height: 400px; overflow-y: auto;">
+          <div id="raffleAuditStream" style="display: flex; flex-direction: column; gap: 8px; max-height: 480px; overflow-y: auto;">
             <div style="color: var(--text-dim); text-align: center; padding: 2rem;">No lucky draw winners yet.</div>
           </div>
         </div>
@@ -1537,7 +1604,7 @@
     </section>
 
     <!-- ========================================================
-         SCREEN 4: CLAIM VERIFIER (DUAL 2-STRIP PLAYER SHEET)
+         SCREEN 4: CLAIM VERIFIER (HOST-CONTROLLED & CUSTOM OFFERS)
     ======================================================== -->
     <section id="screen-verifier" class="screen">
       <div class="card">
@@ -1545,8 +1612,8 @@
         <!-- Header Controls Bar -->
         <div class="verifier-header-bar">
           <div>
-            <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--primary);">🔍 CLAIM VERIFIER • 2-STRIP PLAYER SHEET INSPECTOR</h3>
-            <p style="color: var(--text-muted); font-size: 0.85rem;">Type any Ticket ID (Odd/Top or Even/Bottom) to pull up that player's entire 2-strip sheet</p>
+            <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--primary);">🔍 CLAIM VERIFIER • HOST STUDIO</h3>
+            <p style="color: var(--text-muted); font-size: 0.85rem;">Inspect player sheets, toggle on-demand rules, and create custom offers without forced defaults</p>
           </div>
           <span id="verifierBatchBadge" class="status-pill ready" style="font-size: 0.82rem; padding: 6px 14px;">
             Scanning archives...
@@ -1597,29 +1664,132 @@
           </div>
         </div>
 
-        <!-- Real-Time Automated Claim Verdict Banner -->
-        <div id="verdictBanner" class="verdict-banner">
+        <!-- Real-Time Automated Claim Verdict Banner (Host-Controlled, No Forced Defaults) -->
+        <div id="verdictBanner" class="verdict-banner" style="background: var(--card-alt); border-color: var(--border-color);">
           <div id="verdictTitle" style="font-size: 1.05rem; font-weight: 800; color: var(--text-main);">WAITING FOR TICKET INSPECTION</div>
-          <div id="verdictSub" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 2px;">Enter any ticket number above to inspect patterns.</div>
-          <div class="verdict-chips-row">
-            <span id="chip_s1_e5" class="v-chip">S1 Early 5: —</span>
-            <span id="chip_s1_l1" class="v-chip">S1 Top Line: —</span>
-            <span id="chip_s1_l2" class="v-chip">S1 Mid Line: —</span>
-            <span id="chip_s1_l3" class="v-chip">S1 Bot Line: —</span>
-            <span id="chip_s1_crn" class="v-chip">S1 Corners: —</span>
-            <span id="chip_s1_fh" class="v-chip">S1 Full House: —</span>
-            <span id="chip_s2_e5" class="v-chip">S2 Early 5: —</span>
-            <span id="chip_s2_l1" class="v-chip">S2 Top Line: —</span>
-            <span id="chip_s2_l2" class="v-chip">S2 Mid Line: —</span>
-            <span id="chip_s2_l3" class="v-chip">S2 Bot Line: —</span>
-            <span id="chip_s2_crn" class="v-chip">S2 Corners: —</span>
-            <span id="chip_s2_fh" class="v-chip">S2 Full House: —</span>
-            <span id="chip_sheet_house" class="v-chip">Sheet House (30/30): —</span>
+          <div id="verdictSub" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 2px;">Enter any ticket number above to inspect matched songs.</div>
+          <div id="verdictBreakdownPills" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;"></div>
+        </div>
+
+        <!-- =======================================================
+             FEATURE 3: ⚙️ HOST RULE SELECTOR & CUSTOM OFFER BUILDER
+        ======================================================= -->
+        <div style="margin: 1.25rem 0; display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px;">
+          
+          <!-- Sub-Panel 1: Host Selectable Rule Checkboxes (On-Demand) -->
+          <div style="background: var(--card-alt); border: 1.5px solid var(--border-color); border-radius: 12px; padding: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <span style="font-size: 0.88rem; font-weight: 800; color: var(--text-main);">⚙️ Active Claim Rules (On-Demand)</span>
+              <div style="display: flex; gap: 6px;">
+                <button class="btn-outline" style="padding: 2px 8px; font-size: 0.72rem;" onclick="toggleAllHostRules(true)">All</button>
+                <button class="btn-outline" style="padding: 2px 8px; font-size: 0.72rem;" onclick="toggleAllHostRules(false)">None</button>
+              </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.82rem; font-weight: 600;">
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                <input type="checkbox" id="ruleEarlyN" onchange="recalculateHostRules()" />
+                Early <input type="number" id="ruleEarlyNCount" value="5" min="1" max="15" style="width: 44px; padding: 2px 4px; font-weight: 800; border: 1px solid var(--border-color); border-radius: 4px;" oninput="recalculateHostRules()" /> Songs
+              </label>
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                <input type="checkbox" id="ruleTopLine" onchange="recalculateHostRules()" /> Top Line
+              </label>
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                <input type="checkbox" id="ruleMidLine" onchange="recalculateHostRules()" /> Middle Line
+              </label>
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                <input type="checkbox" id="ruleBotLine" onchange="recalculateHostRules()" /> Bottom Line
+              </label>
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                <input type="checkbox" id="ruleCorners" onchange="recalculateHostRules()" /> Four Corners
+              </label>
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                <input type="checkbox" id="ruleStripFH" onchange="recalculateHostRules()" /> Full Strip House (15/15)
+              </label>
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                <input type="checkbox" id="ruleSheetFH" onchange="recalculateHostRules()" /> 2-Strip Sheet House (30/30)
+              </label>
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                <input type="checkbox" id="rulePillar" onchange="recalculateHostRules()" /> Complete Pillar (Satyam/Shivam/Sundaram)
+              </label>
+            </div>
+            <div id="activeRulesStatusBadge" style="margin-top: 10px; font-size: 0.78rem; font-weight: 700; color: var(--text-muted);">
+              No rules checked — raw statistics active.
+            </div>
+          </div>
+
+          <!-- Sub-Panel 2: Custom Offer / Custom Claim Rule Builder -->
+          <div style="background: var(--card-alt); border: 1.5px solid var(--border-color); border-radius: 12px; padding: 14px;">
+            <div style="font-size: 0.88rem; font-weight: 800; color: var(--text-main); margin-bottom: 8px;">
+              🎁 Custom Offer / Custom Rule Creator
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+              <div>
+                <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); display: block;">Offer / Claim Name:</label>
+                <input type="text" id="customOfferName" class="input-field" style="width: 100%; font-size: 0.82rem; padding: 5px 8px;" placeholder="e.g. Couple Special Bonus" value="Couple Special Bonus" oninput="updateCustomOfferStatus()" />
+              </div>
+              <div>
+                <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); display: block;">Prize / Reward:</label>
+                <input type="text" id="customOfferPrize" class="input-field" style="width: 100%; font-size: 0.82rem; padding: 5px 8px;" placeholder="e.g. ₹500 Hamper / Silver Coin" value="₹500 Cash Prize" />
+              </div>
+            </div>
+
+            <div style="margin-bottom: 8px;">
+              <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 2px;">Condition Type:</label>
+              <select id="customOfferConditionType" class="select-field" style="width: 100%; font-size: 0.82rem; padding: 5px 8px;" onchange="onCustomConditionTypeChanged()">
+                <option value="override">Manual Host Discretion (Host Approval Override)</option>
+                <option value="min_strip">Minimum N Songs Marked on Any Strip</option>
+                <option value="min_sheet">Minimum N Songs Marked on Full Sheet</option>
+                <option value="specific_songs">Specific Song Numbers Marked</option>
+              </select>
+            </div>
+
+            <!-- Dynamic condition parameter inputs -->
+            <div id="condParamBox" style="display: none; margin-bottom: 8px;">
+              <div id="condBoxMin" style="display: none; align-items: center; gap: 6px;">
+                <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted);">Required Songs Count:</label>
+                <input type="number" id="customOfferMinCount" class="input-field" style="width: 60px; padding: 4px;" value="7" min="1" max="30" oninput="updateCustomOfferStatus()" />
+              </div>
+              <div id="condBoxSongs" style="display: none;">
+                <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); display: block;">Specific Song Numbers (comma/space separated):</label>
+                <input type="text" id="customOfferSongNums" class="input-field" style="width: 100%; font-size: 0.82rem; padding: 4px 8px;" placeholder="e.g. 11, 25, 42" oninput="updateCustomOfferStatus()" />
+              </div>
+            </div>
+
+            <!-- Live Condition Status -->
+            <div id="customOfferStatusBadge" style="font-size: 0.78rem; font-weight: 700; color: var(--emerald-dark); margin-bottom: 10px;">
+              Ready for Host Approval
+            </div>
+
+            <!-- Approval Actions -->
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-primary" style="flex: 1; padding: 7px; font-size: 0.82rem;" onclick="approveCustomOfferClaim(true)">
+                ✅ Approve Claim
+              </button>
+              <button class="btn btn-outline" style="padding: 7px 12px; font-size: 0.82rem; color: var(--coral);" onclick="approveCustomOfferClaim(false)">
+                ❌ Reject
+              </button>
+            </div>
           </div>
         </div>
 
         <!-- Rendered Strips Container -->
         <div id="verifierStripsContainer"></div>
+
+        <!-- Host Approved & Custom Claims History Log -->
+        <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 0.95rem; font-weight: 800; color: var(--text-main);">📋 Host Approved Claims Log</span>
+            <div style="display: flex; gap: 6px;">
+              <button class="btn-outline" style="padding: 3px 8px; font-size: 0.75rem;" onclick="exportClaimsLogCSV()">📥 Export CSV</button>
+              <button class="btn-reset" style="padding: 3px 8px; font-size: 0.75rem;" onclick="clearHostClaimsLog()">Clear Log</button>
+            </div>
+          </div>
+          <div id="hostClaimsLogTableContainer" style="max-height: 220px; overflow-y: auto;">
+            <div style="color: var(--text-dim); text-align: center; padding: 1.5rem;">No claims recorded yet this session.</div>
+          </div>
+        </div>
 
       </div>
     </section>
@@ -1827,6 +1997,8 @@
       await loadSongsDictionary();
       await fetchGameState();
       await loadArchiveBatches();
+      await loadLuckyDrawState();
+      await loadHostClaimsLog();
       initDotsSphere();
     }
 
@@ -2787,60 +2959,382 @@
 
 
     // -------------------------------------------------------------
-    // SCREEN 3: LUCKY DRAW SLOT ROLLER
+    // SCREEN 3: LUCKY DRAW (TIE-BREAKER & WHOLE-SET NO-REPEAT)
     // -------------------------------------------------------------
-    async function spinSlotMachine() {
+    let luckyAuditHistory = [];
+    let luckyDrawnPoolSet = new Set();
+    let isLuckySpinning = false;
+
+    function setRaffleMode(mode) {
+      const btnA = document.getElementById('btnRaffleModeA');
+      const btnB = document.getElementById('btnRaffleModeB');
+      const pnlA = document.getElementById('panelRaffleModeA');
+      const pnlB = document.getElementById('panelRaffleModeB');
+
+      if (mode === 'A') {
+        btnA.classList.add('active');
+        btnB.classList.remove('active');
+        pnlA.style.display = 'block';
+        pnlB.style.display = 'none';
+        document.getElementById('raffleResultText').innerText = 'Ready for Tie-Breaker Draw';
+      } else {
+        btnB.classList.add('active');
+        btnA.classList.remove('active');
+        pnlB.style.display = 'block';
+        pnlA.style.display = 'none';
+        document.getElementById('raffleResultText').innerText = 'Ready for Whole-Set Lucky Draw';
+        populateWholeBatchDropdown();
+        onWholeBatchSelected();
+      }
+    }
+
+    function updateTieCandidatesCount() {
+      const input = document.getElementById('tieCandidatesInput').value;
+      const candidates = parseCandidateTickets(input);
+      const badge = document.getElementById('tieCandidatesCountBadge');
+      if (badge) {
+        badge.innerText = `${candidates.length} Candidate${candidates.length === 1 ? '' : 's'} Entered`;
+        badge.className = candidates.length > 0 ? 'status-pill ready' : 'status-pill';
+      }
+      return candidates;
+    }
+
+    function parseCandidateTickets(text) {
+      if (!text) return [];
+      return text
+        .split(/[\n,;\s]+/)
+        .map(t => t.trim().replace(/^#/, ''))
+        .filter(t => t.length > 0);
+    }
+
+    async function spinTieBreaker() {
+      if (isLuckySpinning) return;
+      const candidates = updateTieCandidatesCount();
+      if (!candidates || candidates.length === 0) {
+        alert("Please enter at least one candidate ticket number (e.g. 014, 042, 108).");
+        return;
+      }
+
+      const prize = (document.getElementById('tiePrizeName').value || "Tie-Breaker Winner").trim();
+      const countInput = document.getElementById('tieWinnersCount');
+      const winnersCount = Math.max(1, Math.min(candidates.length, parseInt(countInput.value) || 1));
+
+      isLuckySpinning = true;
       const drum1 = document.getElementById('drum1');
       const drum2 = document.getElementById('drum2');
-      drum1.classList.add('rolling');
-      drum2.classList.add('rolling');
+      const drum3 = document.getElementById('drum3');
+      [drum1, drum2, drum3].forEach(d => d.classList.add('rolling'));
 
-      const poolType = document.getElementById('rafflePoolType').value;
-      const prize = document.getElementById('rafflePrizeName').value || "Lucky Draw";
+      document.getElementById('raffleResultText').innerText = "🎲 Cycling Candidate Tickets...";
+
+      // Drum roll exclusively through entered candidate numbers
+      let spins = 0;
+      const spinInterval = setInterval(() => {
+        const randCandidate = candidates[Math.floor(Math.random() * candidates.length)];
+        const padded = String(randCandidate).padStart(3, '0').slice(-3);
+        drum1.innerText = padded[0];
+        drum2.innerText = padded[1];
+        drum3.innerText = padded[2];
+        spins++;
+      }, 55);
+
+      try {
+        const res = await fetch('/api/lucky-draw/tie-breaker', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            candidate_tickets: candidates,
+            prize: prize,
+            winners_count: winnersCount
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.detail || "Tie-breaker draw failed");
+        }
+
+        setTimeout(() => {
+          clearInterval(spinInterval);
+          [drum1, drum2, drum3].forEach(d => d.classList.remove('rolling'));
+          isLuckySpinning = false;
+
+          const winners = data.winners || [];
+          if (winners.length > 0) {
+            const first = String(winners[0].ticket_id).padStart(3, '0').slice(-3);
+            drum1.innerText = first[0];
+            drum2.innerText = first[1];
+            drum3.innerText = first[2];
+          }
+
+          const winnerLabels = winners.map(w => `#${w.ticket_id}`).join(', ');
+          document.getElementById('raffleResultText').innerHTML = `🎉 WINNER: <span style="color: var(--emerald-dark);">${winnerLabels}</span> — ${prize}`;
+
+          // Prepend to audit log
+          prependRaffleAuditRecord({
+            timestamp: data.timestamp || new Date().toLocaleTimeString(),
+            mode: "🤝 Tie-Breaker",
+            prize: prize,
+            winner: winnerLabels,
+            details: `Candidates: [${candidates.join(', ')}]`
+          });
+        }, 1200);
+
+      } catch (err) {
+        clearInterval(spinInterval);
+        [drum1, drum2, drum3].forEach(d => d.classList.remove('rolling'));
+        isLuckySpinning = false;
+        alert("Error during tie-breaker: " + err.message);
+      }
+    }
+
+    function populateWholeBatchDropdown() {
+      const sel = document.getElementById('wholeSetBatchSelect');
+      if (!sel) return;
+      const currVal = sel.value;
+      sel.innerHTML = '<option value="">Select ticket batch from archive...</option>';
+
+      if (gameState.archives && gameState.archives.length > 0) {
+        gameState.archives.forEach(b => {
+          const opt = document.createElement('option');
+          opt.value = b.batch_name;
+          opt.innerText = `${b.batch_name} (${b.total_tickets} Tickets / ${b.total_sheets} Sheets)`;
+          sel.appendChild(opt);
+        });
+        if (currVal) sel.value = currVal;
+        else sel.value = gameState.archives[0].batch_name;
+      }
+    }
+
+    function toggleCustomTicketRange() {
+      const chk = document.getElementById('chkCustomTicketRange').checked;
+      document.getElementById('customRangeStart').disabled = !chk;
+      document.getElementById('customRangeEnd').disabled = !chk;
+      document.getElementById('wholeSetBatchSelect').disabled = chk;
+      updateRangeStats();
+    }
+
+    async function onWholeBatchSelected() {
+      await updateRangeStats();
+    }
+
+    async function updateRangeStats() {
+      const chkCustom = document.getElementById('chkCustomTicketRange').checked;
+      const batchName = document.getElementById('wholeSetBatchSelect').value;
+      const start = document.getElementById('customRangeStart').value;
+      const end = document.getElementById('customRangeEnd').value;
+
+      try {
+        const params = new URLSearchParams({
+          batch_name: batchName || '',
+          is_custom: chkCustom ? 'true' : 'false',
+          start: start || '1',
+          end: end || '100'
+        });
+        const res = await fetch(`/api/lucky-draw/state?${params.toString()}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        luckyDrawnPoolSet = new Set(data.drawn_tickets || []);
+        const badge = document.getElementById('wholeSetEligibleBadge');
+        if (badge) {
+          badge.innerText = `Eligible: ${data.remaining_count} / ${data.total_pool} Tickets`;
+          badge.className = data.remaining_count > 0 ? 'status-pill ready' : 'status-pill';
+        }
+      } catch (err) {
+        console.error("Error updating range stats:", err);
+      }
+    }
+
+    async function spinWholeBatchLucky() {
+      if (isLuckySpinning) return;
+      const chkCustom = document.getElementById('chkCustomTicketRange').checked;
+      const batchName = document.getElementById('wholeSetBatchSelect').value;
+      const start = parseInt(document.getElementById('customRangeStart').value) || 1;
+      const end = parseInt(document.getElementById('customRangeEnd').value) || 100;
+      const prize = (document.getElementById('wholeSetPrizeName').value || "Bumper Lucky Draw").trim();
+
+      if (!chkCustom && !batchName) {
+        alert("Please select a ticket batch from the dropdown or check Custom Ticket Range.");
+        return;
+      }
+
+      isLuckySpinning = true;
+      const drum1 = document.getElementById('drum1');
+      const drum2 = document.getElementById('drum2');
+      const drum3 = document.getElementById('drum3');
+      [drum1, drum2, drum3].forEach(d => d.classList.add('rolling'));
+
+      document.getElementById('raffleResultText').innerText = "🎰 Rolling Whole Batch Drum...";
 
       let spins = 0;
-      const interval = setInterval(async () => {
+      const spinInterval = setInterval(() => {
         drum1.innerText = Math.floor(Math.random() * 10);
         drum2.innerText = Math.floor(Math.random() * 10);
+        drum3.innerText = Math.floor(Math.random() * 10);
         spins++;
+      }, 55);
 
-        if (spins > 16) {
-          clearInterval(interval);
-          drum1.classList.remove('rolling');
-          drum2.classList.remove('rolling');
+      try {
+        const res = await fetch('/api/lucky-draw/whole-batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            batch_name: batchName,
+            prize: prize,
+            is_custom_range: chkCustom,
+            range_start: start,
+            range_end: end
+          })
+        });
 
-          let pool = gameState.calledNumbers.length ? gameState.calledNumbers : Array.from({length: 90}, (_, i) => i + 1);
-          if (poolType.includes('All')) pool = Array.from({length: 90}, (_, i) => i + 1);
-
-          const winner = pool[Math.floor(Math.random() * pool.length)];
-          drum1.innerText = Math.floor(winner / 10);
-          drum2.innerText = winner % 10;
-
-          const songObj = gameState.songsDict[winner] || {};
-          const songTitle = songObj.title || `Song #${winner}`;
-          document.getElementById('raffleResultText').innerText = `🎉 WINNER: #${String(winner).padStart(2, '0')} — ${songTitle}!`;
-
-          // Add to stream
-          const stream = document.getElementById('raffleAuditStream');
-          if (stream.innerText.includes('No lucky draw')) stream.innerHTML = '';
-          const row = document.createElement('div');
-          row.style.padding = '10px 14px';
-          row.style.background = 'var(--card-alt)';
-          row.style.border = '1px solid var(--border-color)';
-          row.style.borderRadius = '10px';
-          row.innerHTML = `<strong>#${String(winner).padStart(2, '0')} — ${songTitle}</strong> <span style="float: right; color: var(--emerald-dark); font-weight: 700;">${prize}</span>`;
-          stream.prepend(row);
+        const data = await res.json();
+        if (!res.ok) {
+          clearInterval(spinInterval);
+          [drum1, drum2, drum3].forEach(d => d.classList.remove('rolling'));
+          isLuckySpinning = false;
+          alert(data.detail || "Whole batch lucky draw failed");
+          return;
         }
-      }, 70);
+
+        setTimeout(() => {
+          clearInterval(spinInterval);
+          [drum1, drum2, drum3].forEach(d => d.classList.remove('rolling'));
+          isLuckySpinning = false;
+
+          const winner = data.winner;
+          const padded = String(winner.ticket_id).padStart(3, '0').slice(-3);
+          drum1.innerText = padded[0];
+          drum2.innerText = padded[1];
+          drum3.innerText = padded[2];
+
+          const sheetInfo = winner.sheet_num ? `(Sheet #${winner.sheet_num})` : '';
+          document.getElementById('raffleResultText').innerHTML = `🎉 LUCKY TICKET: <span style="color: var(--emerald-dark);">#${winner.ticket_id}</span> ${sheetInfo} — ${prize}`;
+
+          // Update remaining badge
+          const badge = document.getElementById('wholeSetEligibleBadge');
+          if (badge) {
+            badge.innerText = `Eligible: ${data.remaining_count} / ${data.total_pool} Tickets`;
+          }
+
+          // Prepend to audit log
+          prependRaffleAuditRecord({
+            timestamp: data.timestamp || new Date().toLocaleTimeString(),
+            mode: "🎟️ Whole-Set (No-Repeat)",
+            prize: prize,
+            winner: `#${winner.ticket_id} ${sheetInfo}`,
+            details: `Remaining: ${data.remaining_count} left`
+          });
+        }, 1200);
+
+      } catch (err) {
+        clearInterval(spinInterval);
+        [drum1, drum2, drum3].forEach(d => d.classList.remove('rolling'));
+        isLuckySpinning = false;
+        alert("Error drawing lucky ticket: " + err.message);
+      }
     }
 
-    function clearRaffleAudit() {
+    async function resetWholeBatchPool() {
+      const chkCustom = document.getElementById('chkCustomTicketRange').checked;
+      const batchName = document.getElementById('wholeSetBatchSelect').value;
+      const targetName = chkCustom ? "custom_range" : batchName;
+
+      if (!targetName && !chkCustom) {
+        alert("Please select a batch to reset its drawn pool.");
+        return;
+      }
+
+      if (!confirm(`Reset the Lucky Ticket Pool for ${chkCustom ? 'Custom Range' : batchName}? Previously drawn lucky tickets will become eligible again.`)) {
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/lucky-draw/reset-pool', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ batch_name: targetName })
+        });
+        const data = await res.json();
+        alert(data.message || "Pool reset successfully!");
+        await updateRangeStats();
+      } catch (err) {
+        console.error("Error resetting pool:", err);
+      }
+    }
+
+    function prependRaffleAuditRecord(rec) {
+      luckyAuditHistory.unshift(rec);
+      const stream = document.getElementById('raffleAuditStream');
+      if (stream.innerText.includes('No lucky draw winners yet')) {
+        stream.innerHTML = '';
+      }
+
+      const row = document.createElement('div');
+      row.style.padding = '10px 14px';
+      row.style.background = 'var(--card-alt)';
+      row.style.border = '1px solid var(--border-color)';
+      row.style.borderRadius = '10px';
+      row.style.fontSize = '0.85rem';
+      row.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+          <strong>${rec.mode}: ${rec.winner}</strong>
+          <span style="color: var(--emerald-dark); font-weight: 800;">${rec.prize}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; color: var(--text-muted); font-size: 0.75rem;">
+          <span>${rec.details || ''}</span>
+          <span>${rec.timestamp}</span>
+        </div>
+      `;
+      stream.prepend(row);
+    }
+
+    async function clearRaffleAudit() {
+      if (!confirm("Clear all lucky draw audit entries from view?")) return;
+      luckyAuditHistory = [];
       document.getElementById('raffleAuditStream').innerHTML = '<div style="color: var(--text-dim); text-align: center; padding: 2rem;">No lucky draw winners yet.</div>';
+      try {
+        await fetch('/api/lucky-draw/clear-audit', { method: 'POST' });
+      } catch (_) {}
+    }
+
+    function exportLuckyAuditCSV() {
+      if (!luckyAuditHistory || luckyAuditHistory.length === 0) {
+        alert("No lucky draw history to export.");
+        return;
+      }
+      let csv = "Timestamp,Mode,Prize,Winner,Details\n";
+      luckyAuditHistory.forEach(r => {
+        csv += `"${r.timestamp}","${r.mode}","${r.prize}","${r.winner}","${(r.details || '').replace(/"/g, '""')}"\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `lucky_draw_audit_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    async function loadLuckyDrawState() {
+      try {
+        const res = await fetch('/api/lucky-draw/state');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.history && data.history.length > 0) {
+            data.history.forEach(h => prependRaffleAuditRecord(h));
+          }
+        }
+      } catch (err) {
+        console.error("Error loading lucky draw state:", err);
+      }
     }
 
     // -------------------------------------------------------------
-    // SCREEN 4: CLAIM VERIFIER (DUAL 2-STRIP PLAYER SHEET)
+    // SCREEN 4: CLAIM VERIFIER (HOST-CONTROLLED & CUSTOM OFFERS)
     // -------------------------------------------------------------
+    let hostClaimsList = [];
+
     async function loadArchiveBatches() {
       try {
         const res = await fetch('/api/archives');
@@ -2850,7 +3344,7 @@
         const sel = document.getElementById('verifierBatchSelect');
         sel.innerHTML = '';
 
-        archives.forEach((b, idx) => {
+        archives.forEach((b) => {
           const opt = document.createElement('option');
           opt.value = b.batch_name;
           opt.innerText = `${b.batch_name} (${b.total_sheets} Sheets)`;
@@ -2864,7 +3358,8 @@
           await inspectSheet(verifierCurrentBatch, "1");
         }
 
-        // Also update Screen 5 list
+        // Also update Screen 3 whole-batch dropdown and Screen 5 studio list
+        populateWholeBatchDropdown();
         updateStudioArchivesList(archives);
 
       } catch (err) {
@@ -2926,14 +3421,14 @@
       if (topT && topT.eval) {
         document.getElementById('metricStrip1Tag').innerText = `🎫 STRIP 1 (#${topT.ticket_id})`;
         document.getElementById('metricStrip1Hits').innerText = `${topT.eval.total_hits} / ${topT.eval.total_nums} Hits`;
-        document.getElementById('metricStrip1Status').innerText = topT.eval.patterns.length ? topT.eval.patterns.join(', ') : `${topT.eval.total_nums - topT.eval.total_hits} Left`;
+        document.getElementById('metricStrip1Status').innerText = `${topT.eval.total_nums - topT.eval.total_hits} Songs Left`;
       }
 
       // Metric 3: Strip 2
       if (botT && botT.eval) {
         document.getElementById('metricStrip2Tag').innerText = `🎫 STRIP 2 (#${botT.ticket_id})`;
         document.getElementById('metricStrip2Hits').innerText = `${botT.eval.total_hits} / ${botT.eval.total_nums} Hits`;
-        document.getElementById('metricStrip2Status').innerText = botT.eval.patterns.length ? botT.eval.patterns.join(', ') : `${botT.eval.total_nums - botT.eval.total_hits} Left`;
+        document.getElementById('metricStrip2Status').innerText = `${botT.eval.total_nums - botT.eval.total_hits} Songs Left`;
       } else {
         document.getElementById('metricStrip2Tag').innerText = `🎫 STRIP 2 (None)`;
         document.getElementById('metricStrip2Hits').innerText = `—`;
@@ -2944,27 +3439,13 @@
       const pct = data.combined_total > 0 ? (data.combined_hits / data.combined_total * 100).toFixed(1) : "0.0";
       document.getElementById('metricSheetTag').innerText = `🏆 SHEET #${data.sheet_num} COMBINED`;
       document.getElementById('metricSheetHits').innerText = `${data.combined_hits} / ${data.combined_total} Hits`;
-      document.getElementById('metricSheetStatus').innerText = data.sheet_house_ok ? "🌟 SHEET HOUSE QUALIFIED!" : `${pct}% Sheet Match`;
+      document.getElementById('metricSheetStatus').innerText = `${pct}% Sheet Match`;
 
-      // Verdict Banner & Chips
-      const allPatterns = [];
-      if (data.sheet_house_ok) allPatterns.push(`SHEET HOUSE (30/30)`);
-      if (topT?.eval?.patterns) allPatterns.push(...topT.eval.patterns.map(p => `Strip 1 ${p}`));
-      if (botT?.eval?.patterns) allPatterns.push(...botT.eval.patterns.map(p => `Strip 2 ${p}`));
+      // Recalculate Host-Controlled Rules & Verdict Banner (No forced default rules!)
+      recalculateHostRules();
 
-      const banner = document.getElementById('verdictBanner');
-      if (allPatterns.length > 0) {
-        banner.className = 'verdict-banner qualified';
-        document.getElementById('verdictTitle').innerText = `🎉 BOGEY VALIDATED: ${allPatterns.slice(0, 3).join(', ')} QUALIFIED!`;
-        document.getElementById('verdictSub').innerText = `Sheet #${data.sheet_num} meets winning criteria (${data.combined_hits}/${data.combined_total} songs verified).`;
-      } else {
-        banner.className = 'verdict-banner';
-        document.getElementById('verdictTitle').innerText = `⏳ CLAIM PENDING • Sheet #${data.sheet_num}`;
-        document.getElementById('verdictSub').innerText = `Current match: ${data.combined_hits} of ${data.combined_total} songs drawn. Review cells below.`;
-      }
-
-      // Update chips
-      updateVerdictChips(topT?.eval, botT?.eval, data.sheet_house_ok);
+      // Update Custom Offer live condition status
+      updateCustomOfferStatus();
 
       // Render Visual Strips
       const container = document.getElementById('verifierStripsContainer');
@@ -3029,29 +3510,331 @@
       return card;
     }
 
-    function updateVerdictChips(ev1, ev2, sheetHouse) {
-      const setChip = (id, label, isOk) => {
+    function toggleAllHostRules(enable) {
+      ['ruleEarlyN', 'ruleTopLine', 'ruleMidLine', 'ruleBotLine', 'ruleCorners', 'ruleStripFH', 'ruleSheetFH', 'rulePillar'].forEach(id => {
         const el = document.getElementById(id);
-        if (!el) return;
-        el.className = `v-chip ${isOk ? 'active' : ''}`;
-        el.innerText = `${label} ${isOk ? '✔' : '—'}`;
+        if (el) el.checked = enable;
+      });
+      recalculateHostRules();
+    }
+
+    function recalculateHostRules() {
+      if (!verifierBatchData) return;
+      const data = verifierBatchData;
+      const topT = data.top_ticket;
+      const botT = data.bottom_ticket;
+      const ev1 = topT ? topT.eval : null;
+      const ev2 = botT ? botT.eval : null;
+
+      // Extract raw breakdown stats for pills
+      const pillsContainer = document.getElementById('verdictBreakdownPills');
+      if (pillsContainer) {
+        pillsContainer.innerHTML = `
+          <span class="status-pill ready">Strip 1: ${ev1 ? ev1.total_hits : 0}/15 Drawn</span>
+          <span class="status-pill ready">S1 Rows: R1 (${ev1 ? ev1.r1_hits : 0}/${ev1 ? ev1.r1_total : 5}) • R2 (${ev1 ? ev1.r2_hits : 0}/${ev1 ? ev1.r2_total : 5}) • R3 (${ev1 ? ev1.r3_hits : 0}/${ev1 ? ev1.r3_total : 5})</span>
+          ${ev2 ? `<span class="status-pill ready">Strip 2: ${ev2.total_hits}/15 Drawn</span>
+          <span class="status-pill ready">S2 Rows: R1 (${ev2.r1_hits}/${ev2.r1_total}) • R2 (${ev2.r2_hits}/${ev2.r2_total}) • R3 (${ev2.r3_hits}/${ev2.r3_total})</span>` : ''}
+          <span class="status-pill ready" style="background: var(--amber-light); color: var(--amber-dark);">Combined: ${data.combined_hits}/${data.combined_total}</span>
+        `;
+      }
+
+      // Read active host-selected rules
+      const activeRules = [];
+      const passedRules = [];
+
+      // 1. Early N
+      if (document.getElementById('ruleEarlyN').checked) {
+        const count = parseInt(document.getElementById('ruleEarlyNCount').value) || 5;
+        const ruleName = `Early ${count} Songs`;
+        activeRules.push(ruleName);
+        const s1Ok = ev1 && ev1.total_hits >= count;
+        const s2Ok = ev2 && ev2.total_hits >= count;
+        if (s1Ok || s2Ok) {
+          passedRules.push(`${ruleName} (${s1Ok ? 'Strip 1' : 'Strip 2'})`);
+        }
+      }
+
+      // 2. Top Line
+      if (document.getElementById('ruleTopLine').checked) {
+        activeRules.push("Top Line");
+        if (ev1 && ev1.r1) passedRules.push("Top Line (Strip 1)");
+        if (ev2 && ev2.r1) passedRules.push("Top Line (Strip 2)");
+      }
+
+      // 3. Middle Line
+      if (document.getElementById('ruleMidLine').checked) {
+        activeRules.push("Middle Line");
+        if (ev1 && ev1.r2) passedRules.push("Middle Line (Strip 1)");
+        if (ev2 && ev2.r2) passedRules.push("Middle Line (Strip 2)");
+      }
+
+      // 4. Bottom Line
+      if (document.getElementById('ruleBotLine').checked) {
+        activeRules.push("Bottom Line");
+        if (ev1 && ev1.r3) passedRules.push("Bottom Line (Strip 1)");
+        if (ev2 && ev2.r3) passedRules.push("Bottom Line (Strip 2)");
+      }
+
+      // 5. Four Corners
+      if (document.getElementById('ruleCorners').checked) {
+        activeRules.push("Four Corners");
+        if (ev1 && ev1.corners) passedRules.push("Four Corners (Strip 1)");
+        if (ev2 && ev2.corners) passedRules.push("Four Corners (Strip 2)");
+      }
+
+      // 6. Full Strip House (15/15)
+      if (document.getElementById('ruleStripFH').checked) {
+        activeRules.push("Full Strip House (15/15)");
+        if (ev1 && ev1.full_house) passedRules.push("Full Strip House (Strip 1)");
+        if (ev2 && ev2.full_house) passedRules.push("Full Strip House (Strip 2)");
+      }
+
+      // 7. 2-Strip Sheet House (30/30)
+      if (document.getElementById('ruleSheetFH').checked) {
+        activeRules.push("Sheet House (30/30)");
+        if (data.sheet_house_ok) passedRules.push("Sheet House (30/30 Complete)");
+      }
+
+      // 8. Complete Pillar (Satyam / Shivam / Sundaram)
+      if (document.getElementById('rulePillar').checked) {
+        activeRules.push("Pillars");
+        if (ev1 && (ev1.satyam_ok || ev1.shivam_ok || ev1.sundaram_ok)) {
+          const names = [];
+          if (ev1.satyam_ok) names.push("Satyam");
+          if (ev1.shivam_ok) names.push("Shivam");
+          if (ev1.sundaram_ok) names.push("Sundaram");
+          passedRules.push(`Strip 1 Pillar (${names.join(', ')})`);
+        }
+        if (ev2 && (ev2.satyam_ok || ev2.shivam_ok || ev2.sundaram_ok)) {
+          const names = [];
+          if (ev2.satyam_ok) names.push("Satyam");
+          if (ev2.shivam_ok) names.push("Shivam");
+          if (ev2.sundaram_ok) names.push("Sundaram");
+          passedRules.push(`Strip 2 Pillar (${names.join(', ')})`);
+        }
+      }
+
+      // Update Verdict Banner according to Host selection (No default rules forced!)
+      const banner = document.getElementById('verdictBanner');
+      const title = document.getElementById('verdictTitle');
+      const sub = document.getElementById('verdictSub');
+      const statusBadge = document.getElementById('activeRulesStatusBadge');
+
+      if (activeRules.length === 0) {
+        banner.className = 'verdict-banner';
+        title.innerText = `📊 RAW VERIFICATION MODE • Sheet #${data.sheet_num} (Ticket #${data.focused_ticket_id})`;
+        sub.innerText = `No default rules forced. Toggle active rules above or approve custom claims below based on your event's rules.`;
+        if (statusBadge) statusBadge.innerText = "No rules checked — raw statistics active.";
+      } else {
+        if (statusBadge) statusBadge.innerText = `Active rules (${activeRules.length}): ${activeRules.join(', ')}`;
+        if (passedRules.length > 0) {
+          banner.className = 'verdict-banner qualified';
+          title.innerText = `🎉 HOST RULE MATCH: ${passedRules.join(' • ')}`;
+          sub.innerText = `Ticket #${data.focused_ticket_id} meets the host-selected winning rule(s)!`;
+        } else {
+          banner.className = 'verdict-banner';
+          title.innerText = `⏳ PENDING • Selected Rules Not Yet Satisfied`;
+          sub.innerText = `Checking against: ${activeRules.join(', ')}. Review raw song matches below.`;
+        }
+      }
+    }
+
+    function onCustomConditionTypeChanged() {
+      const type = document.getElementById('customOfferConditionType').value;
+      const box = document.getElementById('condParamBox');
+      const boxMin = document.getElementById('condBoxMin');
+      const boxSongs = document.getElementById('condBoxSongs');
+
+      if (type === 'override') {
+        box.style.display = 'none';
+      } else if (type === 'min_strip' || type === 'min_sheet') {
+        box.style.display = 'block';
+        boxMin.style.display = 'flex';
+        boxSongs.style.display = 'none';
+        document.getElementById('customOfferMinCount').value = type === 'min_strip' ? 7 : 14;
+      } else if (type === 'specific_songs') {
+        box.style.display = 'block';
+        boxMin.style.display = 'none';
+        boxSongs.style.display = 'block';
+      }
+      updateCustomOfferStatus();
+    }
+
+    function updateCustomOfferStatus() {
+      const badge = document.getElementById('customOfferStatusBadge');
+      if (!badge) return;
+
+      const type = document.getElementById('customOfferConditionType').value;
+      const offerName = (document.getElementById('customOfferName').value || "Custom Offer").trim();
+
+      if (!verifierBatchData) {
+        badge.innerHTML = `<span style="color: var(--text-muted);">Inspect a ticket to verify "${offerName}" condition.</span>`;
+        return;
+      }
+
+      const data = verifierBatchData;
+      const topT = data.top_ticket;
+      const botT = data.bottom_ticket;
+      const topHits = topT?.eval?.total_hits || 0;
+      const botHits = botT?.eval?.total_hits || 0;
+      const maxStripHits = Math.max(topHits, botHits);
+
+      if (type === 'override') {
+        badge.innerHTML = `<span style="color: var(--primary);">Manual Host Approval: You decide whether to award "${offerName}".</span>`;
+      } else if (type === 'min_strip') {
+        const req = parseInt(document.getElementById('customOfferMinCount').value) || 7;
+        const passed = maxStripHits >= req;
+        badge.innerHTML = passed
+          ? `<span style="color: var(--emerald-dark);">✔ QUALIFIED: Best Strip has ${maxStripHits}/${req} required songs drawn!</span>`
+          : `<span style="color: var(--coral);">⏳ PENDING: Best Strip has ${maxStripHits}/${req} required songs drawn.</span>`;
+      } else if (type === 'min_sheet') {
+        const req = parseInt(document.getElementById('customOfferMinCount').value) || 14;
+        const passed = data.combined_hits >= req;
+        badge.innerHTML = passed
+          ? `<span style="color: var(--emerald-dark);">✔ QUALIFIED: Full Sheet has ${data.combined_hits}/${req} required songs drawn!</span>`
+          : `<span style="color: var(--coral);">⏳ PENDING: Full Sheet has ${data.combined_hits}/${req} required songs drawn.</span>`;
+      } else if (type === 'specific_songs') {
+        const rawSongs = document.getElementById('customOfferSongNums').value;
+        const songNums = rawSongs.split(/[\s,;]+/).map(s => parseInt(s.trim())).filter(n => !isNaN(n) && n > 0);
+        if (songNums.length === 0) {
+          badge.innerHTML = `<span style="color: var(--text-muted);">Enter target song numbers above (e.g. 11, 25, 42).</span>`;
+        } else {
+          const calledSet = new Set(gameState.calledNumbers || []);
+          const hitSongs = songNums.filter(n => calledSet.has(n));
+          const allDrawn = hitSongs.length === songNums.length;
+          badge.innerHTML = allDrawn
+            ? `<span style="color: var(--emerald-dark);">✔ QUALIFIED: All songs [${songNums.join(', ')}] have been drawn!</span>`
+            : `<span style="color: var(--coral);">⏳ PENDING: ${hitSongs.length}/${songNums.length} drawn (Hits: ${hitSongs.join(', ') || 'none'}).</span>`;
+        }
+      }
+    }
+
+    async function approveCustomOfferClaim(isApproved) {
+      if (!verifierBatchData) {
+        alert("Please inspect a ticket first before approving or rejecting a claim.");
+        return;
+      }
+
+      const data = verifierBatchData;
+      const offerName = (document.getElementById('customOfferName').value || "Host Custom Claim").trim();
+      const prize = (document.getElementById('customOfferPrize').value || "Custom Prize").trim();
+      const condType = document.getElementById('customOfferConditionType').value;
+      let condSummary = "Manual Host Decision";
+
+      if (condType === 'min_strip') {
+        condSummary = `Min Strip Hits: ${document.getElementById('customOfferMinCount').value}`;
+      } else if (condType === 'min_sheet') {
+        condSummary = `Min Sheet Hits: ${document.getElementById('customOfferMinCount').value}`;
+      } else if (condType === 'specific_songs') {
+        condSummary = `Songs: ${document.getElementById('customOfferSongNums').value}`;
+      }
+
+      const payload = {
+        ticket_id: String(data.focused_ticket_id || data.sheet_num),
+        sheet_num: parseInt(data.sheet_num) || 1,
+        batch_name: verifierCurrentBatch || "default",
+        offer_name: offerName,
+        prize: prize,
+        status: isApproved ? "APPROVED" : "REJECTED",
+        condition_summary: condSummary
       };
 
-      setChip('chip_s1_e5', 'S1 Early 5', ev1?.early5);
-      setChip('chip_s1_l1', 'S1 Top Line', ev1?.r1);
-      setChip('chip_s1_l2', 'S1 Mid Line', ev1?.r2);
-      setChip('chip_s1_l3', 'S1 Bot Line', ev1?.r3);
-      setChip('chip_s1_crn', 'S1 Corners', ev1?.corners);
-      setChip('chip_s1_fh', 'S1 Full House', ev1?.full_house);
+      try {
+        const res = await fetch('/api/claims/log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const respData = await res.json();
+        await loadHostClaimsLog();
+        alert(`${isApproved ? '✅ Claim APPROVED' : '❌ Claim REJECTED'}: Ticket #${payload.ticket_id} for "${offerName}" (${prize})`);
+      } catch (err) {
+        console.error("Error logging claim:", err);
+      }
+    }
 
-      setChip('chip_s2_e5', 'S2 Early 5', ev2?.early5);
-      setChip('chip_s2_l1', 'S2 Top Line', ev2?.r1);
-      setChip('chip_s2_l2', 'S2 Mid Line', ev2?.r2);
-      setChip('chip_s2_l3', 'S2 Bot Line', ev2?.r3);
-      setChip('chip_s2_crn', 'S2 Corners', ev2?.corners);
-      setChip('chip_s2_fh', 'S2 Full House', ev2?.full_house);
+    async function loadHostClaimsLog() {
+      try {
+        const res = await fetch('/api/claims/log');
+        if (!res.ok) return;
+        const data = await res.json();
+        hostClaimsList = data.claims || [];
 
-      setChip('chip_sheet_house', 'Sheet House (30/30)', sheetHouse);
+        const container = document.getElementById('hostClaimsLogTableContainer');
+        if (!hostClaimsList || hostClaimsList.length === 0) {
+          container.innerHTML = '<div style="color: var(--text-dim); text-align: center; padding: 1.5rem;">No claims recorded yet this session.</div>';
+          return;
+        }
+
+        let html = `
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem; text-align: left;">
+            <thead>
+              <tr style="border-bottom: 2px solid var(--border-color); color: var(--text-muted); font-size: 0.75rem;">
+                <th style="padding: 6px 8px;">Time</th>
+                <th style="padding: 6px 8px;">Ticket #</th>
+                <th style="padding: 6px 8px;">Sheet #</th>
+                <th style="padding: 6px 8px;">Offer / Claim</th>
+                <th style="padding: 6px 8px;">Prize</th>
+                <th style="padding: 6px 8px;">Condition</th>
+                <th style="padding: 6px 8px;">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        hostClaimsList.forEach(c => {
+          const isApp = c.status === 'APPROVED';
+          html += `
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 6px 8px; color: var(--text-muted);">${c.timestamp || ''}</td>
+              <td style="padding: 6px 8px; font-weight: 800;">#${c.ticket_id}</td>
+              <td style="padding: 6px 8px;">Sheet ${c.sheet_num}</td>
+              <td style="padding: 6px 8px; font-weight: 700; color: var(--primary);">${c.offer_name}</td>
+              <td style="padding: 6px 8px; color: var(--emerald-dark); font-weight: 700;">${c.prize}</td>
+              <td style="padding: 6px 8px; color: var(--text-dim); font-size: 0.75rem;">${c.condition_summary || '—'}</td>
+              <td style="padding: 6px 8px;">
+                <span class="status-pill ${isApp ? 'ready' : ''}" style="${isApp ? '' : 'background: #FEE2E2; color: #DC2626;'}">
+                  ${c.status}
+                </span>
+              </td>
+            </tr>
+          `;
+        });
+
+        html += '</tbody></table>';
+        container.innerHTML = html;
+
+      } catch (err) {
+        console.error("Error loading host claims log:", err);
+      }
+    }
+
+    async function clearHostClaimsLog() {
+      if (!confirm("Clear all recorded claims from the host log?")) return;
+      try {
+        await fetch('/api/claims/clear', { method: 'POST' });
+        await loadHostClaimsLog();
+      } catch (err) {
+        console.error("Error clearing claims log:", err);
+      }
+    }
+
+    function exportClaimsLogCSV() {
+      if (!hostClaimsList || hostClaimsList.length === 0) {
+        alert("No claims recorded to export.");
+        return;
+      }
+      let csv = "Timestamp,Ticket_ID,Sheet_Num,Batch_Name,Offer_Name,Prize,Status,Condition\n";
+      hostClaimsList.forEach(c => {
+        csv += `"${c.timestamp || ''}","${c.ticket_id}","${c.sheet_num}","${c.batch_name || ''}","${c.offer_name}","${c.prize}","${c.status}","${(c.condition_summary || '').replace(/"/g, '""')}"\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `claims_log_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
     }
 
     // -------------------------------------------------------------
@@ -3257,15 +4040,32 @@
     window.onScrubInput = onScrubInput;
     window.onScrubChange = onScrubChange;
     window.triggerSphereShockwave = triggerSphereShockwave;
-    window.spinSlotMachine = spinSlotMachine;
-    window.spinLuckyDraw = spinSlotMachine;
+    window.setRaffleMode = setRaffleMode;
+    window.updateTieCandidatesCount = updateTieCandidatesCount;
+    window.spinTieBreaker = spinTieBreaker;
+    window.spinWholeBatchLucky = spinWholeBatchLucky;
+    window.toggleCustomTicketRange = toggleCustomTicketRange;
+    window.updateRangeStats = updateRangeStats;
+    window.onWholeBatchSelected = onWholeBatchSelected;
+    window.resetWholeBatchPool = resetWholeBatchPool;
+    window.exportLuckyAuditCSV = exportLuckyAuditCSV;
     window.clearRaffleAudit = clearRaffleAudit;
+    window.spinSlotMachine = spinTieBreaker;
+    window.spinLuckyDraw = spinTieBreaker;
     window.loadArchiveBatches = loadArchiveBatches;
     window.onBatchSelected = onBatchSelected;
     window.verifyTicketSearch = verifyTicketSearch;
     window.verifyTicket = verifyTicketSearch;
     window.stepSheet = stepSheet;
     window.renderActiveSheet = renderActiveSheet;
+    window.toggleAllHostRules = toggleAllHostRules;
+    window.recalculateHostRules = recalculateHostRules;
+    window.onCustomConditionTypeChanged = onCustomConditionTypeChanged;
+    window.updateCustomOfferStatus = updateCustomOfferStatus;
+    window.approveCustomOfferClaim = approveCustomOfferClaim;
+    window.loadHostClaimsLog = loadHostClaimsLog;
+    window.clearHostClaimsLog = clearHostClaimsLog;
+    window.exportClaimsLogCSV = exportClaimsLogCSV;
     window.generateTickets = generateTickets;
     window.filterCatalogTable = filterCatalogTable;
     window.setCatFilter = setCatFilter;

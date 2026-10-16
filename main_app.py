@@ -1313,10 +1313,11 @@ class DotSphereScreen(tk.Frame):
 # ---------------------------------------------------------------------------
 class LuckyDrawScreen(tk.Frame):
     """
-    Screen 3: Mechanical Slot Lucky Draw (Tie-Breaker & Raffle Module)
-    - Dual-drum mechanical slot roller cycling digits with decelerating frame intervals.
-    - Configurable multi-winner selection (1 to 10 winners).
-    - Session audit history table with ttk.Treeview.
+    Screen 3: Mechanical Slot Lucky Draw & Tie-Breaker
+    - 3-Drum mechanical slot roller cycling digits with decelerating intervals.
+    - Feature 1: Mode A — Dedicated Custom Tie-Breaker for specific tied ticket numbers.
+    - Feature 2: Mode B — Whole-Set Lucky Ticket Draw with strict persistent no-repeat pool.
+    - Session audit history table with ttk.Treeview and CSV/clipboard export.
     """
     def __init__(self, master, app_controller):
         super().__init__(master, bg=PALETTE["bg_body"])
@@ -1326,24 +1327,33 @@ class LuckyDrawScreen(tk.Frame):
         self.called_numbers_ref: List[int] = []
         self.registered_tickets_ref: List[Dict[str, Any]] = []
 
+        # Mode: 'tie_breaker' or 'whole_batch'
+        self.draw_mode_var = tk.StringVar(value="tie_breaker")
+
         # Slot drum animation state
         self.is_spinning = False
         self.spin_interval = 30
+        self.target_winner_num = 0
         self.drum1_target = 0
         self.drum2_target = 0
+        self.drum3_target = 0
         self.drum1_locked = False
         self.drum2_locked = False
+        self.drum3_locked = False
         self.current_drum1 = 0
         self.current_drum2 = 0
+        self.current_drum3 = 0
+        self.current_candidates: List[int] = []
         self.pending_winners: List[Dict[str, Any]] = []
 
         self._init_ui()
+        self.reload_batch_options()
 
     def _init_ui(self):
         # Header Card
         header = tk.Frame(self, bg=PALETTE["bg_card"], bd=1, relief="solid")
         header.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
-        header.pack(fill="x", padx=20, pady=(16, 12))
+        header.pack(fill="x", padx=20, pady=(16, 10))
 
         h_inner = tk.Frame(header, bg=PALETTE["bg_card"], padx=16, pady=10)
         h_inner.pack(fill="x")
@@ -1354,81 +1364,168 @@ class LuckyDrawScreen(tk.Frame):
         ).pack(side="left")
 
         tk.Label(
-            h_inner, text="Provably Fair Random Tie-Breakers & Digit Drum Raffle",
+            h_inner, text="Provably Fair Tie-Breakers & Strict No-Repeat Batch Raffle",
             font=("Segoe UI", 10), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"]
         ).pack(side="right")
 
         # Main Split Content
         split_frame = tk.Frame(self, bg=PALETTE["bg_body"])
-        split_frame.pack(fill="both", expand=True, padx=20, pady=(0, 12))
+        split_frame.pack(fill="both", expand=True, padx=20, pady=(0, 10))
 
-        # Left Config Panel (340px)
-        cfg_panel = tk.Frame(split_frame, bg=PALETTE["bg_card"], bd=1, relief="solid", width=340)
+        # Left Config Panel (380px)
+        cfg_panel = tk.Frame(split_frame, bg=PALETTE["bg_card"], bd=1, relief="solid", width=380)
         cfg_panel.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
         cfg_panel.pack(side="left", fill="y", padx=(0, 10))
         cfg_panel.pack_propagate(False)
 
-        cfg_inner = tk.Frame(cfg_panel, bg=PALETTE["bg_card"], padx=14, pady=14)
+        cfg_inner = tk.Frame(cfg_panel, bg=PALETTE["bg_card"], padx=14, pady=12)
         cfg_inner.pack(fill="both", expand=True)
 
-        tk.Label(cfg_inner, text="1. Draw Parameters", font=("Segoe UI", 11, "bold"), fg=PALETTE["text_main"], bg=PALETTE["bg_card"]).pack(anchor="w", pady=(0, 8))
+        # Mode Selection Tabs
+        tk.Label(cfg_inner, text="Select Draw Mode:", font=("Segoe UI", 10, "bold"), fg=PALETTE["text_main"], bg=PALETTE["bg_card"]).pack(anchor="w", pady=(0, 4))
+        
+        mode_btn_box = tk.Frame(cfg_inner, bg=PALETTE["bg_card"])
+        mode_btn_box.pack(fill="x", pady=(0, 10))
 
-        # Prize category
-        tk.Label(cfg_inner, text="Prize / Claim Category:", font=("Segoe UI", 9, "bold"), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"]).pack(anchor="w")
-        self.combo_prize = ttk.Combobox(cfg_inner, values=[
-            "Early 5 Tie-Breaker", "Top Line Tie-Breaker", "Middle Line Tie-Breaker",
-            "Bottom Line Tie-Breaker", "Four Corners Tie-Breaker", "Full House Tie-Breaker",
-            "Lucky Participant Raffle", "Bumper Jackpot Draw", "Consolation Prize"
-        ], font=("Segoe UI", 10))
-        self.combo_prize.set("Early 5 Tie-Breaker")
-        self.combo_prize.pack(fill="x", pady=(2, 10))
+        tk.Radiobutton(
+            mode_btn_box, text="🤝 Tie-Breaker (Enter Specific Ticket Nos.)",
+            variable=self.draw_mode_var, value="tie_breaker",
+            font=("Segoe UI", 9, "bold"), bg=PALETTE["bg_card"],
+            command=self._on_mode_toggled
+        ).pack(anchor="w")
 
-        # Winner Count Spinbox
-        tk.Label(cfg_inner, text="Simultaneous Winners (1–10):", font=("Segoe UI", 9, "bold"), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"]).pack(anchor="w")
-        self.spin_count = ttk.Spinbox(cfg_inner, from_=1, to=10, font=("Segoe UI", 10), width=6)
-        self.spin_count.set(1)
-        self.spin_count.pack(anchor="w", pady=(2, 10))
+        tk.Radiobutton(
+            mode_btn_box, text="🎟️ Whole-Set Lucky Draw (No-Repeat)",
+            variable=self.draw_mode_var, value="whole_batch",
+            font=("Segoe UI", 9, "bold"), bg=PALETTE["bg_card"],
+            command=self._on_mode_toggled
+        ).pack(anchor="w")
 
-        # Pool Selection
-        tk.Label(cfg_inner, text="Selection Pool:", font=("Segoe UI", 9, "bold"), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"]).pack(anchor="w")
-        self.pool_var = tk.StringVar(value="called")
-        tk.Radiobutton(cfg_inner, text="Already Called Numbers (Screen 1)", variable=self.pool_var, value="called", font=("Segoe UI", 9), bg=PALETTE["bg_card"]).pack(anchor="w")
-        tk.Radiobutton(cfg_inner, text="Registered Ticket IDs (Screen 4)", variable=self.pool_var, value="tickets", font=("Segoe UI", 9), bg=PALETTE["bg_card"]).pack(anchor="w")
+        # Container for Dynamic Panels
+        self.panel_container = tk.Frame(cfg_inner, bg=PALETTE["bg_card"])
+        self.panel_container.pack(fill="both", expand=True)
 
-        self.btn_spin = tk.Button(
-            cfg_inner, text="🎰 SPIN LUCKY DRUM",
-            font=("Segoe UI", 12, "bold"), bg=PALETTE["primary"], fg=PALETTE["text_white"],
+        # ----------------- PANEL A: TIE BREAKER -----------------
+        self.frame_mode_a = tk.Frame(self.panel_container, bg=PALETTE["bg_card"])
+        
+        lbl_a_box = tk.Frame(self.frame_mode_a, bg=PALETTE["bg_card"])
+        lbl_a_box.pack(fill="x", pady=(0, 2))
+        tk.Label(lbl_a_box, text="Candidate Ticket Numbers:", font=("Segoe UI", 9, "bold"), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"]).pack(side="left")
+        self.lbl_cand_count = tk.Label(lbl_a_box, text="0 Candidates", font=("Segoe UI", 8, "bold"), fg=PALETTE["primary"], bg=PALETTE["card_alt"], padx=6, pady=1)
+        self.lbl_cand_count.pack(side="right")
+
+        self.txt_candidates = tk.Text(self.frame_mode_a, height=3, font=("Segoe UI", 10, "bold"), wrap="word", relief="solid", bd=1)
+        self.txt_candidates.insert("1.0", "014, 042, 108, 155")
+        self.txt_candidates.bind("<KeyRelease>", lambda e: self._update_cand_count())
+        self.txt_candidates.pack(fill="x", pady=(2, 8))
+
+        tk.Label(self.frame_mode_a, text="Prize / Claim Category:", font=("Segoe UI", 9, "bold"), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"]).pack(anchor="w")
+        self.combo_prize_a = ttk.Combobox(self.frame_mode_a, values=[
+            "Top Line Tie-Breaker", "Early 5 Tie-Breaker", "Middle Line Tie-Breaker",
+            "Bottom Line Tie-Breaker", "Four Corners Tie-Breaker", "Full House Tie-Breaker"
+        ], font=("Segoe UI", 9))
+        self.combo_prize_a.set("Top Line Tie-Breaker")
+        self.combo_prize_a.pack(fill="x", pady=(2, 8))
+
+        tk.Label(self.frame_mode_a, text="Winners Count (N):", font=("Segoe UI", 9, "bold"), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"]).pack(anchor="w")
+        self.spin_count_a = ttk.Spinbox(self.frame_mode_a, from_=1, to=10, font=("Segoe UI", 9), width=6)
+        self.spin_count_a.set(1)
+        self.spin_count_a.pack(anchor="w", pady=(2, 12))
+
+        self.btn_spin_a = tk.Button(
+            self.frame_mode_a, text="🎲 PICK TIE-BREAKER WINNER",
+            font=("Segoe UI", 11, "bold"), bg=PALETTE["primary"], fg=PALETTE["text_white"],
             activebackground=PALETTE["primary_hover"], relief="flat", cursor="hand2", height=2,
-            command=self.start_draw
+            command=self.start_tie_breaker_draw
         )
-        self.btn_spin.pack(fill="x", side="bottom")
+        self.btn_spin_a.pack(fill="x", pady=(4, 0))
+
+        # ----------------- PANEL B: WHOLE BATCH NO-REPEAT -----------------
+        self.frame_mode_b = tk.Frame(self.panel_container, bg=PALETTE["bg_card"])
+
+        lbl_b_box = tk.Frame(self.frame_mode_b, bg=PALETTE["bg_card"])
+        lbl_b_box.pack(fill="x", pady=(0, 2))
+        tk.Label(lbl_b_box, text="Ticket Pool Source:", font=("Segoe UI", 9, "bold"), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"]).pack(side="left")
+        self.lbl_eligible_badge = tk.Label(lbl_b_box, text="Remaining: -- / --", font=("Segoe UI", 8, "bold"), fg=PALETTE["emerald_dark"], bg=PALETTE["emerald_light"], padx=6, pady=1)
+        self.lbl_eligible_badge.pack(side="right")
+
+        self.combo_batch_raffle = ttk.Combobox(self.frame_mode_b, font=("Segoe UI", 9), state="readonly")
+        self.combo_batch_raffle.bind("<<ComboboxSelected>>", lambda e: self.update_batch_pool_stats())
+        self.combo_batch_raffle.pack(fill="x", pady=(2, 6))
+
+        # Custom Range Toggle
+        self.chk_custom_range = tk.BooleanVar(value=False)
+        range_frame = tk.Frame(self.frame_mode_b, bg=PALETTE["bg_card"])
+        range_frame.pack(fill="x", pady=(0, 8))
+        tk.Checkbutton(
+            range_frame, text="Or Custom Ticket Range:", variable=self.chk_custom_range,
+            font=("Segoe UI", 8, "bold"), bg=PALETTE["bg_card"],
+            command=self.update_batch_pool_stats
+        ).pack(side="left")
+        self.txt_range_start = tk.Entry(range_frame, width=5, font=("Segoe UI", 9))
+        self.txt_range_start.insert(0, "1")
+        self.txt_range_start.bind("<KeyRelease>", lambda e: self.update_batch_pool_stats())
+        self.txt_range_start.pack(side="left", padx=2)
+        tk.Label(range_frame, text="to", bg=PALETTE["bg_card"], font=("Segoe UI", 8)).pack(side="left", padx=2)
+        self.txt_range_end = tk.Entry(range_frame, width=5, font=("Segoe UI", 9))
+        self.txt_range_end.insert(0, "100")
+        self.txt_range_end.bind("<KeyRelease>", lambda e: self.update_batch_pool_stats())
+        self.txt_range_end.pack(side="left", padx=2)
+
+        tk.Label(self.frame_mode_b, text="Round Prize / Label:", font=("Segoe UI", 9, "bold"), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"]).pack(anchor="w")
+        self.txt_prize_b = tk.Entry(self.frame_mode_b, font=("Segoe UI", 9))
+        self.txt_prize_b.insert(0, "Bumper Lucky Draw")
+        self.txt_prize_b.pack(fill="x", pady=(2, 10))
+
+        btn_box_b = tk.Frame(self.frame_mode_b, bg=PALETTE["bg_card"])
+        btn_box_b.pack(fill="x", pady=(4, 0))
+
+        self.btn_spin_b = tk.Button(
+            btn_box_b, text="🎰 DRAW LUCKY TICKET",
+            font=("Segoe UI", 11, "bold"), bg=PALETTE["primary"], fg=PALETTE["text_white"],
+            activebackground=PALETTE["primary_hover"], relief="flat", cursor="hand2", height=2,
+            command=self.start_whole_batch_draw
+        )
+        self.btn_spin_b.pack(side="left", fill="x", expand=True, padx=(0, 4))
+
+        self.btn_reset_pool = tk.Button(
+            btn_box_b, text="🔄 Reset Pool",
+            font=("Segoe UI", 9, "bold"), bg=PALETTE["bg_card_alt"], fg=PALETTE["coral"],
+            activebackground=PALETTE["coral_light"], relief="groove", cursor="hand2", height=2,
+            command=self.reset_lucky_pool
+        )
+        self.btn_reset_pool.pack(side="right", padx=(4, 0))
+
+        # Pack initial mode panel
+        self._on_mode_toggled()
+        self._update_cand_count()
 
         # Right Slot Stage Panel
         slot_panel = tk.Frame(split_frame, bg=PALETTE["bg_card"], bd=1, relief="solid")
         slot_panel.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
         slot_panel.pack(side="right", fill="both", expand=True)
 
-        slot_inner = tk.Frame(slot_panel, bg=PALETTE["bg_card"], padx=18, pady=14)
+        slot_inner = tk.Frame(slot_panel, bg=PALETTE["bg_card"], padx=18, pady=12)
         slot_inner.pack(fill="both", expand=True)
 
-        # Dual Drum Canvas
+        # 3-Drum Mechanical Slot Canvas
         self.canvas_drums = tk.Canvas(
-            slot_inner, width=400, height=140,
+            slot_inner, width=460, height=130,
             bg=PALETTE["bg_card_alt"], highlightthickness=1,
             highlightbackground=PALETTE["border"]
         )
-        self.canvas_drums.pack(fill="x", pady=(0, 10))
-        self._draw_drums(0, 0)
+        self.canvas_drums.pack(fill="x", pady=(0, 8))
+        self._draw_drums(0, 0, 0)
 
         # Winner Cards Display Area
-        tk.Label(slot_inner, text="🏆 Drawn Winner(s):", font=("Segoe UI", 11, "bold"), fg=PALETTE["text_main"], bg=PALETTE["bg_card"]).pack(anchor="w")
+        tk.Label(slot_inner, text="🏆 Winner Result:", font=("Segoe UI", 10, "bold"), fg=PALETTE["text_main"], bg=PALETTE["bg_card"]).pack(anchor="w")
         self.frame_winners = tk.Frame(slot_inner, bg=PALETTE["bg_card"])
-        self.frame_winners.pack(fill="both", expand=True, pady=6)
+        self.frame_winners.pack(fill="both", expand=True, pady=4)
 
         # Bottom Audit History Table
-        log_panel = tk.Frame(self, bg=PALETTE["bg_card"], bd=1, relief="solid", height=190)
+        log_panel = tk.Frame(self, bg=PALETTE["bg_card"], bd=1, relief="solid", height=180)
         log_panel.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
-        log_panel.pack(fill="x", padx=20, pady=(0, 16))
+        log_panel.pack(fill="x", padx=20, pady=(0, 14))
         log_panel.pack_propagate(False)
 
         log_inner = tk.Frame(log_panel, bg=PALETTE["bg_card"], padx=14, pady=8)
@@ -1437,113 +1534,242 @@ class LuckyDrawScreen(tk.Frame):
         log_top = tk.Frame(log_inner, bg=PALETTE["bg_card"])
         log_top.pack(fill="x", pady=(0, 6))
 
-        tk.Label(log_top, text="📋 Session Raffle Audit Log", font=("Segoe UI", 10, "bold"), fg=PALETTE["text_main"], bg=PALETTE["bg_card"]).pack(side="left")
+        tk.Label(log_top, text="📋 Lucky Draw Audit Log", font=("Segoe UI", 10, "bold"), fg=PALETTE["text_main"], bg=PALETTE["bg_card"]).pack(side="left")
 
         tk.Button(log_top, text="Copy Log", font=("Segoe UI", 8), bg=PALETTE["bg_card_alt"], relief="groove", cursor="hand2", command=self._copy_log).pack(side="right", padx=(4, 0))
         tk.Button(log_top, text="Clear Log", font=("Segoe UI", 8), bg=PALETTE["bg_card_alt"], fg=PALETTE["coral"], relief="groove", cursor="hand2", command=self._clear_log).pack(side="right")
 
         # Treeview for Audit History
-        cols = ("Time", "Category", "Pool", "Winner ID", "Details")
+        cols = ("Time", "Mode", "Prize / Category", "Winner Ticket", "Candidates / Notes")
         self.tree_log = ttk.Treeview(log_inner, columns=cols, show="headings", height=5)
         for c in cols:
             self.tree_log.heading(c, text=c)
-        self.tree_log.column("Time", width=80)
-        self.tree_log.column("Category", width=160)
-        self.tree_log.column("Pool", width=130)
-        self.tree_log.column("Winner ID", width=90)
-        self.tree_log.column("Details", width=300)
+        self.tree_log.column("Time", width=75)
+        self.tree_log.column("Mode", width=140)
+        self.tree_log.column("Prize / Category", width=160)
+        self.tree_log.column("Winner Ticket", width=110)
+        self.tree_log.column("Candidates / Notes", width=320)
         self.tree_log.pack(fill="both", expand=True)
 
-    def _draw_drums(self, d1: int, d2: int):
+    def _on_mode_toggled(self):
+        mode = self.draw_mode_var.get()
+        if mode == "tie_breaker":
+            self.frame_mode_b.pack_forget()
+            self.frame_mode_a.pack(fill="both", expand=True)
+        else:
+            self.frame_mode_a.pack_forget()
+            self.frame_mode_b.pack(fill="both", expand=True)
+            self.reload_batch_options()
+            self.update_batch_pool_stats()
+
+    def _update_cand_count(self):
+        cands = self._parse_candidates_input()
+        self.lbl_cand_count.config(
+            text=f"{len(cands)} Candidate{'s' if len(cands) != 1 else ''}",
+            fg=PALETTE["emerald_dark"] if cands else PALETTE["text_dim"]
+        )
+
+    def _parse_candidates_input(self) -> List[int]:
+        raw = self.txt_candidates.get("1.0", tk.END)
+        tokens = re.findall(r"\b\d+\b", raw)
+        cands = []
+        for t in tokens:
+            try:
+                num = int(t)
+                if num not in cands:
+                    cands.append(num)
+            except ValueError:
+                pass
+        return cands
+
+    def reload_batch_options(self):
+        archive_dir = TICKETS_ARCHIVE_DIR
+        batches = []
+        if archive_dir.exists():
+            for rf in sorted(archive_dir.glob("*_registry.json"), key=lambda p: p.stat().st_mtime, reverse=True):
+                disp = rf.name.replace("_registry.json", "")
+                batches.append(disp)
+        self.combo_batch_raffle["values"] = batches
+        if batches and not self.combo_batch_raffle.get():
+            self.combo_batch_raffle.set(batches[0])
+
+    def update_batch_pool_stats(self):
+        is_custom = self.chk_custom_range.get()
+        if is_custom:
+            try:
+                s = int(self.txt_range_start.get())
+                e = int(self.txt_range_end.get())
+                all_t = list(range(s, e + 1))
+            except ValueError:
+                all_t = []
+            batch_key = "custom_range"
+        else:
+            batch_key = self.combo_batch_raffle.get()
+            all_t = self._load_tickets_for_batch(batch_key)
+
+        drawn = set(database.get_drawn_lucky_tickets(batch_key))
+        remaining = [t for t in all_t if str(t).zfill(3) not in drawn and str(t) not in drawn]
+
+        self.lbl_eligible_badge.config(
+            text=f"Eligible: {len(remaining)} / {len(all_t)}",
+            fg=PALETTE["emerald_dark"] if remaining else PALETTE["coral"]
+        )
+        return batch_key, all_t, remaining
+
+    def _load_tickets_for_batch(self, batch_name: str) -> List[int]:
+        if not batch_name:
+            return []
+        p = TICKETS_ARCHIVE_DIR / f"{batch_name}_registry.json"
+        if not p.exists():
+            return []
+        try:
+            with open(p, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            tids = []
+            for item in data.get("tickets", []):
+                tid = item.get("ticket_id")
+                if tid:
+                    digits = re.findall(r"\d+", str(tid))
+                    if digits:
+                        tids.append(int(digits[0]))
+            return sorted(list(set(tids)))
+        except Exception:
+            return []
+
+    def _draw_drums(self, d1: int, d2: int, d3: int):
         self.canvas_drums.delete("all")
-        w, h = 400, 140
+        w, h = 460, 130
 
-        # Outer Chrome Frame
-        self.canvas_drums.create_rectangle(15, 12, w - 15, h - 12, fill="#F1F5F9", outline=PALETTE["border"], width=2)
+        # Outer Frame
+        self.canvas_drums.create_rectangle(15, 10, w - 15, h - 10, fill="#F8FAFC", outline=PALETTE["border"], width=2)
 
-        # Drum 1 (Tens)
-        self.canvas_drums.create_rectangle(70, 24, 180, h - 24, fill="#FFFFFF", outline=PALETTE["border"], width=2)
-        self.canvas_drums.create_text(125, h / 2, text=str(d1), font=("Segoe UI", 48, "bold"), fill=PALETTE["primary"])
+        # Drum 1 (Hundreds)
+        self.canvas_drums.create_rectangle(45, 20, 150, h - 20, fill="#FFFFFF", outline=PALETTE["border"], width=2)
+        self.canvas_drums.create_text(97, h / 2, text=str(d1), font=("Segoe UI", 44, "bold"), fill=PALETTE["primary"])
 
-        # Drum 2 (Units)
-        self.canvas_drums.create_rectangle(220, 24, 330, h - 24, fill="#FFFFFF", outline=PALETTE["border"], width=2)
-        self.canvas_drums.create_text(275, h / 2, text=str(d2), font=("Segoe UI", 48, "bold"), fill=PALETTE["primary"])
+        # Drum 2 (Tens)
+        self.canvas_drums.create_rectangle(175, 20, 280, h - 20, fill="#FFFFFF", outline=PALETTE["border"], width=2)
+        self.canvas_drums.create_text(227, h / 2, text=str(d2), font=("Segoe UI", 44, "bold"), fill=PALETTE["primary"])
 
-        # Center reticle line
-        self.canvas_drums.create_line(60, h / 2, 340, h / 2, fill=PALETTE["amber"], dash=(3, 3), width=1)
+        # Drum 3 (Units)
+        self.canvas_drums.create_rectangle(305, 20, 410, h - 20, fill="#FFFFFF", outline=PALETTE["border"], width=2)
+        self.canvas_drums.create_text(357, h / 2, text=str(d3), font=("Segoe UI", 44, "bold"), fill=PALETTE["primary"])
 
-    def start_draw(self):
+        # Center indicator lines
+        self.canvas_drums.create_line(35, h / 2, 420, h / 2, fill=PALETTE["amber"], dash=(3, 3), width=1)
+
+    # ----------------- DRAW LOGIC: MODE A (TIE-BREAKER) -----------------
+    def start_tie_breaker_draw(self):
         if self.is_spinning:
             return
+        cands = self._parse_candidates_input()
+        if not cands:
+            messagebox.showwarning("No Candidates", "Please enter at least one candidate ticket number!")
+            return
 
-        pool = self.pool_var.get()
-        candidates: List[Dict[str, Any]] = []
+        winners_count = min(int(self.spin_count_a.get()), len(cands))
+        drawn_cands = random.sample(cands, winners_count)
+        self.current_candidates = cands
+        self.pending_winners = [{"id": w, "label": f"#{w:03d}", "details": f"Candidate from [{', '.join(str(c) for c in cands)}]", "source": "🤝 Tie-Breaker"} for w in drawn_cands]
 
-        if pool == "called":
-            if not self.called_numbers_ref:
-                messagebox.showwarning("Empty Pool", "No numbers have been called yet in Screen 1!")
-                return
-            for n in self.called_numbers_ref:
-                title = song_bank.get_song_title(n)
-                candidates.append({"id": n, "label": f"#{n:02d}", "details": title, "source": "Called Songs"})
-        else:
-            if not self.registered_tickets_ref:
-                messagebox.showwarning("No Tickets", "Load a batch in Screen 4 first!")
-                return
-            for t in self.registered_tickets_ref:
-                tid = t.get("ticket_id", "001")
-                num = int(str(tid).lstrip("#")) if str(tid).isdigit() else 1
-                candidates.append({"id": num, "label": f"Ticket #{tid}", "details": "Participant", "source": "Ticket Registry"})
-
-        k = min(int(self.spin_count.get()), len(candidates))
-        drawn = random.sample(candidates, k)
-        self.pending_winners = drawn
-
-        first = drawn[0]["id"]
-        self.drum1_target = (first // 10) % 10
-        self.drum2_target = first % 10
+        first_w = drawn_cands[0]
+        self.drum1_target = (first_w // 100) % 10
+        self.drum2_target = (first_w // 10) % 10
+        self.drum3_target = first_w % 10
 
         self.is_spinning = True
         self.spin_interval = 30
         self.drum1_locked = False
         self.drum2_locked = False
+        self.drum3_locked = False
 
-        self._step_drum_spin()
+        self._step_drum_spin(mode="tie_breaker")
 
-    def _step_drum_spin(self):
-        """Rapidly cycles digits with decelerating frame intervals (30ms down to 140ms)."""
-        if not self.drum1_locked:
-            self.current_drum1 = random.randint(0, 9)
-        if not self.drum2_locked:
-            self.current_drum2 = random.randint(0, 9)
+    # ----------------- DRAW LOGIC: MODE B (WHOLE-SET NO-REPEAT) -----------------
+    def start_whole_batch_draw(self):
+        if self.is_spinning:
+            return
+        batch_key, all_t, remaining = self.update_batch_pool_stats()
+        if not all_t:
+            messagebox.showwarning("Empty Pool", "No tickets in selected batch / range!")
+            return
+        if not remaining:
+            messagebox.showwarning("Pool Exhausted", "All tickets in this batch have already won! Click '🔄 Reset Pool' to draw again.")
+            return
 
-        self._draw_drums(self.current_drum1, self.current_drum2)
+        winner_num = random.choice(remaining)
+        self.pending_winners = [{"id": winner_num, "label": f"#{winner_num:03d}", "details": f"Pool: {batch_key} ({len(remaining)-1} remaining)", "source": "🎟️ Whole-Set", "batch_key": batch_key}]
 
-        # Decelerate interval
+        self.drum1_target = (winner_num // 100) % 10
+        self.drum2_target = (winner_num // 10) % 10
+        self.drum3_target = winner_num % 10
+
+        self.is_spinning = True
+        self.spin_interval = 30
+        self.drum1_locked = False
+        self.drum2_locked = False
+        self.drum3_locked = False
+
+        self._step_drum_spin(mode="whole_batch")
+
+    def reset_lucky_pool(self):
+        is_custom = self.chk_custom_range.get()
+        batch_key = "custom_range" if is_custom else self.combo_batch_raffle.get()
+        if not batch_key:
+            return
+        if messagebox.askyesno("Reset Pool", f"Reset the drawn lucky tickets pool for '{batch_key}'? All tickets will become eligible again."):
+            database.reset_drawn_lucky_pool(batch_key)
+            self.update_batch_pool_stats()
+            messagebox.showinfo("Reset Successful", "Lucky ticket pool has been reset!")
+
+    def _step_drum_spin(self, mode: str):
+        if mode == "tie_breaker" and self.current_candidates:
+            # Animate cycling exclusively through candidate ticket numbers
+            sample_cand = random.choice(self.current_candidates)
+            if not self.drum1_locked:
+                self.current_drum1 = (sample_cand // 100) % 10
+            if not self.drum2_locked:
+                self.current_drum2 = (sample_cand // 10) % 10
+            if not self.drum3_locked:
+                self.current_drum3 = sample_cand % 10
+        else:
+            if not self.drum1_locked:
+                self.current_drum1 = random.randint(0, 9)
+            if not self.drum2_locked:
+                self.current_drum2 = random.randint(0, 9)
+            if not self.drum3_locked:
+                self.current_drum3 = random.randint(0, 9)
+
+        self._draw_drums(self.current_drum1, self.current_drum2, self.current_drum3)
         self.spin_interval += 5
 
         # Sequential locking
-        if self.spin_interval >= 85 and not self.drum1_locked:
+        if self.spin_interval >= 80 and not self.drum1_locked:
             self.drum1_locked = True
             self.current_drum1 = self.drum1_target
 
-        if self.spin_interval >= 135 and not self.drum2_locked:
+        if self.spin_interval >= 120 and not self.drum2_locked:
             self.drum2_locked = True
             self.current_drum2 = self.drum2_target
+
+        if self.spin_interval >= 160 and not self.drum3_locked:
+            self.drum3_locked = True
+            self.current_drum3 = self.drum3_target
             self.is_spinning = False
             self._finalize_draw()
             return
 
-        self.after(self.spin_interval, self._step_drum_spin)
+        self.after(self.spin_interval, lambda: self._step_drum_spin(mode))
 
     def _finalize_draw(self):
-        self._draw_drums(self.drum1_target, self.drum2_target)
+        self._draw_drums(self.drum1_target, self.drum2_target, self.drum3_target)
 
         # Clear existing winner cards
         for w in self.frame_winners.winfo_children():
             w.destroy()
 
-        cat = self.combo_prize.get()
+        mode = self.draw_mode_var.get()
+        prize = self.combo_prize_a.get() if mode == "tie_breaker" else self.txt_prize_b.get()
         now_str = datetime.now().strftime("%H:%M:%S")
 
         for rank, w in enumerate(self.pending_winners, 1):
@@ -1551,11 +1777,16 @@ class LuckyDrawScreen(tk.Frame):
             c.configure(highlightbackground=PALETTE["emerald"], highlightthickness=1)
             c.pack(fill="x", pady=2)
 
-            tk.Label(c, text=f"#{rank} Winner: {w['label']}", font=("Segoe UI", 11, "bold"), fg=PALETTE["emerald_dark"], bg=PALETTE["emerald_light"]).pack(side="left", padx=10, pady=4)
-            tk.Label(c, text=w["details"], font=("Segoe UI", 10), fg=PALETTE["text_main"], bg=PALETTE["emerald_light"]).pack(side="left", padx=10)
+            tk.Label(c, text=f"🎉 Winner #{rank}: {w['label']}", font=("Segoe UI", 11, "bold"), fg=PALETTE["emerald_dark"], bg=PALETTE["emerald_light"]).pack(side="left", padx=10, pady=4)
+            tk.Label(c, text=f"{prize} • {w['details']}", font=("Segoe UI", 9), fg=PALETTE["text_main"], bg=PALETTE["emerald_light"]).pack(side="left", padx=6)
+
+            # Persist winner for Mode B (No-repeat)
+            if mode == "whole_batch" and "batch_key" in w:
+                database.add_drawn_lucky_ticket(w["batch_key"], f"{w['id']:03d}")
+                self.update_batch_pool_stats()
 
             # Prepend into audit log
-            self.tree_log.insert("", 0, values=(now_str, cat, w["source"], str(w["label"]), str(w["details"])))
+            self.tree_log.insert("", 0, values=(now_str, w["source"], prize, str(w["label"]), str(w["details"])))
 
     def _copy_log(self):
         rows = []
@@ -1754,6 +1985,19 @@ def evaluate_strip_patterns(grid: List[List[Any]], called_set: set) -> Dict[str,
     corn_ok = len(corners) == 4 and all(n in called_set for n in corners)
     fh = len(all_nums) > 0 and total_hits == len(all_nums)
 
+    # Pillar calculations
+    satyam_nums = [n for n in all_nums if 1 <= n <= 29]
+    shivam_nums = [n for n in all_nums if 30 <= n <= 59]
+    sundaram_nums = [n for n in all_nums if 60 <= n <= 90]
+
+    satyam_hits = sum(1 for n in satyam_nums if n in called_set)
+    shivam_hits = sum(1 for n in shivam_nums if n in called_set)
+    sundaram_hits = sum(1 for n in sundaram_nums if n in called_set)
+
+    satyam_ok = len(satyam_nums) > 0 and satyam_hits == len(satyam_nums)
+    shivam_ok = len(shivam_nums) > 0 and shivam_hits == len(shivam_nums)
+    sundaram_ok = len(sundaram_nums) > 0 and sundaram_hits == len(sundaram_nums)
+
     patterns = []
     if fh: patterns.append("Full House")
     if r1: patterns.append("Top Line")
@@ -1761,6 +2005,9 @@ def evaluate_strip_patterns(grid: List[List[Any]], called_set: set) -> Dict[str,
     if r3: patterns.append("Bottom Line")
     if corn_ok: patterns.append("Four Corners")
     if early5: patterns.append("Early 5")
+    if satyam_ok: patterns.append("Satyam Complete")
+    if shivam_ok: patterns.append("Shivam Complete")
+    if sundaram_ok: patterns.append("Sundaram Complete")
 
     return {
         "total_hits": total_hits,
@@ -1771,11 +2018,25 @@ def evaluate_strip_patterns(grid: List[List[Any]], called_set: set) -> Dict[str,
         "r3": r3,
         "corners": corn_ok,
         "full_house": fh,
+        "satyam_ok": satyam_ok,
+        "shivam_ok": shivam_ok,
+        "sundaram_ok": sundaram_ok,
         "patterns": patterns,
         "r1_hits": sum(1 for n in rows[0] if n in called_set),
         "r2_hits": sum(1 for n in rows[1] if n in called_set),
         "r3_hits": sum(1 for n in rows[2] if n in called_set),
-        "corn_hits": sum(1 for n in corners if n in called_set)
+        "r1_total": len(rows[0]),
+        "r2_total": len(rows[1]),
+        "r3_total": len(rows[2]),
+        "corn_hits": sum(1 for n in corners if n in called_set),
+        "satyam_hits": satyam_hits,
+        "satyam_total": len(satyam_nums),
+        "shivam_hits": shivam_hits,
+        "shivam_total": len(shivam_nums),
+        "sundaram_hits": sundaram_hits,
+        "sundaram_total": len(sundaram_nums),
+        "all_nums": all_nums,
+        "row_nums": rows
     }
 
 
@@ -1800,10 +2061,28 @@ class ClaimVerifierScreen(tk.Frame):
         self.focused_ticket_id: Optional[str] = "001"
         self.dual_view_var = tk.BooleanVar(value=True)
 
+        # Host-Controlled Rules (Feature 3: all unchecked by default)
+        self.chk_rule_early_n = tk.BooleanVar(value=False)
+        self.spin_rule_early_n = tk.StringVar(value="5")
+        self.chk_rule_top = tk.BooleanVar(value=False)
+        self.chk_rule_mid = tk.BooleanVar(value=False)
+        self.chk_rule_bot = tk.BooleanVar(value=False)
+        self.chk_rule_corners = tk.BooleanVar(value=False)
+        self.chk_rule_strip_house = tk.BooleanVar(value=False)
+        self.chk_rule_sheet_house = tk.BooleanVar(value=False)
+        self.chk_rule_pillar = tk.BooleanVar(value=False)
+
+        # Custom Offer controls
+        self.txt_custom_offer_name = tk.StringVar(value="Couple Special Bonus")
+        self.txt_custom_offer_prize = tk.StringVar(value="₹500 Cash Prize")
+        self.custom_cond_type = tk.StringVar(value="override")
+        self.txt_custom_cond_val = tk.StringVar(value="7")
+
         self.cell_widgets: Dict[Tuple[str, int, int], Tuple[tk.Frame, int]] = {}
 
         self._init_ui()
         self.reload_batch_registries()
+        self.load_claims_log()
 
     def _init_ui(self):
         # -------------------------------------------------------------
@@ -1957,11 +2236,11 @@ class ClaimVerifierScreen(tk.Frame):
         self.lbl_stat_sheet_status.pack(anchor="w")
 
         # -------------------------------------------------------------
-        # 3. REAL-TIME CLAIM VERDICT BANNER & PATTERN CHIPS
+        # 3. REAL-TIME CLAIM VERDICT BANNER (HOST CONTROLLED, NO FORCED DEFAULTS)
         # -------------------------------------------------------------
         self.card_verdict = tk.Frame(self, bg=PALETTE["bg_card"], bd=1, relief="solid")
         self.card_verdict.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
-        self.card_verdict.pack(fill="x", padx=20, pady=(0, 8))
+        self.card_verdict.pack(fill="x", padx=20, pady=(0, 6))
 
         v_inner = tk.Frame(self.card_verdict, bg=PALETTE["bg_card"], padx=16, pady=8)
         v_inner.pack(fill="x")
@@ -1973,39 +2252,147 @@ class ClaimVerifierScreen(tk.Frame):
         self.lbl_verdict_title.pack(anchor="w")
 
         self.lbl_verdict_sub = tk.Label(
-            v_inner, text="Select an archive batch and enter a ticket or sheet number.",
+            v_inner, text="Enter a ticket or sheet number to inspect raw song matches.",
             font=("Segoe UI", 9), fg=PALETTE["text_muted"], bg=PALETTE["bg_card"]
         )
         self.lbl_verdict_sub.pack(anchor="w", pady=(1, 4))
 
-        # Progress Chips Row
-        self.chips_row = tk.Frame(v_inner, bg=PALETTE["bg_card"])
-        self.chips_row.pack(fill="x")
+        self.lbl_breakdown_pills = tk.Label(
+            v_inner, text="Raw Counts: —",
+            font=("Segoe UI", 8, "bold"), fg=PALETTE["primary"], bg=PALETTE["bg_card"]
+        )
+        self.lbl_breakdown_pills.pack(anchor="w")
 
-        self.verdict_chips: Dict[str, tk.Label] = {}
-        chip_defs = [
-            ("s1_e5", "S1 Early 5"), ("s1_l1", "S1 Top Line"), ("s1_l2", "S1 Mid Line"),
-            ("s1_l3", "S1 Bot Line"), ("s1_crn", "S1 Corners"), ("s1_fh", "S1 Full House"),
-            ("s2_e5", "S2 Early 5"), ("s2_l1", "S2 Top Line"), ("s2_l2", "S2 Mid Line"),
-            ("s2_l3", "S2 Bot Line"), ("s2_crn", "S2 Corners"), ("s2_fh", "S2 Full House"),
-            ("sheet_house", "Sheet House (30/30)")
-        ]
+        # -------------------------------------------------------------
+        # 3.5. HOST RULE SELECTOR & CUSTOM OFFER BUILDER PANEL
+        # -------------------------------------------------------------
+        host_controls_frame = tk.Frame(self, bg=PALETTE["bg_card"], bd=1, relief="solid")
+        host_controls_frame.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
+        host_controls_frame.pack(fill="x", padx=20, pady=(0, 8))
 
-        for k, label in chip_defs:
-            lbl = tk.Label(
-                self.chips_row, text=f"{label}: —", font=("Segoe UI", 8, "bold"),
-                bg=PALETTE["bg_card_alt"], fg=PALETTE["text_dim"],
-                relief="solid", bd=1, padx=6, pady=2
-            )
-            lbl.pack(side="left", padx=(0, 4), pady=2)
-            self.verdict_chips[k] = lbl
+        hc_inner = tk.Frame(host_controls_frame, bg=PALETTE["bg_card"], padx=14, pady=8)
+        hc_inner.pack(fill="x")
+
+        # Left Subpanel: Active Rules On-Demand
+        hc_left = tk.Frame(hc_inner, bg=PALETTE["bg_card"])
+        hc_left.pack(side="left", fill="both", expand=True, padx=(0, 10))
+
+        r_hdr = tk.Frame(hc_left, bg=PALETTE["bg_card"])
+        r_hdr.pack(fill="x", pady=(0, 4))
+        tk.Label(r_hdr, text="⚙️ Active Claim Rules (On-Demand):", font=("Segoe UI", 9, "bold"), fg=PALETTE["text_main"], bg=PALETTE["bg_card"]).pack(side="left")
+        tk.Button(r_hdr, text="All", font=("Segoe UI", 7, "bold"), bg=PALETTE["bg_card_alt"], command=lambda: self.toggle_all_rules(True)).pack(side="right", padx=(2, 0))
+        tk.Button(r_hdr, text="None", font=("Segoe UI", 7, "bold"), bg=PALETTE["bg_card_alt"], command=lambda: self.toggle_all_rules(False)).pack(side="right")
+
+        r_grid = tk.Frame(hc_left, bg=PALETTE["bg_card"])
+        r_grid.pack(fill="x")
+
+        f_e = tk.Frame(r_grid, bg=PALETTE["bg_card"])
+        f_e.grid(row=0, column=0, sticky="w", padx=(0, 6), pady=1)
+        tk.Checkbutton(f_e, text="Early", variable=self.chk_rule_early_n, font=("Segoe UI", 8, "bold"), bg=PALETTE["bg_card"], command=self.on_rule_toggled).pack(side="left")
+        sp_e = ttk.Spinbox(f_e, from_=1, to=15, textvariable=self.spin_rule_early_n, width=3, font=("Segoe UI", 8, "bold"))
+        sp_e.pack(side="left", padx=2)
+        sp_e.bind("<KeyRelease>", lambda e: self.on_rule_toggled())
+        tk.Label(f_e, text="Songs", font=("Segoe UI", 8), bg=PALETTE["bg_card"]).pack(side="left")
+
+        tk.Checkbutton(r_grid, text="Top Line", variable=self.chk_rule_top, font=("Segoe UI", 8, "bold"), bg=PALETTE["bg_card"], command=self.on_rule_toggled).grid(row=0, column=1, sticky="w", padx=4, pady=1)
+        tk.Checkbutton(r_grid, text="Middle Line", variable=self.chk_rule_mid, font=("Segoe UI", 8, "bold"), bg=PALETTE["bg_card"], command=self.on_rule_toggled).grid(row=0, column=2, sticky="w", padx=4, pady=1)
+        tk.Checkbutton(r_grid, text="Bottom Line", variable=self.chk_rule_bot, font=("Segoe UI", 8, "bold"), bg=PALETTE["bg_card"], command=self.on_rule_toggled).grid(row=0, column=3, sticky="w", padx=4, pady=1)
+
+        tk.Checkbutton(r_grid, text="Four Corners", variable=self.chk_rule_corners, font=("Segoe UI", 8, "bold"), bg=PALETTE["bg_card"], command=self.on_rule_toggled).grid(row=1, column=0, sticky="w", padx=(0, 6), pady=1)
+        tk.Checkbutton(r_grid, text="Strip House (15)", variable=self.chk_rule_strip_house, font=("Segoe UI", 8, "bold"), bg=PALETTE["bg_card"], command=self.on_rule_toggled).grid(row=1, column=1, sticky="w", padx=4, pady=1)
+        tk.Checkbutton(r_grid, text="Sheet House (30)", variable=self.chk_rule_sheet_house, font=("Segoe UI", 8, "bold"), bg=PALETTE["bg_card"], command=self.on_rule_toggled).grid(row=1, column=2, sticky="w", padx=4, pady=1)
+        tk.Checkbutton(r_grid, text="Complete Pillar", variable=self.chk_rule_pillar, font=("Segoe UI", 8, "bold"), bg=PALETTE["bg_card"], command=self.on_rule_toggled).grid(row=1, column=3, sticky="w", padx=4, pady=1)
+
+        self.lbl_rules_status = tk.Label(hc_left, text="No rules checked — raw statistics active.", font=("Segoe UI", 8), fg=PALETTE["text_dim"], bg=PALETTE["bg_card"])
+        self.lbl_rules_status.pack(anchor="w", pady=(3, 0))
+
+        # Right Subpanel: Custom Offer Creator
+        hc_right = tk.Frame(hc_inner, bg=PALETTE["bg_card"], bd=1, relief="solid")
+        hc_right.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
+        hc_right.pack(side="right", fill="both", padx=(10, 0))
+
+        o_box = tk.Frame(hc_right, bg=PALETTE["bg_card"], padx=10, pady=6)
+        o_box.pack(fill="both")
+
+        tk.Label(o_box, text="🎁 Custom Offer & Prize Creator:", font=("Segoe UI", 9, "bold"), fg=PALETTE["text_main"], bg=PALETTE["bg_card"]).pack(anchor="w")
+
+        row_o1 = tk.Frame(o_box, bg=PALETTE["bg_card"])
+        row_o1.pack(fill="x", pady=2)
+        tk.Label(row_o1, text="Offer:", font=("Segoe UI", 8, "bold"), bg=PALETTE["bg_card"], fg=PALETTE["text_muted"]).pack(side="left")
+        tk.Entry(row_o1, textvariable=self.txt_custom_offer_name, font=("Segoe UI", 8, "bold"), width=16).pack(side="left", padx=(2, 6))
+        tk.Label(row_o1, text="Prize:", font=("Segoe UI", 8, "bold"), bg=PALETTE["bg_card"], fg=PALETTE["text_muted"]).pack(side="left")
+        tk.Entry(row_o1, textvariable=self.txt_custom_offer_prize, font=("Segoe UI", 8, "bold"), width=14).pack(side="left", padx=(2, 0))
+
+        row_o2 = tk.Frame(o_box, bg=PALETTE["bg_card"])
+        row_o2.pack(fill="x", pady=2)
+        tk.Label(row_o2, text="Cond:", font=("Segoe UI", 8, "bold"), bg=PALETTE["bg_card"], fg=PALETTE["text_muted"]).pack(side="left")
+        self.combo_cond = ttk.Combobox(row_o2, values=[
+            "Manual Host Decision", "Min Songs on Strip", "Min Songs on Sheet", "Specific Song Numbers"
+        ], state="readonly", font=("Segoe UI", 8), width=18)
+        self.combo_cond.set("Manual Host Decision")
+        self.combo_cond.bind("<<ComboboxSelected>>", self.on_custom_cond_type_changed)
+        self.combo_cond.pack(side="left", padx=(2, 4))
+        self.entry_cond_val = tk.Entry(row_o2, textvariable=self.txt_custom_cond_val, font=("Segoe UI", 8), width=10)
+        self.entry_cond_val.bind("<KeyRelease>", lambda e: self.render_current_view())
+        self.entry_cond_val.pack(side="left", padx=2)
+
+        row_o3 = tk.Frame(o_box, bg=PALETTE["bg_card"])
+        row_o3.pack(fill="x", pady=(2, 0))
+        self.lbl_custom_status = tk.Label(row_o3, text="Ready for host decision", font=("Segoe UI", 8, "bold"), fg=PALETTE["primary"], bg=PALETTE["bg_card"])
+        self.lbl_custom_status.pack(side="left")
+        tk.Button(row_o3, text="✅ Approve", font=("Segoe UI", 8, "bold"), bg=PALETTE["emerald_light"], fg=PALETTE["emerald_dark"], relief="groove", cursor="hand2", padx=6, pady=1, command=lambda: self.approve_custom_claim(True)).pack(side="right", padx=(4, 0))
+        tk.Button(row_o3, text="❌ Reject", font=("Segoe UI", 8, "bold"), bg="#FEE2E2", fg="#DC2626", relief="groove", cursor="hand2", padx=6, pady=1, command=lambda: self.approve_custom_claim(False)).pack(side="right")
 
         # -------------------------------------------------------------
         # 4. SCROLLABLE VISUAL DUAL-STRIP TICKET DISPLAY AREA
         # -------------------------------------------------------------
         card_grids_outer = tk.Frame(self, bg=PALETTE["bg_card"], bd=1, relief="solid")
         card_grids_outer.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
-        card_grids_outer.pack(fill="both", expand=True, padx=20, pady=(0, 16))
+        card_grids_outer.pack(fill="both", expand=True, padx=20, pady=(0, 8))
+
+        # Canvas with Scrollbar for versatile display on all resolutions
+        self.canvas_scroll = tk.Canvas(card_grids_outer, bg=PALETTE["bg_card"], highlightthickness=0)
+        scroll_y = ttk.Scrollbar(card_grids_outer, orient="vertical", command=self.canvas_scroll.yview)
+        self.canvas_scroll.configure(yscrollcommand=scroll_y.set)
+
+        self.scroll_inner = tk.Frame(self.canvas_scroll, bg=PALETTE["bg_card"], padx=14, pady=10)
+        self.scroll_window_id = self.canvas_scroll.create_window((0, 0), window=self.scroll_inner, anchor="nw")
+
+        self.scroll_inner.bind("<Configure>", lambda e: self.canvas_scroll.configure(scrollregion=self.canvas_scroll.bbox("all")))
+        self.canvas_scroll.bind("<Configure>", lambda e: self.canvas_scroll.itemconfig(self.scroll_window_id, width=e.width))
+
+        self.canvas_scroll.pack(side="left", fill="both", expand=True)
+        scroll_y.pack(side="right", fill="y")
+
+        # -------------------------------------------------------------
+        # 5. HOST APPROVED CLAIMS LOG (AUDIT TABLE)
+        # -------------------------------------------------------------
+        claims_log_panel = tk.Frame(self, bg=PALETTE["bg_card"], bd=1, relief="solid", height=125)
+        claims_log_panel.configure(highlightbackground=PALETTE["border"], highlightthickness=1)
+        claims_log_panel.pack(fill="x", padx=20, pady=(0, 10))
+        claims_log_panel.pack_propagate(False)
+
+        cl_inner = tk.Frame(claims_log_panel, bg=PALETTE["bg_card"], padx=12, pady=6)
+        cl_inner.pack(fill="both", expand=True)
+
+        cl_top = tk.Frame(cl_inner, bg=PALETTE["bg_card"])
+        cl_top.pack(fill="x", pady=(0, 4))
+        tk.Label(cl_top, text="📋 Host Approved Claims Log", font=("Segoe UI", 9, "bold"), fg=PALETTE["text_main"], bg=PALETTE["bg_card"]).pack(side="left")
+        tk.Button(cl_top, text="Clear Log", font=("Segoe UI", 7), bg=PALETTE["bg_card_alt"], fg=PALETTE["coral"], relief="groove", cursor="hand2", command=self.clear_claims_log).pack(side="right")
+        tk.Button(cl_top, text="Copy Log", font=("Segoe UI", 7), bg=PALETTE["bg_card_alt"], relief="groove", cursor="hand2", command=self.copy_claims_log).pack(side="right", padx=(0, 4))
+
+        claims_cols = ("Time", "Ticket #", "Sheet #", "Offer / Claim", "Prize", "Condition", "Status")
+        self.tree_claims = ttk.Treeview(cl_inner, columns=claims_cols, show="headings", height=3)
+        for c in claims_cols:
+            self.tree_claims.heading(c, text=c)
+        self.tree_claims.column("Time", width=70)
+        self.tree_claims.column("Ticket #", width=80)
+        self.tree_claims.column("Sheet #", width=70)
+        self.tree_claims.column("Offer / Claim", width=160)
+        self.tree_claims.column("Prize", width=120)
+        self.tree_claims.column("Condition", width=150)
+        self.tree_claims.column("Status", width=80)
+        self.tree_claims.pack(fill="both", expand=True)
 
         # Canvas with Scrollbar for versatile display on all resolutions
         self.canvas_scroll = tk.Canvas(card_grids_outer, bg=PALETTE["bg_card"], highlightthickness=0)
@@ -2235,57 +2622,17 @@ class ClaimVerifierScreen(tk.Frame):
             fg=PALETTE["emerald_dark"] if sheet_house_ok else PALETTE["amber_dark"]
         )
 
-        # 3. Update Chips
-        self._update_chip("s1_e5", f"{min(5, ev1['total_hits'])}/5", ev1["early5"])
-        self._update_chip("s1_l1", f"{ev1['r1_hits']}/5", ev1["r1"])
-        self._update_chip("s1_l2", f"{ev1['r2_hits']}/5", ev1["r2"])
-        self._update_chip("s1_l3", f"{ev1['r3_hits']}/5", ev1["r3"])
-        self._update_chip("s1_crn", f"{ev1['corn_hits']}/4", ev1["corners"])
-        self._update_chip("s1_fh", f"{ev1['total_hits']}/15", ev1["full_house"])
+        # 3. Update Raw Breakdown Pills
+        s2_info = f" • S2: {ev2['total_hits']}/15 (R1: {ev2['r1_hits']}/{ev2['r1_total']}, R2: {ev2['r2_hits']}/{ev2['r2_total']}, R3: {ev2['r3_hits']}/{ev2['r3_total']})" if ev2 else ""
+        self.lbl_breakdown_pills.config(
+            text=f"Raw Counts: S1: {ev1['total_hits']}/15 (R1: {ev1['r1_hits']}/{ev1['r1_total']}, R2: {ev1['r2_hits']}/{ev1['r2_total']}, R3: {ev1['r3_hits']}/{ev1['r3_total']}, Crn: {ev1['corn_hits']}/4){s2_info} • Combined: {combined_hits}/{combined_total}"
+        )
 
-        if ev2:
-            self._update_chip("s2_e5", f"{min(5, ev2['total_hits'])}/5", ev2["early5"])
-            self._update_chip("s2_l1", f"{ev2['r1_hits']}/5", ev2["r1"])
-            self._update_chip("s2_l2", f"{ev2['r2_hits']}/5", ev2["r2"])
-            self._update_chip("s2_l3", f"{ev2['r3_hits']}/5", ev2["r3"])
-            self._update_chip("s2_crn", f"{ev2['corn_hits']}/4", ev2["corners"])
-            self._update_chip("s2_fh", f"{ev2['total_hits']}/15", ev2["full_house"])
-        else:
-            for k in ["s2_e5", "s2_l1", "s2_l2", "s2_l3", "s2_crn", "s2_fh"]:
-                self._update_chip(k, "—", False)
+        # 4. Host-Controlled Rule Evaluation (Feature 3: No forced default rules)
+        self.recalculate_host_rules(ev1, ev2, combined_hits, combined_total, sheet_house_ok)
 
-        self._update_chip("sheet_house", f"{combined_hits}/{combined_total}", sheet_house_ok)
-
-        # 4. Update Verdict Banner
-        all_qualified = []
-        if sheet_house_ok:
-            all_qualified.append(f"DOUBLE FULL HOUSE (Sheet #{self.current_sheet_num} 30/30)")
-        for p in ev1["patterns"]:
-            all_qualified.append(f"Strip 1 {p}")
-        if ev2:
-            for p in ev2["patterns"]:
-                all_qualified.append(f"Strip 2 {p}")
-
-        if all_qualified:
-            self.lbl_verdict_title.config(
-                text=f"🎉 BOGEY VALIDATED: {', '.join(all_qualified[:3])} QUALIFIED!",
-                fg=PALETTE["emerald_dark"]
-            )
-            self.lbl_verdict_sub.config(
-                text=f"Sheet #{self.current_sheet_num} meets winning criteria ({combined_hits}/{combined_total} songs verified)."
-            )
-            self.card_verdict.config(bg=PALETTE["emerald_light"])
-        else:
-            rem1 = ev1["total_nums"] - ev1["total_hits"]
-            rem2 = (ev2["total_nums"] - ev2["total_hits"]) if ev2 else 0
-            self.lbl_verdict_title.config(
-                text=f"⏳ CLAIM PENDING • Strip 1: {rem1} Left • Strip 2: {rem2} Left",
-                fg=PALETTE["coral_dark"]
-            )
-            self.lbl_verdict_sub.config(
-                text=f"Current Match: {combined_hits} of {combined_total} songs drawn. Review individual cells below."
-            )
-            self.card_verdict.config(bg=PALETTE["bg_card"])
+        # 5. Live Custom Offer Status Update
+        self.update_custom_offer_status(ev1, ev2, combined_hits)
 
         # -------------------------------------------------------------
         # 5. RENDER DUAL 3x9 GRIDS (STRIP 1 & STRIP 2)
@@ -2459,14 +2806,204 @@ class ClaimVerifierScreen(tk.Frame):
                         fg=PALETTE["text_dim"], bg=PALETTE["cell_blank"]
                     ).pack(anchor="center", pady=14)
 
-    def _update_chip(self, chip_key: str, progress: str, is_ok: bool):
-        lbl = self.verdict_chips.get(chip_key)
-        if lbl:
-            txt = lbl.cget("text").split(":")[0]
-            if is_ok:
-                lbl.config(text=f"{txt}: {progress} ✔", bg=PALETTE["emerald_light"], fg=PALETTE["emerald_dark"])
+    def toggle_all_rules(self, enable: bool):
+        self.chk_rule_early_n.set(enable)
+        self.chk_rule_top.set(enable)
+        self.chk_rule_mid.set(enable)
+        self.chk_rule_bot.set(enable)
+        self.chk_rule_corners.set(enable)
+        self.chk_rule_strip_house.set(enable)
+        self.chk_rule_sheet_house.set(enable)
+        self.chk_rule_pillar.set(enable)
+        self.on_rule_toggled()
+
+    def on_rule_toggled(self):
+        self.render_current_view()
+
+    def recalculate_host_rules(self, ev1: Dict[str, Any], ev2: Optional[Dict[str, Any]], combined_hits: int, combined_total: int, sheet_house_ok: bool):
+        active_rules = []
+        passed_rules = []
+
+        # 1. Early N
+        if self.chk_rule_early_n.get():
+            try:
+                cnt = int(self.spin_rule_early_n.get())
+            except ValueError:
+                cnt = 5
+            r_name = f"Early {cnt} Songs"
+            active_rules.append(r_name)
+            s1_ok = ev1["total_hits"] >= cnt
+            s2_ok = ev2 and ev2["total_hits"] >= cnt
+            if s1_ok or s2_ok:
+                passed_rules.append(f"{r_name} ({'Strip 1' if s1_ok else 'Strip 2'})")
+
+        # 2. Top Line
+        if self.chk_rule_top.get():
+            active_rules.append("Top Line")
+            if ev1["r1"]: passed_rules.append("Top Line (Strip 1)")
+            if ev2 and ev2["r1"]: passed_rules.append("Top Line (Strip 2)")
+
+        # 3. Middle Line
+        if self.chk_rule_mid.get():
+            active_rules.append("Middle Line")
+            if ev1["r2"]: passed_rules.append("Middle Line (Strip 1)")
+            if ev2 and ev2["r2"]: passed_rules.append("Middle Line (Strip 2)")
+
+        # 4. Bottom Line
+        if self.chk_rule_bot.get():
+            active_rules.append("Bottom Line")
+            if ev1["r3"]: passed_rules.append("Bottom Line (Strip 1)")
+            if ev2 and ev2["r3"]: passed_rules.append("Bottom Line (Strip 2)")
+
+        # 5. Four Corners
+        if self.chk_rule_corners.get():
+            active_rules.append("Four Corners")
+            if ev1["corners"]: passed_rules.append("Four Corners (Strip 1)")
+            if ev2 and ev2["corners"]: passed_rules.append("Four Corners (Strip 2)")
+
+        # 6. Full Strip House (15/15)
+        if self.chk_rule_strip_house.get():
+            active_rules.append("Strip House (15/15)")
+            if ev1["full_house"]: passed_rules.append("Strip House (Strip 1)")
+            if ev2 and ev2["full_house"]: passed_rules.append("Strip House (Strip 2)")
+
+        # 7. 2-Strip Sheet House (30/30)
+        if self.chk_rule_sheet_house.get():
+            active_rules.append("Sheet House (30/30)")
+            if sheet_house_ok: passed_rules.append("Sheet House (30/30 Complete)")
+
+        # 8. Complete Pillar (Satyam / Shivam / Sundaram)
+        if self.chk_rule_pillar.get():
+            active_rules.append("Pillars")
+            if ev1.get("satyam_ok"): passed_rules.append("Strip 1 Satyam Complete")
+            if ev1.get("shivam_ok"): passed_rules.append("Strip 1 Shivam Complete")
+            if ev1.get("sundaram_ok"): passed_rules.append("Strip 1 Sundaram Complete")
+            if ev2:
+                if ev2.get("satyam_ok"): passed_rules.append("Strip 2 Satyam Complete")
+                if ev2.get("shivam_ok"): passed_rules.append("Strip 2 Shivam Complete")
+                if ev2.get("sundaram_ok"): passed_rules.append("Strip 2 Sundaram Complete")
+
+        # Update Verdict Banner (No forced default rules!)
+        if not active_rules:
+            self.lbl_verdict_title.config(
+                text=f"📊 RAW INSPECTION MODE • Ticket #{self.focused_ticket_id} (Sheet #{self.current_sheet_num})",
+                fg=PALETTE["text_main"]
+            )
+            self.lbl_verdict_sub.config(
+                text=f"No default rules forced. Toggle active rules above or approve custom offers below."
+            )
+            self.lbl_rules_status.config(text="No rules checked — raw statistics active.", fg=PALETTE["text_dim"])
+            self.card_verdict.config(bg=PALETTE["bg_card"])
+        else:
+            self.lbl_rules_status.config(text=f"Active rules ({len(active_rules)}): {', '.join(active_rules)}", fg=PALETTE["primary"])
+            if passed_rules:
+                self.lbl_verdict_title.config(
+                    text=f"🎉 HOST RULE MATCH: {', '.join(passed_rules)} QUALIFIED!",
+                    fg=PALETTE["emerald_dark"]
+                )
+                self.lbl_verdict_sub.config(
+                    text=f"Ticket #{self.focused_ticket_id} meets selected host rules ({combined_hits}/{combined_total} songs verified)."
+                )
+                self.card_verdict.config(bg=PALETTE["emerald_light"])
             else:
-                lbl.config(text=f"{txt}: {progress}", bg=PALETTE["bg_card_alt"], fg=PALETTE["text_muted"])
+                self.lbl_verdict_title.config(
+                    text=f"⏳ PENDING • Selected Rules Not Yet Satisfied",
+                    fg=PALETTE["coral_dark"]
+                )
+                self.lbl_verdict_sub.config(
+                    text=f"Checking active rules: {', '.join(active_rules)}. Review raw song matches below."
+                )
+                self.card_verdict.config(bg=PALETTE["bg_card"])
+
+    def on_custom_cond_type_changed(self, event=None):
+        self.render_current_view()
+
+    def update_custom_offer_status(self, ev1: Dict[str, Any], ev2: Optional[Dict[str, Any]], combined_hits: int):
+        cond = self.combo_cond.get()
+        offer = self.txt_custom_offer_name.get().strip() or "Custom Offer"
+
+        if cond == "Manual Host Decision":
+            self.lbl_custom_status.config(text=f"Manual Host Discretion for '{offer}'", fg=PALETTE["primary"])
+        elif cond == "Min Songs on Strip":
+            try:
+                req = int(self.txt_custom_cond_val.get())
+            except ValueError:
+                req = 7
+            best_strip = max(ev1["total_hits"], ev2["total_hits"] if ev2 else 0)
+            if best_strip >= req:
+                self.lbl_custom_status.config(text=f"✔ QUALIFIED: Best Strip {best_strip}/{req} songs", fg=PALETTE["emerald_dark"])
+            else:
+                self.lbl_custom_status.config(text=f"⏳ PENDING: Best Strip {best_strip}/{req} songs", fg=PALETTE["coral"])
+        elif cond == "Min Songs on Sheet":
+            try:
+                req = int(self.txt_custom_cond_val.get())
+            except ValueError:
+                req = 14
+            if combined_hits >= req:
+                self.lbl_custom_status.config(text=f"✔ QUALIFIED: Sheet {combined_hits}/{req} songs", fg=PALETTE["emerald_dark"])
+            else:
+                self.lbl_custom_status.config(text=f"⏳ PENDING: Sheet {combined_hits}/{req} songs", fg=PALETTE["coral"])
+        elif cond == "Specific Song Numbers":
+            raw = self.txt_custom_cond_val.get()
+            nums = [int(n) for n in re.findall(r"\b\d+\b", raw)]
+            if not nums:
+                self.lbl_custom_status.config(text="Enter song numbers (e.g. 11, 25, 42)", fg=PALETTE["text_dim"])
+            else:
+                called_set = set(self.called_numbers_ref)
+                hits = [n for n in nums if n in called_set]
+                if len(hits) == len(nums):
+                    self.lbl_custom_status.config(text=f"✔ QUALIFIED: All [{', '.join(str(n) for n in nums)}] drawn!", fg=PALETTE["emerald_dark"])
+                else:
+                    self.lbl_custom_status.config(text=f"⏳ PENDING: {len(hits)}/{len(nums)} drawn", fg=PALETTE["coral"])
+
+    def approve_custom_claim(self, is_approved: bool):
+        if not self.normalized_batch or not self.current_sheet_num:
+            messagebox.showwarning("No Ticket", "Inspect a ticket first before approving or rejecting a claim!")
+            return
+
+        tid = str(self.focused_ticket_id)
+        sheet_num = int(self.current_sheet_num)
+        batch = self.combo_batch.get() or "default"
+        offer = self.txt_custom_offer_name.get().strip() or "Custom Offer"
+        prize = self.txt_custom_offer_prize.get().strip() or "Hamper"
+        status = "APPROVED" if is_approved else "REJECTED"
+        cond_summary = f"{self.combo_cond.get()}: {self.txt_custom_cond_val.get()}"
+
+        database.log_host_claim(tid, sheet_num, batch, offer, prize, status, cond_summary)
+        self.load_claims_log()
+
+        if is_approved:
+            messagebox.showinfo("Claim Approved", f"✅ Approved Claim for Ticket #{tid} ({offer} — {prize})")
+        else:
+            messagebox.showinfo("Claim Rejected", f"❌ Rejected Claim for Ticket #{tid}")
+
+    def load_claims_log(self):
+        for child in self.tree_claims.get_children():
+            self.tree_claims.delete(child)
+        claims = database.get_host_claims_log()
+        for c in claims:
+            self.tree_claims.insert("", tk.END, values=(
+                c.get("timestamp", ""),
+                f"#{c.get('ticket_id', '')}",
+                f"Sheet {c.get('sheet_num', '')}",
+                c.get("offer_name", ""),
+                c.get("prize", ""),
+                c.get("condition_summary", ""),
+                c.get("status", "")
+            ))
+
+    def clear_claims_log(self):
+        if messagebox.askyesno("Clear Claims Log", "Clear all host claims from the log?"):
+            database.clear_host_claims_log()
+            self.load_claims_log()
+
+    def copy_claims_log(self):
+        rows = []
+        for child in self.tree_claims.get_children():
+            rows.append("\t".join(str(v) for v in self.tree_claims.item(child)["values"]))
+        self.clipboard_clear()
+        self.clipboard_append("\n".join(rows))
+        messagebox.showinfo("Copied", "Claims log copied to clipboard!")
 
 
 # ---------------------------------------------------------------------------

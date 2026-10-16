@@ -17,6 +17,7 @@ import csv
 import json
 import random
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
@@ -828,6 +829,283 @@ def inspect_archive_ticket(batch_name: str, ticket_id: str):
     }
 
 
+# ===========================================================================
+# FEATURE 1 & 2: LUCKY DRAW APIs (Tie-Breaker & Whole-Batch Strict No-Repeat)
+# ===========================================================================
+@app.get("/api/lucky-draw/state")
+def get_lucky_draw_state(
+    batch_name: Optional[str] = None,
+    is_custom: Optional[bool] = False,
+    start: Optional[int] = None,
+    end: Optional[int] = None
+):
+    """Retrieves current lucky draw audit log and drawn tickets pool."""
+    from config import TICKETS_ARCHIVE_DIR
+    from generator.generate_housie_tickets import sanitize_batch_name
+    
+    clean_batch = sanitize_batch_name(batch_name) if (batch_name and batch_name != "custom_range" and not is_custom) else ""
+    is_custom_mode = bool(is_custom or batch_name in ("custom_range", "") or (start is not None and end is not None))
+    
+    drawn_tickets = database.get_drawn_lucky_tickets(clean_batch if clean_batch else None)
+    audit_history = database.get_lucky_draw_records()
+    
+    total_tickets = 0
+    all_ticket_ids = []
+    
+    if is_custom_mode and start is not None and end is not None:
+        s = max(1, int(start))
+        e = max(s, int(end))
+        all_ticket_ids = [f"{i:03d}" for i in range(s, e + 1)]
+        total_tickets = len(all_ticket_ids)
+        clean_batch = "custom_range"
+    elif clean_batch:
+        target = TICKETS_ARCHIVE_DIR / f"{clean_batch}_registry.json"
+        if target.exists():
+            try:
+                with open(target, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                all_ticket_ids = [str(t.get("ticket_id", "")).strip() for t in data.get("tickets", []) if t.get("ticket_id")]
+                total_tickets = len(all_ticket_ids)
+            except Exception:
+                pass
+
+    drawn_set = set(str(t).strip() for t in drawn_tickets)
+    eligible = [t for t in all_ticket_ids if t not in drawn_set] if all_ticket_ids else []
+
+    return {
+        "batch_name": clean_batch,
+        "audit_history": audit_history,
+        "drawn_tickets": list(drawn_set),
+        "drawn_count": len(drawn_set),
+        "total_tickets": total_tickets,
+        "remaining_count": len(eligible) if total_tickets > 0 else 0,
+        "eligible_tickets": eligible
+    }
+
+
+@app.post("/api/lucky-draw/tie-breaker")
+async def execute_tie_breaker(request: Request):
+    """
+    Lucky Draw Mode A: Picks winner(s) exclusively from entered candidate ticket numbers.
+    Payload: { candidate_tickets: str or list, winner_count: int, prize_name: str }
+    """
+    body = await request.json()
+    raw_candidates = body.get("candidate_tickets", "")
+    winner_count = max(1, min(10, int(body.get("winner_count", body.get("winners_count", 1)))))
+    prize = str(body.get("prize_name", body.get("prize_label", "Tie-Breaker Winner"))).strip() or "Tie-Breaker Winner"
+
+    candidates_list: List[str] = []
+    if isinstance(raw_candidates, list):
+        for c in raw_candidates:
+            val = str(c).strip().lstrip("#")
+            if val:
+                candidates_list.append(val)
+    elif isinstance(raw_candidates, str):
+        # Split on comma, space, semicolon, or newline
+        tokens = re.split(r'[\s,;\n\r]+', raw_candidates.strip())
+        for tok in tokens:
+            t = tok.strip().lstrip("#")
+            if t:
+                candidates_list.append(t)
+
+    # De-duplicate while preserving order
+    unique_candidates = []
+    seen = set()
+    for c in candidates_list:
+        if c not in seen:
+            seen.add(c)
+            unique_candidates.append(c)
+
+    if not unique_candidates:
+        raise HTTPException(status_code=400, detail="Please enter at least one candidate Ticket Number.")
+
+    k = min(winner_count, len(unique_candidates))
+    winners = random.sample(unique_candidates, k)
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # Record into audit log
+    database.add_lucky_draw_audit_entry(
+        prize_name=prize,
+        pool_type="🤝 Tie-Breaker Draw",
+        winner_ids=winners
+    )
+
+    winners_objs = [{"ticket_id": w} for w in winners]
+    return {
+        "status": "success",
+        "mode": "tie-breaker",
+        "prize_name": prize,
+        "prize": prize,
+        "winner": winners_objs[0],
+        "winners": winners_objs,
+        "candidates": unique_candidates,
+        "timestamp": timestamp
+    }
+
+
+@app.post("/api/lucky-draw/whole-batch")
+async def execute_whole_batch_draw(request: Request):
+    """
+    Lucky Draw Mode B: Picks non-repeating lucky ticket from whole batch or custom range.
+    Payload: { batch_name: str, prize_name: str, custom_range_start: int, custom_range_end: int }
+    """
+    from config import TICKETS_ARCHIVE_DIR
+    from generator.generate_housie_tickets import sanitize_batch_name
+
+    body = await request.json()
+    batch_name = str(body.get("batch_name", "")).strip()
+    prize = str(body.get("prize_name", body.get("prize_label", body.get("prize", "Whole-Set Lucky Ticket")))).strip() or "Whole-Set Lucky Ticket"
+    is_custom = body.get("is_custom_range", False) or (batch_name in ("custom_range", ""))
+    range_start = body.get("range_start", body.get("custom_range_start"))
+    range_end = body.get("range_end", body.get("custom_range_end"))
+
+    all_tickets_map: Dict[str, Any] = {}
+    clean_batch = sanitize_batch_name(batch_name) if (batch_name and not is_custom and batch_name != "custom_range") else ""
+
+    if is_custom or batch_name in ("custom_range", "") or (range_start is not None and range_end is not None):
+        try:
+            start_i = max(1, int(range_start if range_start is not None else 1))
+            end_i = max(start_i, int(range_end if range_end is not None else 100))
+            for i in range(start_i, end_i + 1):
+                tid = f"{i:03d}"
+                all_tickets_map[tid] = {"ticket_id": tid, "sheet_num": (i + 1) // 2}
+            clean_batch = "custom_range"
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid ticket number range.")
+    elif clean_batch:
+        target = TICKETS_ARCHIVE_DIR / f"{clean_batch}_registry.json"
+        if not target.exists():
+            raise HTTPException(status_code=404, detail=f"Ticket batch '{batch_name}' not found.")
+        try:
+            with open(target, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            for t in data.get("tickets", []):
+                tid = str(t.get("ticket_id", "")).strip()
+                if tid:
+                    all_tickets_map[tid] = t
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to read batch registry: {e}")
+    else:
+        raise HTTPException(status_code=400, detail="Please select a ticket batch or specify a range.")
+
+    all_ticket_ids = list(all_tickets_map.keys())
+    if not all_ticket_ids:
+        raise HTTPException(status_code=400, detail="No tickets available in selected pool.")
+
+    # Exclude previously drawn lucky tickets (STRICT NO-REPEAT GUARANTEE)
+    drawn_tickets = database.get_drawn_lucky_tickets(clean_batch if clean_batch else None)
+    drawn_set = set(str(t).strip() for t in drawn_tickets)
+    available_tickets = [tid for tid in all_ticket_ids if tid not in drawn_set]
+
+    if not available_tickets:
+        raise HTTPException(
+            status_code=400,
+            detail=f"All {len(all_ticket_ids)} tickets in this batch have already won! Click 'Reset Lucky Ticket Pool' to start fresh."
+        )
+
+    winner_tid = random.choice(available_tickets)
+    database.add_drawn_lucky_ticket(clean_batch, winner_tid, prize)
+
+    # Record into audit log
+    database.add_lucky_draw_audit_entry(
+        prize_name=prize,
+        pool_type=f"🎟️ Whole-Set ({clean_batch or 'Custom Range'})",
+        winner_ids=[winner_tid]
+    )
+
+    winner_meta = all_tickets_map.get(winner_tid, {})
+    remaining = len(available_tickets) - 1
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    return {
+        "status": "success",
+        "mode": "whole-batch",
+        "batch_name": clean_batch,
+        "prize_name": prize,
+        "prize": prize,
+        "winner": {
+            "ticket_id": winner_tid,
+            "sheet_num": winner_meta.get("sheet_num")
+        },
+        "winner_id": winner_tid,
+        "winner_meta": winner_meta,
+        "remaining_count": remaining,
+        "total_count": len(all_ticket_ids),
+        "total_pool": len(all_ticket_ids),
+        "timestamp": timestamp
+    }
+
+
+@app.post("/api/lucky-draw/reset-pool")
+async def reset_lucky_pool(request: Request):
+    """Resets drawn lucky tickets for a batch (or all batches) so all tickets can win again."""
+    from generator.generate_housie_tickets import sanitize_batch_name
+    body = await request.json()
+    batch_name = str(body.get("batch_name", "")).strip()
+    clean_batch = sanitize_batch_name(batch_name) if batch_name else None
+    database.reset_drawn_lucky_pool(clean_batch)
+    return {"status": "success", "message": f"Lucky ticket pool reset for '{clean_batch or 'all'}'."}
+
+
+@app.post("/api/lucky-draw/clear-audit")
+def clear_lucky_audit():
+    """Clears all lucky draw audit history."""
+    database.clear_lucky_draw_records()
+    return {"status": "success"}
+
+
+# ===========================================================================
+# FEATURE 3: CLAIM VERIFIER & HOST CUSTOM OFFERS LOG
+# ===========================================================================
+@app.get("/api/claims/log")
+def get_claims_log():
+    """Retrieves all host-approved or rejected custom claims."""
+    return database.get_host_claims_log()
+
+
+@app.post("/api/claims/log")
+async def record_host_claim(request: Request):
+    """
+    Records a host-approved or rejected claim with custom offer name, prize, and details.
+    """
+    body = await request.json()
+    ticket_id = str(body.get("ticket_id", body.get("ticket_no", ""))).strip()
+    sheet_num = int(body.get("sheet_num", 1))
+    offer_name = str(body.get("offer_name", "General Claim")).strip() or "General Claim"
+    prize = str(body.get("prize", body.get("prize_label", ""))).strip()
+    status = str(body.get("status", "APPROVED")).upper().strip()
+    details = str(body.get("details", body.get("condition_summary", body.get("notes", "")))).strip()
+
+    if not ticket_id:
+        raise HTTPException(status_code=400, detail="Ticket ID is required to log a claim.")
+
+    session_id = database.get_or_create_active_session()
+    rec_id = database.log_host_claim(
+        session_id=session_id,
+        ticket_id=ticket_id,
+        sheet_num=sheet_num,
+        offer_name=offer_name,
+        prize=prize,
+        status=status,
+        details=details
+    )
+
+    return {
+        "status": "success",
+        "claim_id": rec_id,
+        "ticket_id": ticket_id,
+        "sheet_num": sheet_num,
+        "offer_name": offer_name,
+        "prize": prize,
+        "verdict": status
+    }
+
+
+@app.post("/api/claims/clear")
+def clear_claims():
+    """Clears host approved claims log."""
+    database.clear_host_claims_log()
+    return {"status": "success"}
 
 
 @app.get("/api/export/pdf")

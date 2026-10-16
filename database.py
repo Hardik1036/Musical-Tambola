@@ -116,6 +116,32 @@ def init_db() -> None:
                 claimed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+
+        # 8. Persistent Drawn Lucky Tickets Pool (Mode B - Strict No-Repeat)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS drawn_lucky_tickets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                batch_name TEXT NOT NULL,
+                ticket_id TEXT NOT NULL,
+                prize_name TEXT DEFAULT '',
+                drawn_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # 9. Host Approved & Custom Claims Log
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS host_claims_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT NOT NULL,
+                ticket_id TEXT NOT NULL,
+                sheet_num INTEGER DEFAULT 1,
+                offer_name TEXT NOT NULL,
+                prize TEXT DEFAULT '',
+                status TEXT DEFAULT 'APPROVED',
+                details TEXT DEFAULT '',
+                claimed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
         
         conn.commit()
 
@@ -436,6 +462,9 @@ def add_lucky_draw_record(prize_name: str, pool_type: str, winner_ids: List[Any]
         return cursor.lastrowid
 
 
+add_lucky_draw_audit_entry = add_lucky_draw_record
+
+
 def get_lucky_draw_records() -> List[Dict[str, Any]]:
     """Get lucky draw history."""
     with get_connection() as conn:
@@ -458,3 +487,71 @@ def clear_lucky_draw_records() -> None:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM lucky_draw_audit")
         conn.commit()
+
+
+# ---------------------------------------------------------------------------
+# Persistent Drawn Lucky Tickets Pool (Strict No-Repeat Across Rounds)
+# ---------------------------------------------------------------------------
+def add_drawn_lucky_ticket(batch_name: str, ticket_id: str, prize_name: str = "") -> None:
+    """Records a drawn ticket into the persistent lucky pool so it cannot win again."""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO drawn_lucky_tickets (batch_name, ticket_id, prize_name)
+            VALUES (?, ?, ?)
+        """, (batch_name, str(ticket_id).strip(), prize_name))
+        conn.commit()
+
+
+def get_drawn_lucky_tickets(batch_name: Optional[str] = None) -> List[str]:
+    """Retrieves all previously drawn ticket IDs to exclude from future rounds."""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        if batch_name:
+            cursor.execute("SELECT ticket_id FROM drawn_lucky_tickets WHERE batch_name = ?", (batch_name,))
+        else:
+            cursor.execute("SELECT ticket_id FROM drawn_lucky_tickets")
+        return [row["ticket_id"] for row in cursor.fetchall()]
+
+
+def reset_drawn_lucky_pool(batch_name: Optional[str] = None) -> None:
+    """Resets the lucky draw ticket pool, making all tickets eligible again."""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        if batch_name:
+            cursor.execute("DELETE FROM drawn_lucky_tickets WHERE batch_name = ?", (batch_name,))
+        else:
+            cursor.execute("DELETE FROM drawn_lucky_tickets")
+        conn.commit()
+
+
+# ---------------------------------------------------------------------------
+# Host Approved Claims & Custom Offers Log
+# ---------------------------------------------------------------------------
+def log_host_claim(session_id: str, ticket_id: str, sheet_num: int, offer_name: str, prize: str = "", status: str = "APPROVED", details: str = "") -> int:
+    """Records an approved or rejected claim in the persistent host claims log."""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO host_claims_log (session_id, ticket_id, sheet_num, offer_name, prize, status, details, claimed_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        """, (session_id, str(ticket_id).strip(), sheet_num, offer_name, prize, status, details))
+        conn.commit()
+        return cursor.lastrowid
+
+
+def get_host_claims_log() -> List[Dict[str, Any]]:
+    """Retrieves the full list of approved and rejected host claims."""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM host_claims_log ORDER BY id DESC")
+        return [dict(r) for r in cursor.fetchall()]
+
+
+def clear_host_claims_log() -> None:
+    """Clears the host claims log."""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM host_claims_log")
+        conn.commit()
+
